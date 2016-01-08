@@ -1,0 +1,26 @@
+#######################################
+# Syntax Coloring Map ArduinoTDump
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+ArduinoTDump	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+detectCart		KEYWORD2
+getFlashID		KEYWORD2
+readWord		KEYWORD2
+readByte		KEYWORD2
+writeWord		KEYWORD2
+writeByte		KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+devType		KEYWORD3
+
