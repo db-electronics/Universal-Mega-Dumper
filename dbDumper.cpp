@@ -1,6 +1,6 @@
  /*
-    Title:          ArduinoTDump.cpp
-    Author:         René Richard
+    Title:          dbDumper.cpp
+    Author:         René Riuint8_td
     Description:
         This library allows to read and write to various game cartridges
         including: Genesis, SMS, PCE - with possibility for future
@@ -14,9 +14,9 @@
 
  LICENSE
  
-    This file is part of ArduinoTDump.
+    This file is part of dbDumper.
 
-    ArduinoTDump is free software: you can redistribute it and/or modify
+    dbDumper is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
@@ -31,11 +31,11 @@
 */
 
 #include "Arduino.h"
-#include "ArduinoTDump.h"
+#include "dbDumper.h"
 
-ArduinoTDump::ArduinoTDump() {
+dbDumper::dbDumper() {
 
-  char i;
+  uint8_t i;
 
   //Dataport as inputs, use port access for performance on these
   DATAH_DDR = 0x00;
@@ -81,25 +81,18 @@ ArduinoTDump::ArduinoTDump() {
   digitalWrite(M07, LOW);
 
   //wait for things to settle
-  pinMode(nLED, OUTPUT);
-  for(i=0;i<4;i++)
-  {
-    digitalWrite(nLED, LOW);
-    delay(250);
-    digitalWrite(nLED, HIGH);
-    delay(250);
-  }
+  delay(250);
 
-  //release from reset
+  //release carts from reset
   digitalWrite(nRST, HIGH);
 
 }
 
-unsigned int ArduinoTDump::readWord(unsigned long address)
+uint16_t dbDumper::readWord(uint32_t address)
 {
-  unsigned int readData;
+  uint16_t readData;
 
-  dbTD_latchAddress(address);
+  _latchAddress(address);
 
   //set data bus to inputs
   DATAH_DDR = 0x00;
@@ -109,9 +102,9 @@ unsigned int ArduinoTDump::readWord(unsigned long address)
   digitalWrite(nGCE, LOW);
   digitalWrite(nRD, LOW);
   
-  readData = (unsigned int)DATAINH;
+  readData = (uint16_t)DATAINH;
   readData <<= 8;
-  readData |= (unsigned int)(DATAINL & 0x00FF);
+  readData |= (uint16_t)(DATAINL & 0x00FF);
   
   digitalWrite(nGCE, HIGH);
   digitalWrite(nRD, HIGH);
@@ -119,17 +112,17 @@ unsigned int ArduinoTDump::readWord(unsigned long address)
   return readData;
 }
 
-void ArduinoTDump::writeWord(unsigned long address, unsigned int data)
+void dbDumper::writeWord(uint32_t address, uint16_t data)
 {
-  dbTD_latchAddress(address);
+  _latchAddress(address);
 
   //set data bus to outputs
   DATAH_DDR = 0xFF;
   DATAL_DDR = 0xFF;
 
   //put word on bus
-  DATAOUTL = (unsigned char)(data);
-  DATAOUTH = (unsigned char)(data>>8);
+  DATAOUTL = (uint8_t)(data);
+  DATAOUTH = (uint8_t)(data>>8);
 
   // write to the bus
   digitalWrite(nGCE, LOW);
@@ -143,13 +136,13 @@ void ArduinoTDump::writeWord(unsigned long address, unsigned int data)
   DATAL_DDR = 0x00;
 }
 
-void ArduinoTDump::readBlock(unsigned long address, unsigned long blockSize)
+void dbDumper::readBlock(uint32_t address, uint32_t blockSize)
 {
-  unsigned int i;
+  uint16_t i;
 
   for(i=0 ; i < blockSize ; i+=2)
   {
-    latchAddress(address);
+    _latchAddress(address);
     //set data bus to inputs
     DATAH_DDR = 0x00;
     DATAL_DDR = 0x00;
@@ -164,13 +157,13 @@ void ArduinoTDump::readBlock(unsigned long address, unsigned long blockSize)
   }
 }
 
-void ArduinoTDump::latchAddress(unsigned long address)
+void dbDumper::_latchAddress(uint32_t address)
 {
-  unsigned char addrh,addrm,addrl;
+  uint8_t addrh,addrm,addrl;
   //separate address into 3 bytes for address latches
-  addrl = (unsigned char)(address & 0xFF);
-  addrm = (unsigned int)(address>>8 & 0xFF);
-  addrh = (unsigned int)(address>>16 & 0xFF);
+  addrl = (uint8_t)(address & 0xFF);
+  addrm = (uint16_t)(address>>8 & 0xFF);
+  addrh = (uint16_t)(address>>16 & 0xFF);
 
   //set data to outputs
   DATAH_DDR = 0xFF;
@@ -189,9 +182,9 @@ void ArduinoTDump::latchAddress(unsigned long address)
   digitalWrite(ALE_high, LOW);
 }
 
-unsigned int ArduinoTDump::getFlashId(char type)
+uint16_t dbDumper::getFlashId(uint8_t type)
 {
-  unsigned int flashID;
+  uint16_t flashID;
   switch(type)
   {
     case 'M': //macronix
@@ -208,7 +201,7 @@ unsigned int ArduinoTDump::getFlashId(char type)
   return flashID;
 }
 
-bool ArduinoTDump::detectCart(char type)
+bool dbDumper::detectCart(uint8_t type)
 {
   bool detect = false;
 

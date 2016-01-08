@@ -1,5 +1,5 @@
  /*
-    Title:          ArduinoTDump.h
+    Title:          dbDumper.h
     Author:         René Richard
     Description:
         This library allows to read and write to various game cartridges
@@ -14,9 +14,9 @@
 
  LICENSE
  
-    This file is part of ArduinoTDump.
+    This file is part of dbDumper.
 
-    ArduinoTDump is free software: you can redistribute it and/or modify
+    dbDumper is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
@@ -30,8 +30,8 @@
     along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef ArduinoTDump_h
-#define ArduinoTDump_h
+#ifndef dbDumper_h
+#define dbDumper_h
 
 #define DEBUG         1
 
@@ -47,45 +47,45 @@
 #define SMS           'S'
 #define PCE           'P'
 
-class ArduinoTDump
+class dbDumper
 {
 	public:
-		ArduinoTDump();
-		bool ArduinoTDump::detectCart()
-		unsigned int ArduinoTDump::getFlashId()
+		dbDumper();
+		bool dbDumper::detectCart()
+		uint16_t dbDumper::getFlashId()
 
 		//read
-		unsigned int ArduinoTDump::readWord(unsigned long);
-		unsigned char ArduinoTDump::readByte(unsigned long, char);
+		uint16_t dbDumper::readWord(uint32_t);
+		uint8_t dbDumper::readByte(uint32_t, uint8_t);
 
 		//write
-		void ArduinoTDump::writeWord(unsigned long, unsigned int);
-		void ArduinoTDump::
+		void dbDumper::writeWord(uint32_t, uint16_t);
+		void dbDumper::writeByte(uint32_t, uint8_t);
 		
 	private:
-		void latchAddress(unsigned long);
+		void _latchAddress(uint32_t);
 
 		//pin numbers
-		const int nLWR = 8;
-		const int nUWR = 9;
-		const int ALE_low = 26;
-		const int ALE_high = 27;
-		const int nRD = 25;
-		const int M07 = 24;
-		const int nSCE = 23;
-		const int nGCE = 22;
-		const int nPCE = 21;
-		const int nRST = 20;
-		const int nTIME = 19;
-		const int nGWR = 18;
-		const int nPCD = 38;
-		const int nGCD = 39;
-		const int nSCD = 40;
-		const int nPBtn = 44;
-		const int nLED = 45;
+		static const uint8_t nLWR = 8;
+		static const uint8_t nUWR = 9;
+		static const uint8_t ALE_low = 26;
+		static const uint8_t ALE_high = 27;
+		static const uint8_t nRD = 25;
+		static const uint8_t M07 = 24;
+		static const uint8_t nSCE = 23;
+		static const uint8_t nGCE = 22;
+		static const uint8_t nPCE = 21;
+		static const uint8_t nRST = 20;
+		static const uint8_t nTIME = 19;
+		static const uint8_t nGWR = 18;
+		static const uint8_t nPCD = 38;
+		static const uint8_t nGCD = 39;
+		static const uint8_t nSCD = 40;
+		static const uint8_t nPBtn = 44;
+		static const uint8_t nLED = 45;
 };
 
-  char dataBuffer[1024];
+  uint8_t dataBuffer[1024];
 
-#endif  //ArduinoTDump_h
+#endif  //dbDumper_h
 
