@@ -1,12 +1,12 @@
 #######################################
-# Syntax Coloring Map ArduinoTDump
+# Syntax Coloring Map dbDumper
 #######################################
 
 #######################################
 # Datatypes (KEYWORD1)
 #######################################
 
-ArduinoTDump	KEYWORD1
+dbDumper		KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
