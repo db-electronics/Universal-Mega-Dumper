@@ -23,5 +23,5 @@ writeByte		KEYWORD2
 #######################################
 # Constants (LITERAL1)
 #######################################
-GENESIS			KEYWORD3
+genesis			KEYWORD3
 

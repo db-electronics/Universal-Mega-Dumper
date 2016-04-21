@@ -48,28 +48,40 @@
 class dbDumper
 {
 	public:
+		enum eMode{
+			undefined,
+			coleco,
+			genesis
+		};
+
 		dbDumper();
-		void setMode(uint16_t);
+		void setMode(eMode);
 		void resetCart(uint8_t);
 
 		bool detectCart();
-		uint16_t getFlashId();
+		uint16_t getFlashID();
 
 		//read
 		uint16_t readWord(uint32_t);
+		uint16_t readWord(uint16_t);
 		uint8_t readByte(uint32_t);
+		uint8_t readByte(uint16_t);
 
 		//write
 		void writeWord(uint32_t, uint16_t);
+		void writeWord(uint16_t, uint16_t);
 		void writeByte(uint32_t, uint8_t);
+		void writeByte(uint16_t, uint8_t);
 		
 		//pin numbers address control
 		static const uint8_t nLED = 8;
 		static const uint8_t nPB = 9;
 
 	private:
+		void _latchAddress(uint16_t);
 		void _latchAddress(uint32_t);
 		uint8_t _resetPin;
+		eMode _mode;
 
 		//pin numbers address control
 		static const uint8_t ALE_low = 26;
@@ -90,6 +102,17 @@ class dbDumper
 		static const uint8_t CTRL5 = 43;
 		static const uint8_t CTRL6 = 44;
 		static const uint8_t CTRL7 = 45;
+
+		//Coleco pin functions
+		static const uint8_t COL_nBPRES = 39;
+		static const uint8_t COL_nE000 = 38;
+		static const uint8_t COL_A16 = 38;
+		static const uint8_t COL_nC000 = 40;
+		static const uint8_t COL_A15 = 40;
+		static const uint8_t COL_nA000 = 41;
+		static const uint8_t COL_A14 = 41;
+		static const uint8_t COL_n8000 = 43;
+		static const uint8_t COL_A13 = 43;	
 
 		//Genesis pin functions
 		static const uint8_t GEN_SL1 = 38;
