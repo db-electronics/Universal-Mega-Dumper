@@ -6,7 +6,7 @@
         including: Genesis, SMS, PCE - with possibility for future
         expansion.
     Target Hardware:
-        Teensy++2.0 with db Electronics TeensyDumper board
+        Teensy++2.0 with db Electronics TeensyDumper board rev 1.1 or greater
     Arduino IDE settings:
         Board Type  - Teensy++2.0
         USB Type    - Serial
@@ -35,57 +35,77 @@
 
 dbDumper::dbDumper() {
 
-  uint8_t i;
+  	setMode(0);
 
-  //Dataport as inputs, use port access for performance on these
-  DATAH_DDR = 0x00;
-  DATAL_DDR = 0x00;
+}
 
-  //74HC373 latch enable input is active high, default to low
-  pinMode(ALE_low, OUTPUT);
-  digitalWrite(ALE_low, LOW);
-  pinMode(ALE_high, OUTPUT);
-  digitalWrite(ALE_high, LOW);
+void dbDumper::resetCart(uint8_t)
+{
+	digitalWrite(_resetPin, LOW);
+	delay(250);
+	digitalWrite(_resetPin, HIGH);
+}
 
-  //Cartridge detect pins need to be inputs
-  pinMode(nPCD, INPUT);
-  pinMode(nGCD, INPUT);
-  pinMode(nSCD, INPUT);
+void dbDumper::setMode(uint16_t mode)
+{
+	//Dataport as inputs, use port access for performance on these
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
 
-  //chip enables as outputs, default to high
-  pinMode(nSCE, OUTPUT);
-  digitalWrite(nSCE, HIGH);
-  pinMode(nGCE, OUTPUT);
-  digitalWrite(nGCE, HIGH);
-  pinMode(nPCE, OUTPUT);
-  digitalWrite(nPCE, HIGH);
+	//74HC373 latch enable input is active high, default to low
+  	pinMode(ALE_low, OUTPUT);
+  	digitalWrite(ALE_low, LOW);
+  	pinMode(ALE_high, OUTPUT);
+  	digitalWrite(ALE_high, LOW);
 
-  //write signals default to high
-  pinMode(nLWR, OUTPUT);    // 8 bit write, low byte (PCE, SMS)
-  digitalWrite(nLWR, HIGH);
-  pinMode(nUWR, OUTPUT);    // 8 bit write, high byte
-  digitalWrite(nUWR, HIGH);
-  pinMode(nGWR, OUTPUT);    // 16 bit write, genesis only
-  digitalWrite(nGWR, HIGH);
+	//global outputs signal default to high
+	pinMode(nWR, OUTPUT);
+  	digitalWrite(nWR, HIGH);
+  	pinMode(nRD, OUTPUT);
+  	digitalWrite(nRD, HIGH);
+	pinMode(nCE, OUTPUT);
+  	digitalWrite(nRD, HIGH);
 
-  //read-nOE default to high
-  pinMode(nRD, OUTPUT);
-  digitalWrite(nRD, HIGH);
+  	//cartridge detect
+  	pinMode(nCART, INPUT_PULLUP);
 
-  //other signals
-  pinMode(nRST, OUTPUT);
-  digitalWrite(nRST, LOW);  //start in reset
-  pinMode(nTIME, OUTPUT);
-  digitalWrite(nTIME, HIGH);
-  pinMode(M07, OUTPUT);
-  digitalWrite(M07, LOW);
+	//LED and pushbutton
+	pinMode(nLED, OUTPUT);
+	digitalWrite(nLED, HIGH);
+	pinMode(nPB, INPUT);
 
-  //wait for things to settle
-  delay(250);
-
-  //release carts from reset
-  digitalWrite(nRST, HIGH);
-
+	switch(mode)
+	{
+		case GENESIS:
+			_resetPin = GEN_nVRES;
+			pinMode(GEN_SL1, INPUT);
+		  	pinMode(GEN_SR1, INPUT);
+		  	pinMode(GEN_nDTACK, OUTPUT);
+			digitalWrite(GEN_nDTACK, HIGH);
+		  	pinMode(GEN_nCAS2, OUTPUT);
+			digitalWrite(GEN_nCAS2, HIGH);
+			pinMode(GEN_nVRES, OUTPUT);
+			digitalWrite(GEN_nVRES, HIGH);
+			pinMode(GEN_nLWR, OUTPUT);
+			digitalWrite(GEN_nLWR, HIGH);
+			pinMode(GEN_nUWR, OUTPUT);
+			digitalWrite(GEN_nUWR, HIGH);
+			pinMode(GEN_nTIME, OUTPUT);
+			digitalWrite(GEN_nTIME, HIGH);
+			resetCart(_resetPin);
+			break;	
+		default:
+			//control signals default to all inputs
+		  	pinMode(CTRL0, INPUT);
+		  	pinMode(CTRL1, INPUT);
+		  	pinMode(CTRL2, INPUT);
+		  	pinMode(CTRL3, INPUT);
+			pinMode(CTRL4, INPUT);
+			pinMode(CTRL5, INPUT);
+			pinMode(CTRL6, INPUT);
+			pinMode(CTRL7, INPUT);
+			break;
+	}
 }
 
 uint16_t dbDumper::readWord(uint32_t address)
@@ -99,14 +119,36 @@ uint16_t dbDumper::readWord(uint32_t address)
   DATAL_DDR = 0x00;
 
   // read the bus
-  digitalWrite(nGCE, LOW);
+  digitalWrite(nCE, LOW);
   digitalWrite(nRD, LOW);
   
   readData = (uint16_t)DATAINH;
   readData <<= 8;
   readData |= (uint16_t)(DATAINL & 0x00FF);
   
-  digitalWrite(nGCE, HIGH);
+  digitalWrite(nCE, HIGH);
+  digitalWrite(nRD, HIGH);
+
+  return readData;
+}
+
+uint8_t dbDumper::readByte(uint32_t address)
+{
+  uint8_t readData;
+
+  _latchAddress(address);
+
+  //set data bus to inputs
+  DATAH_DDR = 0x00;
+  DATAL_DDR = 0x00;
+
+  // read the bus
+  digitalWrite(nCE, LOW);
+  digitalWrite(nRD, LOW);
+  
+  readData = DATAINL;
+  
+  digitalWrite(nCE, HIGH);
   digitalWrite(nRD, HIGH);
 
   return readData;
@@ -125,17 +167,41 @@ void dbDumper::writeWord(uint32_t address, uint16_t data)
   DATAOUTH = (uint8_t)(data>>8);
 
   // write to the bus
-  digitalWrite(nGCE, LOW);
-  digitalWrite(nGWR, LOW);
+  digitalWrite(nCE, LOW);
+  digitalWrite(nWR, LOW);
   delayMicroseconds(1);
-  digitalWrite(nGWR, HIGH);
-  digitalWrite(nGCE, HIGH);
+  digitalWrite(nWR, HIGH);
+  digitalWrite(nCE, HIGH);
   
   //set data bus to inputs
   DATAH_DDR = 0x00;
   DATAL_DDR = 0x00;
 }
 
+void dbDumper::writeByte(uint32_t address, uint8_t data)
+{
+  _latchAddress(address);
+
+  //set data bus to outputs
+  DATAH_DDR = 0xFF;
+  DATAL_DDR = 0xFF;
+
+  //put word on bus
+  DATAOUTL = data;
+
+  // write to the bus
+  digitalWrite(nCE, LOW);
+  digitalWrite(nWR, LOW);
+  delayMicroseconds(1);
+  digitalWrite(nWR, HIGH);
+  digitalWrite(nCE, HIGH);
+  
+  //set data bus to inputs
+  DATAH_DDR = 0x00;
+  DATAL_DDR = 0x00;
+}
+
+/*
 void dbDumper::readBlock(uint32_t address, uint32_t blockSize)
 {
   uint16_t i;
@@ -147,15 +213,16 @@ void dbDumper::readBlock(uint32_t address, uint32_t blockSize)
     DATAH_DDR = 0x00;
     DATAL_DDR = 0x00;
     // read the bus
-    digitalWrite(nGCE, LOW);
+    digitalWrite(nCE, LOW);
     digitalWrite(nRD, LOW);
     dataBuffer[i] = DATAINH;
     dataBuffer[i+1] = DATAINL;
-    digitalWrite(nGCE, HIGH);
+    digitalWrite(nCE, HIGH);
     digitalWrite(nRD, HIGH);
     address += 2;
   }
 }
+*/
 
 void dbDumper::_latchAddress(uint32_t address)
 {
@@ -182,8 +249,9 @@ void dbDumper::_latchAddress(uint32_t address)
   digitalWrite(ALE_high, LOW);
 }
 
-uint16_t dbDumper::getFlashId(uint8_t type)
+uint16_t dbDumper::getFlashId()
 {
+/*
   uint16_t flashID;
   switch(type)
   {
@@ -197,37 +265,18 @@ uint16_t dbDumper::getFlashId(uint8_t type)
       flashID = 0xFFFF;
       break;
   }
-  
-  return flashID;
+*/
+  return 0;
 }
 
-bool dbDumper::detectCart(uint8_t type)
+bool dbDumper::detectCart()
 {
-  bool detect = false;
+  	bool detect = false;
 
-  switch(type)
-  {
-    case GENESIS:
-      if (digitalRead(nGCD) == LOW)
-      {
-        detect = true;
-      }
-      break;
-    case SMS:
-      if (digitalRead(nSCD) == LOW)
-      {
-        detect = true;
-      }
-      break;
-    case PCE:
-      if (digitalRead(nPCD) == LOW)
-      {
-        detect = true;
-      }
-      break;
-    default:
-
-      break;
-  }
+  	if (digitalRead(nCART) == LOW)
+	{
+		detect = true;
+	}
+	return detect;
 }
 

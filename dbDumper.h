@@ -43,49 +43,70 @@
 #define DATAH_DDR     DDRD
 #define DATAL_DDR     DDRC
 
-#define GENESIS       'G'
-#define SMS           'S'
-#define PCE           'P'
+#define GENESIS       1
 
 class dbDumper
 {
 	public:
 		dbDumper();
-		bool dbDumper::detectCart()
-		uint16_t dbDumper::getFlashId()
+		void setMode(uint16_t);
+		void resetCart(uint8_t);
+
+		bool detectCart();
+		uint16_t getFlashId();
 
 		//read
-		uint16_t dbDumper::readWord(uint32_t);
-		uint8_t dbDumper::readByte(uint32_t, uint8_t);
+		uint16_t readWord(uint32_t);
+		uint8_t readByte(uint32_t);
 
 		//write
-		void dbDumper::writeWord(uint32_t, uint16_t);
-		void dbDumper::writeByte(uint32_t, uint8_t);
+		void writeWord(uint32_t, uint16_t);
+		void writeByte(uint32_t, uint8_t);
 		
+		//pin numbers address control
+		static const uint8_t nLED = 8;
+		static const uint8_t nPB = 9;
+
 	private:
 		void _latchAddress(uint32_t);
+		uint8_t _resetPin;
 
-		//pin numbers
-		static const uint8_t nLWR = 8;
-		static const uint8_t nUWR = 9;
+		//pin numbers address control
 		static const uint8_t ALE_low = 26;
 		static const uint8_t ALE_high = 27;
-		static const uint8_t nRD = 25;
-		static const uint8_t M07 = 24;
-		static const uint8_t nSCE = 23;
-		static const uint8_t nGCE = 22;
-		static const uint8_t nPCE = 21;
-		static const uint8_t nRST = 20;
-		static const uint8_t nTIME = 19;
-		static const uint8_t nGWR = 18;
-		static const uint8_t nPCD = 38;
-		static const uint8_t nGCD = 39;
-		static const uint8_t nSCD = 40;
-		static const uint8_t nPBtn = 44;
-		static const uint8_t nLED = 45;
-};
 
-  uint8_t dataBuffer[1024];
+		//globally affected pins
+		static const uint8_t nRD = 25;	
+		static const uint8_t nWR = 24;
+		static const uint8_t nCE = 19;
+		static const uint8_t nCART = 18;
+
+		//general control pins
+		static const uint8_t CTRL0 = 38;
+		static const uint8_t CTRL1 = 39;
+		static const uint8_t CTRL2 = 40;
+		static const uint8_t CTRL3 = 41;
+		static const uint8_t CTRL4 = 42;
+		static const uint8_t CTRL5 = 43;
+		static const uint8_t CTRL6 = 44;
+		static const uint8_t CTRL7 = 45;
+
+		//Genesis pin functions
+		static const uint8_t GEN_SL1 = 38;
+		static const uint8_t GEN_SR1 = 39;
+		static const uint8_t GEN_nDTACK = 40;
+		static const uint8_t GEN_nCAS2 = 41;
+		static const uint8_t GEN_nVRES = 42;
+		static const uint8_t GEN_nLWR = 43;
+		static const uint8_t GEN_nUWR = 44;
+		static const uint8_t GEN_nTIME = 45;
+		
+		//SPI pins
+		static const uint8_t MISOp = 23;
+		static const uint8_t MOSIp = 22;
+		static const uint8_t SCKp = 21;
+		static const uint8_t SCSp = 20;	
+};
 
 #endif  //dbDumper_h
 

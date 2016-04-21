@@ -12,6 +12,7 @@ dbDumper		KEYWORD1
 # Methods and Functions (KEYWORD2)
 #######################################
 
+setMode			KEYWORD2
 detectCart		KEYWORD2
 getFlashID		KEYWORD2
 readWord		KEYWORD2
@@ -22,5 +23,5 @@ writeByte		KEYWORD2
 #######################################
 # Constants (LITERAL1)
 #######################################
-devType		KEYWORD3
+GENESIS			KEYWORD3
 
