@@ -43,29 +43,31 @@
 #define DATAH_DDR     DDRD
 #define DATAL_DDR     DDRC
 
-#define GENESIS       1
-
 class dbDumper
 {
 	public:
-		enum eMode{
+		enum eMode
+		{
 			undefined,
 			coleco,
-			genesis
+			genesis,
+			pcengine
 		};
 
 		dbDumper();
+		
 		void setMode(eMode);
 		void resetCart(uint8_t);
-
 		bool detectCart();
 		uint16_t getFlashID();
 
 		//read
-		uint16_t readWord(uint32_t);
+		uint8_t readByte(uint16_t);
 		uint16_t readWord(uint16_t);
 		uint8_t readByte(uint32_t);
-		uint8_t readByte(uint16_t);
+		uint16_t readWord(uint32_t);
+		void readWordBlock(uint32_t, uint8_t*, uint16_t);
+		void readByteBlock(uint32_t, uint8_t*, uint16_t);
 
 		//write
 		void writeWord(uint32_t, uint16_t);
@@ -73,13 +75,14 @@ class dbDumper
 		void writeByte(uint32_t, uint8_t);
 		void writeByte(uint16_t, uint8_t);
 		
-		//pin numbers address control
+		//pin numbers UI
 		static const uint8_t nLED = 8;
 		static const uint8_t nPB = 9;
 
 	private:
-		void _latchAddress(uint16_t);
-		void _latchAddress(uint32_t);
+		inline void _latchAddress(uint16_t);
+		inline void _latchAddress(uint32_t);
+		
 		uint8_t _resetPin;
 		eMode _mode;
 

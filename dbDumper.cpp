@@ -125,6 +125,7 @@ void dbDumper::setMode(eMode mode)
 			pinMode(CTRL5, INPUT);
 			pinMode(CTRL6, INPUT);
 			pinMode(CTRL7, INPUT);
+			_mode = undefined;
 			break;
 	}
 }
@@ -183,166 +184,221 @@ uint16_t dbDumper::readWord(uint16_t address)
 
 uint8_t dbDumper::readByte(uint32_t address)
 {
-  uint8_t readData;
+	uint8_t readData;
 
-  _latchAddress(address);
+	_latchAddress(address);
 
-  //set data bus to inputs
-  DATAH_DDR = 0x00;
-  DATAL_DDR = 0x00;
+	//set data bus to inputs
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
 
-  // read the bus
-  digitalWrite(nCE, LOW);
-  digitalWrite(nRD, LOW);
+	// read the bus
+	digitalWrite(nCE, LOW);
+	digitalWrite(nRD, LOW);
   
-  readData = DATAINL;
+	//read genesis odd bytes from the high byte of the bus
+	switch(_mode)
+	{
+		case genesis:
+			if( (uint8_t)(address) & 0x01 )
+			{
+				readData = DATAINH;
+			}else
+			{
+				readData = DATAINL;
+			}
+			break;
+		default:
+			readData = DATAINL;
+			break;
+	}
   
-  digitalWrite(nCE, HIGH);
-  digitalWrite(nRD, HIGH);
+	digitalWrite(nCE, HIGH);
+	digitalWrite(nRD, HIGH);
 
-  return readData;
+	return readData;
 }
 
 uint8_t dbDumper::readByte(uint16_t address)
 {
-  uint8_t readData;
+	uint8_t readData;
 
-  _latchAddress(address);
+	_latchAddress(address);
 
-  //set data bus to inputs
-  DATAH_DDR = 0x00;
-  DATAL_DDR = 0x00;
+	//set data bus to inputs
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
 
-  // read the bus
-  digitalWrite(nCE, LOW);
-  digitalWrite(nRD, LOW);
+	// read the bus
+	digitalWrite(nCE, LOW);
+	digitalWrite(nRD, LOW);
   
-  readData = DATAINL;
+	//read genesis odd bytes from the high byte of the bus
+	switch(_mode)
+	{
+		case genesis:
+			if( (uint8_t)(address) & 0x01 )
+			{
+				readData = DATAINH;
+			}else
+			{
+				readData = DATAINL;
+			}
+			break;
+		default:
+			readData = DATAINL;
+			break;
+	}
   
-  digitalWrite(nCE, HIGH);
-  digitalWrite(nRD, HIGH);
+	digitalWrite(nCE, HIGH);
+	digitalWrite(nRD, HIGH);
 
-  return readData;
+	return readData;
 }
 
 void dbDumper::writeWord(uint32_t address, uint16_t data)
 {
-  _latchAddress(address);
+	_latchAddress(address);
 
-  //set data bus to outputs
-  DATAH_DDR = 0xFF;
-  DATAL_DDR = 0xFF;
+	//set data bus to outputs
+	DATAH_DDR = 0xFF;
+	DATAL_DDR = 0xFF;
 
-  //put word on bus
-  DATAOUTL = (uint8_t)(data);
-  DATAOUTH = (uint8_t)(data>>8);
+	//put word on bus
+	DATAOUTL = (uint8_t)(data);
+	DATAOUTH = (uint8_t)(data>>8);
 
-  // write to the bus
-  digitalWrite(nCE, LOW);
-  digitalWrite(nWR, LOW);
-  delayMicroseconds(1);
-  digitalWrite(nWR, HIGH);
-  digitalWrite(nCE, HIGH);
+	// write to the bus
+	digitalWrite(nCE, LOW);
+	digitalWrite(nWR, LOW);
+	delayMicroseconds(1);
+	digitalWrite(nWR, HIGH);
+	digitalWrite(nCE, HIGH);
   
-  //set data bus to inputs
-  DATAH_DDR = 0x00;
-  DATAL_DDR = 0x00;
+	//set data bus to inputs
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
 }
 
 void dbDumper::writeWord(uint16_t address, uint16_t data)
 {
-  _latchAddress(address);
+	_latchAddress(address);
 
-  //set data bus to outputs
-  DATAH_DDR = 0xFF;
-  DATAL_DDR = 0xFF;
+	//set data bus to outputs
+	DATAH_DDR = 0xFF;
+	DATAL_DDR = 0xFF;
 
-  //put word on bus
-  DATAOUTL = (uint8_t)(data);
-  DATAOUTH = (uint8_t)(data>>8);
+	//put word on bus
+	DATAOUTL = (uint8_t)(data);
+	DATAOUTH = (uint8_t)(data>>8);
 
-  // write to the bus
-  digitalWrite(nCE, LOW);
-  digitalWrite(nWR, LOW);
-  delayMicroseconds(1);
-  digitalWrite(nWR, HIGH);
-  digitalWrite(nCE, HIGH);
+	// write to the bus
+	digitalWrite(nCE, LOW);
+	digitalWrite(nWR, LOW);
+	delayMicroseconds(1);
+	digitalWrite(nWR, HIGH);
+	digitalWrite(nCE, HIGH);
   
-  //set data bus to inputs
-  DATAH_DDR = 0x00;
-  DATAL_DDR = 0x00;
+	//set data bus to inputs
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
 }
 
 void dbDumper::writeByte(uint32_t address, uint8_t data)
 {
-  _latchAddress(address);
+	_latchAddress(address);
 
-  //set data bus to outputs
-  DATAH_DDR = 0xFF;
-  DATAL_DDR = 0xFF;
+	//set data bus to outputs
+	DATAH_DDR = 0xFF;
+	DATAL_DDR = 0xFF;
 
-  //put word on bus
-  DATAOUTL = data;
+	//put word on bus
+	DATAOUTL = data;
 
-  // write to the bus
-  digitalWrite(nCE, LOW);
-  digitalWrite(nWR, LOW);
-  delayMicroseconds(1);
-  digitalWrite(nWR, HIGH);
-  digitalWrite(nCE, HIGH);
+	// write to the bus
+	digitalWrite(nCE, LOW);
+	digitalWrite(nWR, LOW);
+	delayMicroseconds(1);
+	digitalWrite(nWR, HIGH);
+	digitalWrite(nCE, HIGH);
   
-  //set data bus to inputs
-  DATAH_DDR = 0x00;
-  DATAL_DDR = 0x00;
+	//set data bus to inputs
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
 }
 
 void dbDumper::writeByte(uint16_t address, uint8_t data)
 {
-  _latchAddress(address);
+	_latchAddress(address);
 
-  //set data bus to outputs
-  DATAH_DDR = 0xFF;
-  DATAL_DDR = 0xFF;
+	//set data bus to outputs
+	DATAH_DDR = 0xFF;
+	DATAL_DDR = 0xFF;
 
-  //put word on bus
-  DATAOUTL = data;
+	//put word on bus
+	DATAOUTL = data;
 
-  // write to the bus
-  digitalWrite(nCE, LOW);
-  digitalWrite(nWR, LOW);
-  delayMicroseconds(1);
-  digitalWrite(nWR, HIGH);
-  digitalWrite(nCE, HIGH);
+	// write to the bus
+	digitalWrite(nCE, LOW);
+	digitalWrite(nWR, LOW);
+	delayMicroseconds(1);
+	digitalWrite(nWR, HIGH);
+	digitalWrite(nCE, HIGH);
   
-  //set data bus to inputs
-  DATAH_DDR = 0x00;
-  DATAL_DDR = 0x00;
+	//set data bus to inputs
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
 }
 
-/*
-void dbDumper::readBlock(uint32_t address, uint32_t blockSize)
+
+void dbDumper::readWordBlock(uint32_t address, uint8_t * buf, uint16_t blockSize)
 {
-  uint16_t i;
+	uint16_t i;
 
-  for(i=0 ; i < blockSize ; i+=2)
-  {
-    _latchAddress(address);
-    //set data bus to inputs
-    DATAH_DDR = 0x00;
-    DATAL_DDR = 0x00;
-    // read the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nRD, LOW);
-    dataBuffer[i] = DATAINH;
-    dataBuffer[i+1] = DATAINL;
-    digitalWrite(nCE, HIGH);
-    digitalWrite(nRD, HIGH);
-    address += 2;
-  }
+	for( i = 0 ; i < blockSize ; i += 2 )
+	{
+		_latchAddress(address);
+		
+		//set data bus to inputs
+		DATAH_DDR = 0x00;
+		DATAL_DDR = 0x00;
+		
+		// read the bus
+		digitalWrite(nCE, LOW);
+		digitalWrite(nRD, LOW);
+		buf[i] = DATAINH;
+		buf[i+1] = DATAINL;
+		digitalWrite(nCE, HIGH);
+		digitalWrite(nRD, HIGH);
+		
+		address += 2;
+	}
 }
-*/
 
-void dbDumper::_latchAddress(uint32_t address)
+void dbDumper::readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize)
+{
+	uint16_t i;
+
+	for( i = 0 ; i < blockSize ; i += 1 )
+	{
+		_latchAddress(address);
+		
+		//set data bus to inputs
+		DATAH_DDR = 0x00;
+		DATAL_DDR = 0x00;
+		
+		// read the bus
+		digitalWrite(nCE, LOW);
+		digitalWrite(nRD, LOW);
+		buf[i] = DATAINL;
+		digitalWrite(nCE, HIGH);
+		digitalWrite(nRD, HIGH);
+		
+		address += 1;
+	}
+}
+
+inline void dbDumper::_latchAddress(uint32_t address)
 {
   uint8_t addrh,addrm,addrl;
   //separate address into 3 bytes for address latches
@@ -367,7 +423,7 @@ void dbDumper::_latchAddress(uint32_t address)
   digitalWrite(ALE_high, LOW);
 }
 
-void dbDumper::_latchAddress(uint16_t address)
+inline void dbDumper::_latchAddress(uint16_t address)
 {
   uint8_t addrm,addrl;
   //separate address into 2 bytes for address latches
@@ -389,10 +445,26 @@ void dbDumper::_latchAddress(uint16_t address)
 uint16_t dbDumper::getFlashID()
 {
 
-  	uint16_t flashID;
+  	uint16_t flashID = 0;
 
   	switch(_mode)
   	{
+		case genesis:
+			//mx29f800 software ID detect word mode
+			writeWord((uint16_t)0x0555,0x00AA);
+			writeWord((uint16_t)0x02AA,0x0055);
+			writeWord((uint16_t)0x0555,0x0090);
+			flashID = readWord((uint16_t)0x0001);
+			writeWord((uint16_t)0x0000,0x00F0);
+			break;
+		case pcengine:
+			//mx29f800 software ID detect byte mode
+			writeByte((uint16_t)0x0AAA,0xAA);
+			writeByte((uint16_t)0x0555,0x55);
+			writeByte((uint16_t)0x0AAA,0x90);
+			flashID = (uint16_t)readByte((uint16_t)0x0002);
+			writeByte((uint16_t)0x0000,0xF0);
+			break;
     	case coleco:
 			//SST39SF0x0 software ID detect
 
