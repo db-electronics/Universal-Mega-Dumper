@@ -110,25 +110,41 @@ void dbTD_setModeCMD()
 
 void dbTD_flashIDCMD()
 {
-  uint16_t readWord;
-  readWord = db.getFlashID();
+  char *arg;
+  uint16_t data;
+  data = db.getFlashID();
 
-  Serial.write((char)(readWord));
-  Serial.write((char)(readWord>>8));
+  arg = SCmd.next();
+  if( arg != NULL )
+  {
+    switch(*arg)
+    {
+      case 'h':
+          Serial.print(data,HEX);
+        break;
+      default:
+        break;
+    }
+  }else
+  {
+    Serial.write((char)(data));
+    Serial.write((char)(data>>8));
+  }
+
 }
 
 void dbTD_readWordCMD()
 {
   char *arg;
   uint32_t address=0;
-  uint16_t readWord;
+  uint16_t data;
   arg = SCmd.next();
 
   address = strtoul(arg, (char**)0, 0);
-  readWord = db.readWord(address);
+  data = db.readWord(address);
 
-  Serial.write((char)(readWord));
-  Serial.write((char)(readWord>>8));
+  Serial.write((char)(data));
+  Serial.write((char)(data>>8));
 
 }
 
@@ -136,14 +152,27 @@ void dbTD_readByteCMD()
 {
   char *arg;
   uint32_t address=0;
-  uint8_t readWord;
+  uint8_t data;
   arg = SCmd.next();
 
   address = strtoul(arg, (char**)0, 0);
-  readWord = db.readWord(address);
+  data = db.readByte(address);
 
-  Serial.write((char)(readWord));
-  Serial.write((char)(readWord>>8));
+  arg = SCmd.next();
+  if( arg != NULL )
+  {
+    switch(*arg)
+    {
+      case 'h':
+          Serial.print(data,HEX);
+        break;
+      default:
+        break;
+    }
+  }else
+  {
+    Serial.write((char)(data));
+  }
 
 }
 
