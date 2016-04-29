@@ -46,13 +46,7 @@
 class dbDumper
 {
 	public:
-		enum eMode
-		{
-			undefined,
-			coleco,
-			genesis,
-			pcengine
-		};
+		enum eMode{ undefined, coleco, genesis, pcengine };
 
 		dbDumper();
 		
@@ -80,11 +74,16 @@ class dbDumper
 		static const uint8_t nPB = 9;
 
 	private:
+		uint8_t _resetPin;
+		uint16_t _flashID;
+		eMode _mode;
+	
 		inline void _latchAddress(uint16_t);
 		inline void _latchAddress(uint32_t);
 		
-		uint8_t _resetPin;
-		eMode _mode;
+		void _colSoftwareIDEntry();
+		void _colSoftwareIDExit();
+		void _colPinMode();
 
 		//pin numbers address control
 		static const uint8_t ALE_low = 26;

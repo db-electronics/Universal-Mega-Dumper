@@ -1,6 +1,6 @@
  /*
     Title:          dbDumper.cpp
-    Author:         René Riuint8_td
+    Author:         René Richard
     Description:
         This library allows to read and write to various game cartridges
         including: Genesis, SMS, PCE - with possibility for future
@@ -33,7 +33,8 @@
 #include "Arduino.h"
 #include "dbDumper.h"
 
-dbDumper::dbDumper() {
+dbDumper::dbDumper() 
+{
 
   	setMode(undefined);
 
@@ -77,21 +78,7 @@ void dbDumper::setMode(eMode mode)
 	switch(mode)
 	{
 		case coleco:
-			
-			pinMode(COL_nBPRES, OUTPUT);
-			digitalWrite(COL_nBPRES, LOW);
-			pinMode(COL_nE000, OUTPUT);
-			digitalWrite(COL_nE000, LOW);
-			pinMode(COL_nC000, OUTPUT);
-			digitalWrite(COL_nC000, LOW);
-			pinMode(COL_nA000, OUTPUT);
-			digitalWrite(COL_nA000, LOW);
-			pinMode(COL_n8000, OUTPUT);
-			digitalWrite(COL_n8000, LOW);
-
-			_resetPin = 45; //unused with coleco
-			_mode = coleco;
-
+			_colPinMode();
 			break;
 		case genesis:
 			
@@ -400,51 +387,50 @@ void dbDumper::readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize
 
 inline void dbDumper::_latchAddress(uint32_t address)
 {
-  uint8_t addrh,addrm,addrl;
-  //separate address into 3 bytes for address latches
-  addrl = (uint8_t)(address & 0xFF);
-  addrm = (uint8_t)(address>>8 & 0xFF);
-  addrh = (uint8_t)(address>>16 & 0xFF);
+	uint8_t addrh,addrm,addrl;
+	//separate address into 3 bytes for address latches
+	addrl = (uint8_t)(address & 0xFF);
+	addrm = (uint8_t)(address>>8 & 0xFF);
+	addrh = (uint8_t)(address>>16 & 0xFF);
 
-  //set data to outputs
-  DATAH_DDR = 0xFF;
-  DATAL_DDR = 0xFF;
+	//set data to outputs
+	DATAH_DDR = 0xFF;
+	DATAL_DDR = 0xFF;
 
-  //put low and mid address on bus and latch it
-  DATAOUTH = addrm;
-  DATAOUTL = addrl;
-  digitalWrite(ALE_low, HIGH);
-  digitalWrite(ALE_low, LOW);
+	//put low and mid address on bus and latch it
+	DATAOUTH = addrm;
+	DATAOUTL = addrl;
+	digitalWrite(ALE_low, HIGH);
+	digitalWrite(ALE_low, LOW);
 
-  //put high address on bus and latch it
-  DATAOUTH = 0x00;
-  DATAOUTL = addrh;
-  digitalWrite(ALE_high, HIGH);
-  digitalWrite(ALE_high, LOW);
+	//put high address on bus and latch it
+	DATAOUTH = 0x00;
+	DATAOUTL = addrh;
+	digitalWrite(ALE_high, HIGH);
+	digitalWrite(ALE_high, LOW);
 }
 
 inline void dbDumper::_latchAddress(uint16_t address)
 {
-  uint8_t addrm,addrl;
-  //separate address into 2 bytes for address latches
-  addrl = (uint8_t)(address & 0xFF);
-  addrm = (uint8_t)(address>>8 & 0xFF);
+	uint8_t addrm,addrl;
+	//separate address into 2 bytes for address latches
+	addrl = (uint8_t)(address & 0xFF);
+	addrm = (uint8_t)(address>>8 & 0xFF);
 
-  //set data to outputs
-  DATAH_DDR = 0xFF;
-  DATAL_DDR = 0xFF;
+	//set data to outputs
+	DATAH_DDR = 0xFF;
+	DATAL_DDR = 0xFF;
 
-  //put low and mid address on bus and latch it
-  DATAOUTH = addrm;
-  DATAOUTL = addrl;
-  digitalWrite(ALE_low, HIGH);
-  digitalWrite(ALE_low, LOW);
+	//put low and mid address on bus and latch it
+	DATAOUTH = addrm;
+	DATAOUTL = addrl;
+	digitalWrite(ALE_low, HIGH);
+	digitalWrite(ALE_low, LOW);
 
 }
 
 uint16_t dbDumper::getFlashID()
 {
-
   	uint16_t flashID = 0;
 
   	switch(_mode)
@@ -468,31 +454,14 @@ uint16_t dbDumper::getFlashID()
     	case coleco:
 			//SST39SF0x0 software ID detect
 
-			digitalWrite(COL_nBPRES, LOW);
-			digitalWrite(COL_A16, LOW);
-			digitalWrite(COL_A15, LOW);
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, LOW);
+			_colSoftwareIDEntry();
+			
+			flashID = (uint16_t)readByte((uint16_t)0x0000);
+			flashID <<= 8;
+			flashID |= (uint16_t)readByte((uint16_t)0x0001);
+			_flashID = flashID;
 
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
-      		writeByte((uint16_t)0x5555,0xAA);
-
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, HIGH);
-      		writeByte((uint16_t)0x2AAA,0x55);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
-      		writeByte((uint16_t)0x5555,0x90);
-
-			digitalWrite(COL_A16, LOW);
-			digitalWrite(COL_A15, LOW);
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, LOW);
-			flashID = (uint16_t)readByte((uint16_t)0x0001);
-
-			writeByte((uint16_t)0x0000,0xF0);
+			_colSoftwareIDExit();
 
       		break;
 		default:

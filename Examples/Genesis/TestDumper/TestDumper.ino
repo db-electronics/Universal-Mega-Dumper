@@ -34,13 +34,13 @@ dbDumper db;
 
 void setup() {
 
-  char i;
+  uint8_t i;
 
   //hello PC
   Serial.begin(57600);
-  Serial.println(F("db Electronics TeensyDumper v0.1"));
+  Serial.println(F("db Electronics TeensyDumper v0.2"));
 
-  db.setMode(GENESIS);
+  db.setMode(db.genesis);
 
   //flash to show we're alive
   for(i=0;i<4;i++)
@@ -52,9 +52,14 @@ void setup() {
   }
 
   //register callbacks for SerialCommand
-  SCmd.addCommand("DT",dbTD_detectCMD);
+  SCmd.addCommand("dt",dbTD_detectCMD);
+  SCmd.addCommand("sm",dbTD_setModeCMD);
+  SCmd.addCommand("id",dbTD_flashIDCMD);
+  SCmd.addCommand("rw",dbTD_readWordCMD);
+  SCmd.addCommand("rb",dbTD_readByteCMD);
   SCmd.addDefaultHandler(unknownCMD);
 }
+
 void loop()
 {
   SCmd.readSerial();
@@ -71,7 +76,6 @@ void unknownCMD(const char *command)
   Serial.println(SCmd.getCommandList());  //Returns all registered commands
 }
 
-
 void dbTD_detectCMD()
 {
   if(db.detectCart())
@@ -81,6 +85,66 @@ void dbTD_detectCMD()
   {
     Serial.println(F("False")); 
   }
+}
+
+void dbTD_setModeCMD()
+{
+  char *arg;
+  arg = SCmd.next();
+  switch(*arg)
+  {
+    case 'g':
+      db.setMode(db.genesis);
+      Serial.println(F("mode set genesis")); 
+      break;
+    case 'c':
+      db.setMode(db.coleco);
+      Serial.println(F("mode set coleco")); 
+      break;
+    default:
+      Serial.println(F("mode set undefined")); 
+      db.setMode(db.undefined);
+      break;
+  }  
+}
+
+void dbTD_flashIDCMD()
+{
+  uint16_t readWord;
+  readWord = db.getFlashID();
+
+  Serial.write((char)(readWord));
+  Serial.write((char)(readWord>>8));
+}
+
+void dbTD_readWordCMD()
+{
+  char *arg;
+  uint32_t address=0;
+  uint16_t readWord;
+  arg = SCmd.next();
+
+  address = strtoul(arg, (char**)0, 0);
+  readWord = db.readWord(address);
+
+  Serial.write((char)(readWord));
+  Serial.write((char)(readWord>>8));
+
+}
+
+void dbTD_readByteCMD()
+{
+  char *arg;
+  uint32_t address=0;
+  uint8_t readWord;
+  arg = SCmd.next();
+
+  address = strtoul(arg, (char**)0, 0);
+  readWord = db.readWord(address);
+
+  Serial.write((char)(readWord));
+  Serial.write((char)(readWord>>8));
+
 }
 
 /*
