@@ -69,6 +69,15 @@ class dbDumper
 		void writeByte(uint32_t, uint8_t);
 		void writeByte(uint16_t, uint8_t);
 		
+		//erase
+		void chipErase(void);
+		uint8_t toggleBit(uint8_t);
+		
+		//program
+		void programByte(uint16_t, uint8_t);
+		void programByte(uint32_t, uint8_t);
+		void programWord(uint32_t, uint16_t);
+		
 		//pin numbers UI
 		static const uint8_t nLED = 8;
 		static const uint8_t nPB = 9;

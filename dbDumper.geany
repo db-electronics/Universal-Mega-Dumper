@@ -22,10 +22,10 @@ long_line_behaviour=1
 long_line_column=72
 
 [files]
-current_page=0
-FILE_NAME_0=2201;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FArduino%2Flibraries%2FdbDumper%2FdbDumper.h;0;4
-FILE_NAME_1=1281;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FArduino%2Flibraries%2FdbDumper%2FdbDumper.cpp;0;4
-FILE_NAME_2=369;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FArduino%2Flibraries%2FdbDumper%2Fcoleco.cpp;0;4
+current_page=1
+FILE_NAME_0=2082;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FArduino%2Flibraries%2FdbDumper%2FdbDumper.h;0;4
+FILE_NAME_1=14873;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FArduino%2Flibraries%2FdbDumper%2FdbDumper.cpp;0;4
+FILE_NAME_2=1928;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FArduino%2Flibraries%2FdbDumper%2Fcoleco.cpp;0;4
 
 [VTE]
 last_dir=/home/rene

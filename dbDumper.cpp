@@ -437,19 +437,19 @@ uint16_t dbDumper::getFlashID()
   	{
 		case genesis:
 			//mx29f800 software ID detect word mode
-			writeWord((uint16_t)0x0555,0x00AA);
-			writeWord((uint16_t)0x02AA,0x0055);
-			writeWord((uint16_t)0x0555,0x0090);
+			writeWord((uint16_t)0x0555, 0x00AA);
+			writeWord((uint16_t)0x02AA, 0x0055);
+			writeWord((uint16_t)0x0555, 0x0090);
 			flashID = readWord((uint16_t)0x0001);
-			writeWord((uint16_t)0x0000,0x00F0);
+			writeWord((uint16_t)0x0000, 0x00F0);
 			break;
 		case pcengine:
 			//mx29f800 software ID detect byte mode
-			writeByte((uint16_t)0x0AAA,0xAA);
-			writeByte((uint16_t)0x0555,0x55);
-			writeByte((uint16_t)0x0AAA,0x90);
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0x90);
 			flashID = (uint16_t)readByte((uint16_t)0x0002);
-			writeByte((uint16_t)0x0000,0xF0);
+			writeByte((uint16_t)0x0000, 0xF0);
 			break;
     	case coleco:
 			//SST39SF0x0 software ID detect
@@ -470,6 +470,237 @@ uint16_t dbDumper::getFlashID()
   	}
 
   	return flashID;
+}
+
+void dbDumper::chipErase()
+{
+  	switch(_mode)
+  	{
+		case genesis:
+			//mx29f800 chip erase word mode
+			writeWord((uint16_t)0x0555, 0x00AA);
+			writeWord((uint16_t)0x02AA, 0x0055);
+			writeWord((uint16_t)0x0555, 0x0080);
+			writeWord((uint16_t)0x0555, 0x00AA);
+			writeWord((uint16_t)0x02AA, 0x0055);
+			writeWord((uint16_t)0x0555, 0x0010);
+			break;
+		case pcengine:
+			//mx29f800 chip erase byte mode
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0x80);
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0x10);
+			break;
+    	case coleco:
+			//SST39SF0x0 chip erase
+			digitalWrite(COL_nBPRES, LOW);
+			digitalWrite(COL_A16, LOW);
+			digitalWrite(COL_A15, LOW);
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, LOW);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0xAA);
+
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, HIGH);
+			writeByte((uint16_t)0x2AAA, 0x55);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0x80);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0xAA);
+			
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, HIGH);
+			writeByte((uint16_t)0x2AAA, 0x55);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0x10);
+
+			digitalWrite(COL_A16, LOW);
+			digitalWrite(COL_A15, LOW);
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, LOW);
+      		break;
+		default:
+			break;
+  	}
+}
+
+uint8_t dbDumper::toggleBit(uint8_t attempts)
+{
+	uint8_t retValue = 0;
+	uint8_t i;
+	
+  	switch(_mode)
+  	{
+		case genesis:
+			//mx29f800 toggle bit on bit 6
+			uint16_t read16Value, old16Value;
+			
+			//first read should always be a 1 according to datasheet
+			old16Value = readWord((uint16_t)0x0000) & 0x0040;
+			
+			for( i=0; i<attempts; i++ )
+			{
+				//successive reads compare this read to the previous one for toggle bit
+				read16Value = readWord((uint16_t)0x0000) & 0x0040;
+				if( old16Value == read16Value )
+				{
+					retValue += 1;
+				}else
+				{
+					retValue = 0;
+				}
+				old16Value = read16Value;
+			}
+			break;
+		case pcengine:
+    	case coleco:
+			//SST39SF0x0 toggle bit on bit 6
+			uint8_t readValue, oldValue;
+			
+			//first read should always be a 1 according to datasheet
+			oldValue = readByte((uint16_t)0x0000) & 0x40;
+			
+			for( i=0; i<attempts; i++ )
+			{
+				//successive reads compare this read to the previous one for toggle bit
+				readValue = readByte((uint16_t)0x0000) & 0x40;
+				if( oldValue == readValue )
+				{
+					retValue += 1;
+				}else
+				{
+					retValue = 0;
+				}
+				oldValue = readValue;
+			}
+      		break;
+		default:
+			break;
+  	}
+  	return retValue;
+}
+
+void dbDumper::programByte(uint16_t address, uint8_t data)
+{
+	uint16_t range;
+  	switch(_mode)
+  	{
+		case pcengine:
+			//MX29F800 program byte
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0xA0);
+			writeByte(address, data);
+			
+			break;
+    	case coleco:
+			//SST39SF0x0 program byte
+			digitalWrite(COL_nBPRES, LOW);
+			digitalWrite(COL_A16, LOW);
+			digitalWrite(COL_A15, LOW);
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, LOW);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0xAA);
+
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, HIGH);
+			writeByte((uint16_t)0x2AAA, 0x55);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0xA0);
+			
+			//determine which address range to use, look at the two MS bits
+			range = address & 0x6000;
+			switch(range)
+			{
+				case 0x0000:
+					digitalWrite(COL_nE000, HIGH);
+					digitalWrite(COL_nC000, HIGH);
+					digitalWrite(COL_nA000, HIGH);
+					digitalWrite(COL_n8000, LOW);
+					
+					break;
+				case 0x2000:
+					digitalWrite(COL_nE000, HIGH);
+					digitalWrite(COL_nC000, HIGH);
+					digitalWrite(COL_nA000, LOW);
+					digitalWrite(COL_n8000, HIGH);
+					
+					break;
+				case 0x4000:
+					digitalWrite(COL_nE000, HIGH);
+					digitalWrite(COL_nC000, LOW);
+					digitalWrite(COL_nA000, HIGH);
+					digitalWrite(COL_n8000, HIGH);
+					
+					break;
+				case 0x6000:
+					digitalWrite(COL_nE000, LOW);
+					digitalWrite(COL_nC000, HIGH);
+					digitalWrite(COL_nA000, HIGH);
+					digitalWrite(COL_n8000, HIGH);
+					
+					break;
+				default:
+					break;
+			}
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0xA0);
+			writeByte(address, data);
+      		break;
+      		
+		default:
+			break;
+  	}
+}
+
+void dbDumper::programByte(uint32_t address, uint8_t data)
+{
+  	switch(_mode)
+  	{
+		case pcengine:
+			//MX29F800 program byte
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0xA0);
+			writeByte(address, data);
+			break;
+		default:
+			break;
+  	}
+}
+
+void dbDumper::programWord(uint32_t address, uint16_t data)
+{
+  	switch(_mode)
+  	{
+		case genesis:
+			//MX29F800 program byte
+			writeWord((uint16_t)0x0555, 0x00AA);
+			writeWord((uint16_t)0x02AA, 0x0055);
+			writeWord((uint16_t)0x0555, 0x00A0);
+			writeByte(address, data);
+			break;
+		default:
+			break;
+  	}
 }
 
 bool dbDumper::detectCart()
