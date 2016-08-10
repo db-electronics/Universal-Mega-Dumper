@@ -673,6 +673,7 @@ void dbDumper::programByte(uint16_t address, uint8_t data)
 
 void dbDumper::programByte(uint32_t address, uint8_t data)
 {
+	uint16_t range;
   	switch(_mode)
   	{
 		case pcengine:
@@ -682,6 +683,66 @@ void dbDumper::programByte(uint32_t address, uint8_t data)
 			writeByte((uint16_t)0x0AAA, 0xA0);
 			writeByte(address, data);
 			break;
+		case coleco:
+			//SST39SF0x0 program byte
+			digitalWrite(COL_nBPRES, LOW);
+			digitalWrite(COL_A16, LOW);
+			digitalWrite(COL_A15, LOW);
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, LOW);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0xAA);
+
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, HIGH);
+			writeByte((uint16_t)0x2AAA, 0x55);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0xA0);
+			
+			//determine which address range to use, look at the two MS bits
+			range = address & 0x6000;
+			switch(range)
+			{
+				case 0x0000:
+					digitalWrite(COL_nE000, HIGH);
+					digitalWrite(COL_nC000, HIGH);
+					digitalWrite(COL_nA000, HIGH);
+					digitalWrite(COL_n8000, LOW);
+					
+					break;
+				case 0x2000:
+					digitalWrite(COL_nE000, HIGH);
+					digitalWrite(COL_nC000, HIGH);
+					digitalWrite(COL_nA000, LOW);
+					digitalWrite(COL_n8000, HIGH);
+					
+					break;
+				case 0x4000:
+					digitalWrite(COL_nE000, HIGH);
+					digitalWrite(COL_nC000, LOW);
+					digitalWrite(COL_nA000, HIGH);
+					digitalWrite(COL_n8000, HIGH);
+					
+					break;
+				case 0x6000:
+					digitalWrite(COL_nE000, LOW);
+					digitalWrite(COL_nC000, HIGH);
+					digitalWrite(COL_nA000, HIGH);
+					digitalWrite(COL_n8000, HIGH);
+					
+					break;
+				default:
+					break;
+			}
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0xA0);
+			writeByte(address, data);
+      		break;
 		default:
 			break;
   	}

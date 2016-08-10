@@ -57,6 +57,7 @@ void setup() {
   SCmd.addCommand("id",dbTD_flashIDCMD);
   SCmd.addCommand("rw",dbTD_readWordCMD);
   SCmd.addCommand("rb",dbTD_readByteCMD);
+  SCmd.addCommand("wb",dbTD_writeByteCMD);
   SCmd.addDefaultHandler(unknownCMD);
 }
 
@@ -173,7 +174,21 @@ void dbTD_readByteCMD()
   {
     Serial.write((char)(data));
   }
+}
 
+void dbTD_writeByteCMD()
+{
+  char *arg;
+  uint32_t address=0;
+  uint8_t data;
+  
+  arg = SCmd.next();
+  address = strtoul(arg, (char**)0, 0);
+
+  arg = SCmd.next(); 
+  data = (uint8_t)strtoul(arg, (char**)0, 0);
+
+  db.programByte(address,data);
 }
 
 /*
