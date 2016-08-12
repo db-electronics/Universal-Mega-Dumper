@@ -92,6 +92,7 @@ class dbDumper
 		
 		void _colSoftwareIDEntry();
 		void _colSoftwareIDExit();
+		void _colAddrRangeSet(uint16_t address);
 		void _colPinMode();
 
 		//pin numbers address control

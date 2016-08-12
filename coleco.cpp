@@ -76,6 +76,47 @@ void dbDumper::_colPinMode()
 	_mode = coleco;
 }
 
+void dbDumper::_colAddrRangeSet(uint16_t address)
+{
+	uint16_t range;
+	
+	//determine which address range to use, look at the two MS bits
+	range = address & 0x6000;
+	switch(range)
+	{
+		case 0x0000:
+			digitalWrite(COL_nE000, HIGH);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, HIGH);
+			digitalWrite(COL_n8000, LOW);
+			
+			break;
+		case 0x2000:
+			digitalWrite(COL_nE000, HIGH);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, LOW);
+			digitalWrite(COL_n8000, HIGH);
+			
+			break;
+		case 0x4000:
+			digitalWrite(COL_nE000, HIGH);
+			digitalWrite(COL_nC000, LOW);
+			digitalWrite(COL_nA000, HIGH);
+			digitalWrite(COL_n8000, HIGH);
+			
+			break;
+		case 0x6000:
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, HIGH);
+			digitalWrite(COL_n8000, HIGH);
+			
+			break;
+		default:
+			break;
+	}
+}
+
 void dbDumper::_colSoftwareIDExit()
 {
 	writeByte((uint16_t)0x0000,0xF0);
