@@ -705,10 +705,6 @@ void dbDumper::programByte(uint16_t address, uint8_t data)
 			
 			//determine which address range to use, look at the two MS bits
 			_colAddrRangeSet(address);
-			
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0xA0);
 			writeByte(address, data);
       		break;
       		
@@ -750,10 +746,6 @@ void dbDumper::programByte(uint32_t address, uint8_t data)
 			
 			//determine which address range to use, look at the two MS bits
 			_colAddrRangeSet((uint16_t)address);
-			
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0xA0);
 			writeByte((uint16_t)address, data);
       		break;
 		default:

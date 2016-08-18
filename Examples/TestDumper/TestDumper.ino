@@ -1,16 +1,18 @@
+/** @file TestDumper.ino
+ *  @author René Richard
+ *  @brief This program allows to read and write to various game cartridges
+ *  including: Genesis, Coleco, SMS, PCE - with possibility for future expansion.
+ *  
+ *  Target Hardware:
+ *  Teensy++2.0 with db Electronics TeensyDumper board rev >= 1.1
+ * 
+ *  Arduino IDE settings:
+ *  Board Type  - Teensy++2.0
+ *  USB Type    - Serial
+ *  CPU Speed   - 16 MHz
+ */
+ 
 /*
-    Title:          TestDumper
-    Author:         René Richard
-    Description:
-        This program allows to read and write to various game cartridges
-        including: Genesis, SMS, PCE - with possibility for future
-        expansion.
-    Target Hardware:
-        Teensy++2.0 with db Electronics TeensyDumper board rev >= 1.1
-    Arduino IDE settings:
-        Board Type  - Teensy++2.0
-        USB Type    - Serial
-        CPU Speed   - 16 MHz
  LICENSE
  
     This program is free software: you can redistribute it and/or modify
@@ -62,22 +64,40 @@ void setup() {
   SCmd.addDefaultHandler(unknownCMD);
 }
 
+/** @brief Main loop
+ *  
+ *  @return Void
+ */
 void loop()
 {
   SCmd.readSerial();
 }
 
+
+/** @brief Prints a list of registered commands on the console
+ *  
+ *  @param command The unknown command
+ *  @return Void
+ */
 void unknownCMD(const char *command)
 {
-  Serial.println(F("unknown command"));
-
-  Serial.print(F("Unrecognized command: \""));
-  Serial.print(command);
+  Serial.println(F("Unrecognized command: \""));
+  Serial.println(command);
   Serial.println(F("\". Registered Commands:"));
-  
   Serial.println(SCmd.getCommandList());  //Returns all registered commands
 }
 
+
+/** @brief Detects whether a cart is connected to the dumper
+ *  
+ *  If a cart asserts the #CART signal it will be detected.
+ *  Note that the mode must be set prior to issuing this command
+ *  
+ *  Usage:
+ *  dt
+ *  
+ *  @return Void
+ */
 void dbTD_detectCMD()
 {
   if(db.detectCart())
@@ -89,6 +109,18 @@ void dbTD_detectCMD()
   }
 }
 
+
+/** @brief Sets the dumper mode
+ *  
+ *  Configures the dumper's I/O for the corresponding system.
+ *  Mode set is required to be issued prior to most other commands as most
+ *  commands require a mode to function properly.
+ *  
+ *  Usage:
+ *  sm c
+ *  
+ *  @return Void
+ */
 void dbTD_setModeCMD()
 {
   char *arg;
@@ -110,11 +142,34 @@ void dbTD_setModeCMD()
   }  
 }
 
+
+/** @brief Erases the contents of the cart
+ *  
+ *  Erases the correspoding the Flash IC on the cart.
+ *  Requires set mode to be issued prior.
+ *  
+ *  Usage:
+ *  er
+ *  
+ *  @return Void
+ */
 void dbTD_eraseChipCMD()
 {
   db.eraseChip(); 
 }
 
+
+/** @brief Get the Flash ID
+ *  
+ *  Reads the ID of the corresponding Flash IC.
+ *  Requires set mode to be issued prior.
+ *  
+ *  Usage:
+ *  id
+ *  id h
+ *  
+ *  @return Void
+ */
 void dbTD_flashIDCMD()
 {
   char *arg;
@@ -127,7 +182,7 @@ void dbTD_flashIDCMD()
     switch(*arg)
     {
       case 'h':
-          Serial.print(data,HEX);
+          Serial.println(data,HEX);
         break;
       default:
         break;
@@ -140,6 +195,19 @@ void dbTD_flashIDCMD()
 
 }
 
+
+/** @brief Read a word from the cartridge
+ *  
+ *  Read a 16bit word from the cartridge, only valid for 16bit buses.
+ *  
+ *  Usage:
+ *  rw 0x0000
+ *    - returns unformated word
+ *  rw 0x0000 h
+ *    - returns HEX formatted word with \n\r
+ *  
+ *  @return Void
+ */
 void dbTD_readWordCMD()
 {
   char *arg;
@@ -150,11 +218,39 @@ void dbTD_readWordCMD()
   address = strtoul(arg, (char**)0, 0);
   data = db.readWord(address);
 
-  Serial.write((char)(data));
-  Serial.write((char)(data>>8));
+  arg = SCmd.next();
+  if( arg != NULL )
+  {
+    switch(*arg)
+    {
+      case 'h':
+          Serial.println(data,HEX);
+        break;
+      default:
+        break;
+    }
+  }else
+  {
+    Serial.write((char)(data));
+    Serial.write((char)(data>>8));
+  }
 
 }
 
+
+/** @brief Read a byte from the cartridge
+ *  
+ *  Read an 8bit byte from the cartridge. In Coleco mode
+ *  the address is forced to uint16_t.
+ *  
+ *  Usage:
+ *  rb 0x0000
+ *    - returns unformated byte
+ *  rb 0x0000 h
+ *    - returns HEX formatted byte with \n\r
+ *  
+ *  @return Void
+ */
 void dbTD_readByteCMD()
 {
   char *arg;
@@ -179,7 +275,7 @@ void dbTD_readByteCMD()
     switch(*arg)
     {
       case 'h':
-          Serial.print(data,HEX);
+          Serial.println(data,HEX);
         break;
       default:
         break;
@@ -190,6 +286,22 @@ void dbTD_readByteCMD()
   }
 }
 
+
+/** @brief Program a byte in the cartridge
+ *  
+ *  Program a byte in the cartridge. Priod to progamming,
+ *  the sector or entire chip must be erased. The function
+ *  returns immediately without checking if the operation
+ *  has completed (i.e. toggle bit)
+ *  
+ *  Usage:
+ *  wb 0x0000 0x12
+ *    - programs 0x12 into address 0x0000
+ *  wb 412 12
+ *    - programs decimal 12 into address decimal 412
+ *  
+ *  @return Void
+ */
 void dbTD_writeByteCMD()
 {
   char *arg;
