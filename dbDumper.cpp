@@ -486,7 +486,7 @@ uint16_t dbDumper::getFlashID()
   	return flashID;
 }
 
-void dbDumper::chipErase()
+void dbDumper::eraseChip()
 {
   	switch(_mode)
   	{
@@ -536,6 +536,71 @@ void dbDumper::chipErase()
 			digitalWrite(COL_A13, HIGH);
 			writeByte((uint16_t)0x2AAA, 0x55);
 
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0x10);
+
+			digitalWrite(COL_A16, LOW);
+			digitalWrite(COL_A15, LOW);
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, LOW);
+      		break;
+		default:
+			break;
+  	}
+}
+
+void dbDumper::eraseSector(uint16_t sectorAddress)
+{
+  	switch(_mode)
+  	{
+		case genesis:
+			//mx29f800 chip erase word mode
+			writeWord((uint16_t)0x0555, 0x00AA);
+			writeWord((uint16_t)0x02AA, 0x0055);
+			writeWord((uint16_t)0x0555, 0x0080);
+			writeWord((uint16_t)0x0555, 0x00AA);
+			writeWord((uint16_t)0x02AA, 0x0055);
+			writeWord((uint16_t)0x0555, 0x0010);
+			break;
+		case pcengine:
+			//mx29f800 chip erase byte mode
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0x80);
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0x10);
+			break;
+    	case coleco:
+			//SST39SF0x0 chip erase
+			digitalWrite(COL_nBPRES, LOW);
+			digitalWrite(COL_A16, LOW);
+			digitalWrite(COL_A15, LOW);
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, LOW);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0xAA);
+
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, HIGH);
+			writeByte((uint16_t)0x2AAA, 0x55);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0x80);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0xAA);
+			
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, HIGH);
+			writeByte((uint16_t)0x2AAA, 0x55);
+
+			//sector address comes here
 			digitalWrite(COL_A14, HIGH);
 			digitalWrite(COL_A13, LOW);
 			writeByte((uint16_t)0x5555, 0x10);

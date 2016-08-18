@@ -51,6 +51,8 @@ class dbDumper
 		dbDumper();
 		
 		void setMode(eMode);
+		eMode getMode() { return _mode; }
+
 		void resetCart(uint8_t);
 		bool detectCart();
 		uint16_t getFlashID();
@@ -70,7 +72,8 @@ class dbDumper
 		void writeByte(uint16_t, uint8_t);
 		
 		//erase
-		void chipErase(void);
+		void eraseChip(void);
+		void eraseSector(uint16_t);
 		uint8_t toggleBit(uint8_t);
 		
 		//program

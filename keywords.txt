@@ -13,6 +13,7 @@ dbDumper		KEYWORD1
 #######################################
 
 setMode			KEYWORD2
+getMode			KEYWORD2
 detectCart		KEYWORD2
 getFlashID		KEYWORD2
 readWord		KEYWORD2
@@ -20,9 +21,11 @@ readByte		KEYWORD2
 writeWord		KEYWORD2
 writeByte		KEYWORD2
 programByte		KEYWORD2
+eraseChip		KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
 #######################################
 genesis			KEYWORD3
-
+coleco			KEYWORD3
+pcengine		KEYWORD3

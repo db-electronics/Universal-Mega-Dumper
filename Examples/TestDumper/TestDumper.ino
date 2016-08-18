@@ -54,6 +54,7 @@ void setup() {
   //register callbacks for SerialCommand
   SCmd.addCommand("dt",dbTD_detectCMD);
   SCmd.addCommand("sm",dbTD_setModeCMD);
+  SCmd.addCommand("er",dbTD_eraseChipCMD);
   SCmd.addCommand("id",dbTD_flashIDCMD);
   SCmd.addCommand("rw",dbTD_readWordCMD);
   SCmd.addCommand("rb",dbTD_readByteCMD);
@@ -109,6 +110,11 @@ void dbTD_setModeCMD()
   }  
 }
 
+void dbTD_eraseChipCMD()
+{
+  db.eraseChip(); 
+}
+
 void dbTD_flashIDCMD()
 {
   char *arg;
@@ -157,7 +163,15 @@ void dbTD_readByteCMD()
   arg = SCmd.next();
 
   address = strtoul(arg, (char**)0, 0);
-  data = db.readByte(address);
+
+  //if coleco, force 16 bit address
+  if( db.getMode() == db.coleco )
+  {
+    data = db.readByte((uint16_t)address);
+  }else
+  {
+    data = db.readByte(address);
+  }
 
   arg = SCmd.next();
   if( arg != NULL )
