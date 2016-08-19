@@ -1,14 +1,15 @@
-/** \file dbDumper.cpp
- *  \author René Richard
- *  \brief This program allows to read and write to various game cartridges including: Genesis, Coleco, SMS, PCE - with possibility for future expansion.
+/*******************************************************************//**
+ * \file dbDumper.cpp
+ * \author René Richard
+ * \brief This program allows to read and write to various game cartridges including: Genesis, Coleco, SMS, PCE - with possibility for future expansion.
  *  
- *  Target Hardware:
- *  Teensy++2.0 with db Electronics TeensyDumper board rev >= 1.1
- *  Arduino IDE settings:
- *  Board Type  - Teensy++2.0
- *  USB Type    - Serial
- *  CPU Speed   - 16 MHz
- */
+ * Target Hardware:
+ * Teensy++2.0 with db Electronics TeensyDumper board rev >= 1.1
+ * Arduino IDE settings:
+ * Board Type  - Teensy++2.0
+ * USB Type    - Serial
+ * CPU Speed   - 16 MHz
+ **********************************************************************/
 
  /*
  LICENSE
@@ -32,13 +33,20 @@
 #include "Arduino.h"
 #include "dbDumper.h"
 
+/*******************************************************************//**
+ * The constructor sets the mode using setMode() to undefined.
+ **********************************************************************/
 dbDumper::dbDumper() 
 {
-
   	setMode(undefined);
-
 }
 
+/*******************************************************************//**
+ * The resetCart() function issues a 250ms active-low reset pulse to
+ * the pin specified by the variable _resetPin.
+ * 
+ * \warning setMode() must be called prior to using this function.
+  **********************************************************************/
 void dbDumper::resetCart()
 {
 	digitalWrite(_resetPin, LOW);
@@ -46,6 +54,26 @@ void dbDumper::resetCart()
 	digitalWrite(_resetPin, HIGH);
 }
 
+/*******************************************************************//**
+ * The detectCart() functions tests if the nCART line is pulled low
+ * by a cartridge.
+ **********************************************************************/
+bool dbDumper::detectCart()
+{
+  	bool detect = false;
+
+  	if (digitalRead(nCART) == LOW)
+	{
+		detect = true;
+	}
+	return detect;
+}
+
+/*******************************************************************//**
+ * The setMode() function configures the Teensy IO properly for the
+ * selected cartridge. The _mode and _resetPin variables store the
+ * current mode and resetPin #s for later use by the firmware.
+ **********************************************************************/
 void dbDumper::setMode(eMode mode)
 {
 	//Dataport as inputs, use port access for performance on these
@@ -116,101 +144,65 @@ void dbDumper::setMode(eMode mode)
 	}
 }
 
-uint16_t dbDumper::readWord(uint32_t address)
+/*******************************************************************//**
+ * The setMode() function returns the manufacturer and product ID from 
+ * the Flash IC as a uint16_t. It automatically performs the correct
+ * flash ID read sequence based on the currently selected mode.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ **********************************************************************/
+uint16_t dbDumper::getFlashID()
 {
-	//only genesis mode reads word for now
+  	uint16_t flashID = 0;
 
-	uint16_t readData; ///< Word data read from cartridge, is returned
-
-  	_latchAddress(address);
-
-  	//set data bus to inputs
-  	DATAH_DDR = 0x00;
-  	DATAL_DDR = 0x00;
-
-  	// read the bus
-  	digitalWrite(nCE, LOW);
-  	digitalWrite(nRD, LOW);
-  
-  	readData = (uint16_t)DATAINH;
-  	readData <<= 8;
-  	readData |= (uint16_t)(DATAINL & 0x00FF);
-  
-  	digitalWrite(nCE, HIGH);
-  	digitalWrite(nRD, HIGH);
-
-  	return readData;
-}
-
-uint16_t dbDumper::readWord(uint16_t address)
-{
-	//only genesis mode reads word for now
-
-	uint16_t readData; ///< Word data read from cartridge, is returned
-
-  	_latchAddress(address);
-
-  	//set data bus to inputs
-  	DATAH_DDR = 0x00;
-  	DATAL_DDR = 0x00;
-
-  	// read the bus
-  	digitalWrite(nCE, LOW);
-  	digitalWrite(nRD, LOW);
-  
-  	readData = (uint16_t)DATAINH;
-  	readData <<= 8;
-  	readData |= (uint16_t)(DATAINL & 0x00FF);
-  
-  	digitalWrite(nCE, HIGH);
-  	digitalWrite(nRD, HIGH);
-
-  	return readData;
-}
-
-uint8_t dbDumper::readByte(uint32_t address)
-{
-	uint8_t readData;
-
-	_latchAddress(address);
-	if( _mode == coleco )
-	{
-		_colAddrRangeSet((uint16_t)address);
-	}
-	//set data bus to inputs
-	DATAH_DDR = 0x00;
-	DATAL_DDR = 0x00;
-
-	// read the bus
-	digitalWrite(nCE, LOW);
-	digitalWrite(nRD, LOW);
-  
-	//read genesis odd bytes from the high byte of the bus
-	switch(_mode)
-	{
+  	switch(_mode)
+  	{
 		case genesis:
-			if( (uint8_t)(address) & 0x01 )
-			{
-				readData = DATAINH;
-			}else
-			{
-				readData = DATAINL;
-			}
+			//mx29f800 software ID detect word mode
+			writeWord((uint16_t)0x0555, 0x00AA);
+			writeWord((uint16_t)0x02AA, 0x0055);
+			writeWord((uint16_t)0x0555, 0x0090);
+			flashID = readWord((uint16_t)0x0001);
+			writeWord((uint16_t)0x0000, 0x00F0);
 			break;
-		case coleco:
-			readData = DATAINL;
+		case pcengine:
+			//mx29f800 software ID detect byte mode
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0x90);
+			flashID = (uint16_t)readByte((uint16_t)0x0002);
+			writeByte((uint16_t)0x0000, 0xF0);
 			break;
-		default:
-			readData = DATAINL;
-			break;
-	}
-  
-	digitalWrite(nCE, HIGH);
-	digitalWrite(nRD, HIGH);
+    	case coleco:
+			//SST39SF0x0 software ID detect
 
-	return readData;
+			_colSoftwareIDEntry();
+			
+			flashID = (uint16_t)readByte((uint16_t)0x0000);
+			flashID <<= 8;
+			flashID |= (uint16_t)readByte((uint16_t)0x0001);
+			_flashID = flashID;
+
+			_colSoftwareIDExit();
+
+      		break;
+		default:
+      		flashID = 0xFFFF;
+      	break;
+  	}
+
+  	return flashID;
 }
 
+/*******************************************************************//**
+ * The readByte(uint16_t) function returns a byte read from 
+ * a 16bit address. The upper 8 address bits (23..16) are not modified
+ * by this function so this can be used to perform quick successive
+ * reads within a 64k boundary.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ * \warning upper 8 address bits (23..16) are not modified
+ **********************************************************************/
 uint8_t dbDumper::readByte(uint16_t address)
 {
 	uint8_t readData;
@@ -255,101 +247,243 @@ uint8_t dbDumper::readByte(uint16_t address)
 	return readData;
 }
 
-void dbDumper::writeWord(uint32_t address, uint16_t data)
+/*******************************************************************//**
+ * The readByte(uint32_t) function returns a byte read from 
+ * a 24bit address.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ **********************************************************************/
+uint8_t dbDumper::readByte(uint32_t address)
 {
+	uint8_t readData;
+
 	_latchAddress(address);
-
-	//set data bus to outputs
-	DATAH_DDR = 0xFF;
-	DATAL_DDR = 0xFF;
-
-	//put word on bus
-	DATAOUTL = (uint8_t)(data);
-	DATAOUTH = (uint8_t)(data>>8);
-
-	// write to the bus
-	digitalWrite(nCE, LOW);
-	digitalWrite(nWR, LOW);
-	delayMicroseconds(1);
-	digitalWrite(nWR, HIGH);
-	digitalWrite(nCE, HIGH);
-  
+	if( _mode == coleco )
+	{
+		_colAddrRangeSet((uint16_t)address);
+	}
 	//set data bus to inputs
 	DATAH_DDR = 0x00;
 	DATAL_DDR = 0x00;
-}
 
-void dbDumper::writeWord(uint16_t address, uint16_t data)
-{
-	_latchAddress(address);
-
-	//set data bus to outputs
-	DATAH_DDR = 0xFF;
-	DATAL_DDR = 0xFF;
-
-	//put word on bus
-	DATAOUTL = (uint8_t)(data);
-	DATAOUTH = (uint8_t)(data>>8);
-
-	// write to the bus
+	// read the bus
 	digitalWrite(nCE, LOW);
-	digitalWrite(nWR, LOW);
-	delayMicroseconds(1);
-	digitalWrite(nWR, HIGH);
-	digitalWrite(nCE, HIGH);
+	digitalWrite(nRD, LOW);
   
-	//set data bus to inputs
-	DATAH_DDR = 0x00;
-	DATAL_DDR = 0x00;
+	//read genesis odd bytes from the high byte of the bus
+	switch(_mode)
+	{
+		case genesis:
+			if( (uint8_t)(address) & 0x01 )
+			{
+				readData = DATAINH;
+			}else
+			{
+				readData = DATAINL;
+			}
+			break;
+		case coleco:
+			readData = DATAINL;
+			break;
+		default:
+			readData = DATAINL;
+			break;
+	}
+  
+	digitalWrite(nCE, HIGH);
+	digitalWrite(nRD, HIGH);
+
+	return readData;
 }
 
-void dbDumper::writeByte(uint32_t address, uint8_t data)
+/*******************************************************************//**
+ * The readByteBlock function reads a block of bytes size blockSize into
+ * *buf starting at the specified 16bit address.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ **********************************************************************/
+void dbDumper::readByteBlock(uint16_t address, uint8_t * buf, uint16_t blockSize)
 {
-	_latchAddress(address);
+	uint16_t i;
 
-	//set data bus to outputs
-	DATAH_DDR = 0xFF;
-	DATAL_DDR = 0xFF;
-
-	//put word on bus
-	DATAOUTL = data;
-
-	// write to the bus
-	digitalWrite(nCE, LOW);
-	digitalWrite(nWR, LOW);
-	delayMicroseconds(1);
-	digitalWrite(nWR, HIGH);
-	digitalWrite(nCE, HIGH);
-  
-	//set data bus to inputs
-	DATAH_DDR = 0x00;
-	DATAL_DDR = 0x00;
+	for( i = 0 ; i < blockSize ; i += 1 )
+	{
+		_latchAddress(address);
+		
+		//set data bus to inputs
+		DATAH_DDR = 0x00;
+		DATAL_DDR = 0x00;
+		
+		// read the bus
+		digitalWrite(nCE, LOW);
+		digitalWrite(nRD, LOW);
+		
+		//read genesis odd bytes from the high byte of the bus
+		switch(_mode)
+		{
+			case genesis:
+				if( (uint8_t)(address) & 0x01 )
+				{
+					buf[i] = DATAINH;
+				}else
+				{
+					buf[i] = DATAINL;
+				}
+				break;
+			case coleco:
+				buf[i] = DATAINL;
+				break;
+			default:
+				buf[i] = DATAINL;
+				break;
+		}
+		
+		digitalWrite(nCE, HIGH);
+		digitalWrite(nRD, HIGH);
+		
+		address += 1;
+	}
 }
 
-void dbDumper::writeByte(uint16_t address, uint8_t data)
+/*******************************************************************//**
+ * The readByteBlock function reads a block of bytes size blockSize into
+ * *buf starting at the specified 24bit address.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ **********************************************************************/
+void dbDumper::readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize)
 {
-	_latchAddress(address);
+	uint16_t i;
 
-	//set data bus to outputs
-	DATAH_DDR = 0xFF;
-	DATAL_DDR = 0xFF;
-
-	//put word on bus
-	DATAOUTL = data;
-
-	// write to the bus
-	digitalWrite(nCE, LOW);
-	digitalWrite(nWR, LOW);
-	delayMicroseconds(1);
-	digitalWrite(nWR, HIGH);
-	digitalWrite(nCE, HIGH);
-  
-	//set data bus to inputs
-	DATAH_DDR = 0x00;
-	DATAL_DDR = 0x00;
+	for( i = 0 ; i < blockSize ; i += 1 )
+	{
+		_latchAddress(address);
+		
+		//set data bus to inputs
+		DATAH_DDR = 0x00;
+		DATAL_DDR = 0x00;
+		
+		// read the bus
+		digitalWrite(nCE, LOW);
+		digitalWrite(nRD, LOW);
+		buf[i] = DATAINL;
+		digitalWrite(nCE, HIGH);
+		digitalWrite(nRD, HIGH);
+		
+		address += 1;
+	}
 }
 
+/*******************************************************************//**
+ * The readWord(uint16_t) function returns a word read from 
+ * a 16bit address. The upper 8 address bits (23..16) are not modified
+ * by this function so this can be used to perform quicker successive
+ * reads within a 64k boundary.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ * \warning upper 8 address bits (23..16) are not modified
+ * \warning converts to little endian
+ **********************************************************************/
+uint16_t dbDumper::readWord(uint16_t address)
+{
+	//only genesis mode reads word for now
 
+	uint16_t readData;
+
+  	_latchAddress(address);
+
+  	//set data bus to inputs
+  	DATAH_DDR = 0x00;
+  	DATAL_DDR = 0x00;
+
+  	// read the bus
+  	digitalWrite(nCE, LOW);
+  	digitalWrite(nRD, LOW);
+  
+  	readData = (uint16_t)DATAINL;
+  	readData <<= 8;
+  	readData |= (uint16_t)(DATAINH & 0x00FF);
+  
+  	digitalWrite(nCE, HIGH);
+  	digitalWrite(nRD, HIGH);
+
+  	return readData;
+}
+
+/*******************************************************************//**
+ * The readWord(uint32_t) function returns a word read from 
+ * a 24bit address.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ * \warning converts to little endian
+ **********************************************************************/
+uint16_t dbDumper::readWord(uint32_t address)
+{
+	//only genesis mode reads word for now
+
+	uint16_t readData;
+
+  	_latchAddress(address);
+
+  	//set data bus to inputs
+  	DATAH_DDR = 0x00;
+  	DATAL_DDR = 0x00;
+
+  	// read the bus
+  	digitalWrite(nCE, LOW);
+  	digitalWrite(nRD, LOW);
+  
+  	readData = (uint16_t)DATAINL;
+  	readData <<= 8;
+  	readData |= (uint16_t)(DATAINH & 0x00FF);
+  
+  	digitalWrite(nCE, HIGH);
+  	digitalWrite(nRD, HIGH);
+
+  	return readData;
+}
+
+/*******************************************************************//**
+ * The readWordBlock function reads a block of bytes size blockSize into
+ * buf starting at the specified 16bit address. The data is read as
+ * big endian.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ * \warning upper 8 address bits (23..16) are not modified
+ * \warning Data read as big endian.
+ **********************************************************************/
+void dbDumper::readWordBlock(uint16_t address, uint8_t * buf, uint16_t blockSize)
+{
+	uint16_t i;
+
+	for( i = 0 ; i < blockSize ; i += 2 )
+	{
+		_latchAddress(address);
+		
+		//set data bus to inputs
+		DATAH_DDR = 0x00;
+		DATAL_DDR = 0x00;
+		
+		// read the bus
+		digitalWrite(nCE, LOW);
+		digitalWrite(nRD, LOW);
+		buf[i] = DATAINH;
+		buf[i+1] = DATAINL;
+		digitalWrite(nCE, HIGH);
+		digitalWrite(nRD, HIGH);
+		
+		address += 2;
+	}
+}
+
+/*******************************************************************//**
+ * The readWordBlock function reads a block of bytes size blockSize into
+ * buf starting at the specified 24bit address. The data is read as
+ * big endian.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ * \warning Data read as big endian.
+ **********************************************************************/
 void dbDumper::readWordBlock(uint32_t address, uint8_t * buf, uint16_t blockSize)
 {
 	uint16_t i;
@@ -374,27 +508,130 @@ void dbDumper::readWordBlock(uint32_t address, uint8_t * buf, uint16_t blockSize
 	}
 }
 
-void dbDumper::readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize)
+/*******************************************************************//**
+ * The writeByte function strobes a byte into the cartridge at a 16bit
+ * address. The upper 8 address bits (23..16) are not modified
+ * by this function so this can be used to perform quicker successive
+ * writes within a 64k boundary.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ * \warning upper 8 address bits (23..16) are not modified
+ **********************************************************************/
+void dbDumper::writeByte(uint16_t address, uint8_t data)
 {
-	uint16_t i;
+	_latchAddress(address);
 
-	for( i = 0 ; i < blockSize ; i += 1 )
-	{
-		_latchAddress(address);
-		
-		//set data bus to inputs
-		DATAH_DDR = 0x00;
-		DATAL_DDR = 0x00;
-		
-		// read the bus
-		digitalWrite(nCE, LOW);
-		digitalWrite(nRD, LOW);
-		buf[i] = DATAINL;
-		digitalWrite(nCE, HIGH);
-		digitalWrite(nRD, HIGH);
-		
-		address += 1;
-	}
+	//set data bus to outputs
+	DATAH_DDR = 0xFF;
+	DATAL_DDR = 0xFF;
+
+	//put word on bus
+	DATAOUTL = data;
+
+	// write to the bus
+	digitalWrite(nCE, LOW);
+	digitalWrite(nWR, LOW);
+	delayMicroseconds(1);
+	digitalWrite(nWR, HIGH);
+	digitalWrite(nCE, HIGH);
+  
+	//set data bus to inputs
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
+}
+
+/*******************************************************************//**
+ * The writeByte function strobes a byte into the cartridge at a 24bit
+ * address.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ **********************************************************************/
+void dbDumper::writeByte(uint32_t address, uint8_t data)
+{
+	_latchAddress(address);
+
+	//set data bus to outputs
+	DATAH_DDR = 0xFF;
+	DATAL_DDR = 0xFF;
+
+	//put word on bus
+	DATAOUTL = data;
+
+	// write to the bus
+	digitalWrite(nCE, LOW);
+	digitalWrite(nWR, LOW);
+	delayMicroseconds(1);
+	digitalWrite(nWR, HIGH);
+	digitalWrite(nCE, HIGH);
+  
+	//set data bus to inputs
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
+}
+
+/*******************************************************************//**
+ * The writeWord function strobes a word into the cartridge at a 16bit
+ * address. The upper 8 address bits (23..16) are not modified
+ * by this function so this can be used to perform quicker successive
+ * writes within a 64k boundary.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ * \warning upper 8 address bits (23..16) are not modified
+ * \warning word is written as big endian
+ **********************************************************************/
+void dbDumper::writeWord(uint16_t address, uint16_t data)
+{
+	_latchAddress(address);
+
+	//set data bus to outputs
+	DATAH_DDR = 0xFF;
+	DATAL_DDR = 0xFF;
+
+	//put word on bus
+	DATAOUTH = (uint8_t)(data);
+	DATAOUTL = (uint8_t)(data>>8);
+
+	// write to the bus
+	digitalWrite(nCE, LOW);
+	digitalWrite(nWR, LOW);
+	delayMicroseconds(1);
+	digitalWrite(nWR, HIGH);
+	digitalWrite(nCE, HIGH);
+  
+	//set data bus to inputs
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
+}
+
+/*******************************************************************//**
+ * The writeWord function strobes a word into the cartridge at a 16bit
+ * address.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ * \warning word is written as big endian
+ **********************************************************************/
+void dbDumper::writeWord(uint32_t address, uint16_t data)
+{
+	_latchAddress(address);
+
+	//set data bus to outputs
+	DATAH_DDR = 0xFF;
+	DATAL_DDR = 0xFF;
+
+	//put word on bus
+	DATAOUTH = (uint8_t)(data);
+	DATAOUTL = (uint8_t)(data>>8);
+
+	// write to the bus
+	digitalWrite(nCE, LOW);
+	digitalWrite(nWR, LOW);
+	delayMicroseconds(1);
+	digitalWrite(nWR, HIGH);
+	digitalWrite(nCE, HIGH);
+  
+	//set data bus to inputs
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
 }
 
 inline void dbDumper::_latchAddress(uint32_t address)
@@ -439,49 +676,6 @@ inline void dbDumper::_latchAddress(uint16_t address)
 	digitalWrite(ALE_low, HIGH);
 	digitalWrite(ALE_low, LOW);
 
-}
-
-uint16_t dbDumper::getFlashID()
-{
-  	uint16_t flashID = 0;
-
-  	switch(_mode)
-  	{
-		case genesis:
-			//mx29f800 software ID detect word mode
-			writeWord((uint16_t)0x0555, 0x00AA);
-			writeWord((uint16_t)0x02AA, 0x0055);
-			writeWord((uint16_t)0x0555, 0x0090);
-			flashID = readWord((uint16_t)0x0001);
-			writeWord((uint16_t)0x0000, 0x00F0);
-			break;
-		case pcengine:
-			//mx29f800 software ID detect byte mode
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0x90);
-			flashID = (uint16_t)readByte((uint16_t)0x0002);
-			writeByte((uint16_t)0x0000, 0xF0);
-			break;
-    	case coleco:
-			//SST39SF0x0 software ID detect
-
-			_colSoftwareIDEntry();
-			
-			flashID = (uint16_t)readByte((uint16_t)0x0000);
-			flashID <<= 8;
-			flashID |= (uint16_t)readByte((uint16_t)0x0001);
-			_flashID = flashID;
-
-			_colSoftwareIDExit();
-
-      		break;
-		default:
-      		flashID = 0xFFFF;
-      	break;
-  	}
-
-  	return flashID;
 }
 
 void dbDumper::eraseChip()
@@ -801,16 +995,5 @@ void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
 		default:
 			break;
   	}
-}
-
-bool dbDumper::detectCart()
-{
-  	bool detect = false;
-
-  	if (digitalRead(nCART) == LOW)
-	{
-		detect = true;
-	}
-	return detect;
 }
 

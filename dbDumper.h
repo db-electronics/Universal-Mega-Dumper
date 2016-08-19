@@ -1,4 +1,5 @@
-/** \file dbDumper.h
+/*******************************************************************//**
+ *  \file dbDumper.h
  *  \author René Richard
  *  \brief This program allows to read and write to various game cartridges including: Genesis, Coleco, SMS, PCE - with possibility for future expansion.
  *  
@@ -8,7 +9,7 @@
  *  Board Type  - Teensy++2.0
  *  USB Type    - Serial
  *  CPU Speed   - 16 MHz
- */
+ **********************************************************************/
  
  /*
  LICENSE
@@ -32,57 +33,182 @@
 #ifndef dbDumper_h
 #define dbDumper_h
 
-#define DEBUG         1
-
   //define pins
-#define DATAOUTH      PORTD
-#define DATAOUTL      PORTC
-#define DATAINH       PIND
-#define DATAINL       PINC
-#define DATAH_DDR     DDRD
-#define DATAL_DDR     DDRC
+#define DATAOUTH      PORTD		/**< PORTD used for high byte of databus output */
+#define DATAOUTL      PORTC		/**< PORTD used for low byte of databus output */
+#define DATAINH       PIND		/**< PIND used for high byte databus input */
+#define DATAINL       PINC		/**< PINC used for low byte databus input */
+#define DATAH_DDR     DDRD		/**< DDRD data direction for high byte of databus */
+#define DATAL_DDR     DDRC		/**< DDRC data direction for low byte of databus */
 
-/** \class dbDumper
- *  
- *  \brief Teensy dbDumper class to read and write db Flash Carts
- */
+/*******************************************************************//** 
+ * \class dbDumper
+ * \brief Teensy dbDumper class to read and write db Flash Carts
+ **********************************************************************/
 class dbDumper
 {
 	public:
-		/** eMode Type
-		 *  eMode is used by dbDumper to keep track of which mode is currently set
-		 */
+
+		/*******************************************************************//**
+		 * \brief eMode Type
+		 * eMode is used by dbDumper to keep track of which mode is currently set
+		 **********************************************************************/
 		enum eMode
 		{ 
-			undefined, 	/**< undefined mode */
+			undefined, 	/**< Undefined mode */
 			coleco, 	/**< ColecoVision mode */
 			genesis, 	/**< Genesis Megadrive mode */
 			pcengine 	/**< PC Engine TG-16 mode */
 		};
 
-
+		/*******************************************************************//**
+		 * \brief Constructor
+		 **********************************************************************/
 		dbDumper();
+
+		/*******************************************************************//**
+		 * \brief Reset the Flash IC in the catridge
+		**********************************************************************/
+		void resetCart();
 		
+		/*******************************************************************//**
+		 * \brief Set the operation mode of the dbDumper
+		 * 
+		 * \param eMode enum mode to set
+		 **********************************************************************/
+		bool detectCart();
+		
+		/*******************************************************************//**
+		 * \brief Set the operation mode of the dbDumper
+		 * 
+		 * \param eMode enum mode to set
+		 **********************************************************************/
 		void setMode(eMode);
+		
+		/*******************************************************************//**
+		 * \brief Set the operation mode of the dbDumper
+		 * 
+		 * \param eMode enum mode to set
+		 */
 		eMode getMode() { return _mode; }
 
-		void resetCart();
-		bool detectCart();
+		/*******************************************************************//**
+		 * \brief Read the Manufacturer and Product ID in the Flash IC
+		 **********************************************************************/
 		uint16_t getFlashID();
 
-		//read
-		uint8_t readByte(uint16_t address);
-		uint16_t readWord(uint16_t address);
-		uint8_t readByte(uint32_t address);
-		uint16_t readWord(uint32_t address);
-		void readWordBlock(uint32_t address, uint8_t * buf, uint16_t blockSize);
-		void readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize);
 
-		//write
-		void writeWord(uint32_t address, uint16_t data);
-		void writeWord(uint16_t address, uint16_t data);
-		void writeByte(uint32_t address, uint8_t data);
+		/*******************************************************************//**
+		 * \name Read Functions
+		 * This group of functions perform various read operations
+		 **********************************************************************/
+		/**@{*/
+		
+		/*******************************************************************//**
+		 * \brief Read a byte from a 16bit address
+		 * 
+		 * \param address 16bit address
+		 **********************************************************************/
+		uint8_t readByte(uint16_t address);
+		
+		/*******************************************************************//**
+		 * \brief Read a byte from a 24bit address
+		 * 
+		 * \param address 24bit address
+		 **********************************************************************/
+		uint8_t readByte(uint32_t address);
+		
+		/*******************************************************************//**
+		 * \brief Read a byte block from a 16 bit address
+		 * 
+		 * \param address 16bit address
+		 * \param buf a pointer to store the byte block
+		 * \param blockSize number of bytes to read from the block
+		 **********************************************************************/
+		void readByteBlock(uint16_t address, uint8_t * buf, uint16_t blockSize);
+		
+		/*******************************************************************//**
+		 * \brief Read a byte block from a 24 bit address
+		 * 
+		 * \param address 24bit address
+		 * \param buf a pointer to store the byte block
+		 * \param blockSize number of bytes to read from the block
+		 **********************************************************************/
+		void readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize);
+		
+		/*******************************************************************//**
+		 * \brief Read a word from a 16bit address
+		 * 
+		 * \param address 16bit address
+		 **********************************************************************/
+		uint16_t readWord(uint16_t address);
+		
+		/*******************************************************************//**
+		 * \brief Read a word from a 24bit address
+		 * 
+		 * \param address 24bit address
+		 **********************************************************************/
+		uint16_t readWord(uint32_t address);
+		
+		/*******************************************************************//**
+		 * \brief Read a word block from a 16 bit address
+		 * 
+		 * \param address 16bit address
+		 * \param buf a pointer to store the byte block
+		 * \param blockSize number of bytes to read from the block
+		 **********************************************************************/
+		void readWordBlock(uint32_t address, uint8_t * buf, uint16_t blockSize);
+		
+		/*******************************************************************//**
+		 * \brief Read a word block from a 24 bit address
+		 * 
+		 * \param address 24bit address
+		 * \param buf a pointer to store the byte block
+		 * \param blockSize number of bytes to read from the block
+		 **********************************************************************/
+		void readWordBlock(uint32_t address, uint8_t * buf, uint16_t blockSize);
+		
+		/**@}*/
+		
+		/*******************************************************************//** 
+		 * \name Write Functions
+		 * This group of functions perform various write operations
+		 **********************************************************************/
+		/**@{*/
+		
+		/*******************************************************************//**
+		 * \brief Write a byte to a 16bit address
+		 * 
+		 * \param address 16bit address
+		 * \param data byte
+		 **********************************************************************/
 		void writeByte(uint16_t address, uint8_t data);
+		
+		/*******************************************************************//**
+		 * \brief Write a byte to a 24bit address
+		 * 
+		 * \param address 24bit address
+		 * \param data byte
+		 **********************************************************************/
+		void writeByte(uint32_t address, uint8_t data);
+		
+		/*******************************************************************//**
+		 * \brief Write a word to a 16bit address
+		 * 
+		 * \param address 16bit address
+		 * \param data word
+		 **********************************************************************/
+		void writeWord(uint16_t address, uint16_t data);
+		
+		/*******************************************************************//**
+		 * \brief Write a word to a 24bit address
+		 * 
+		 * \param address 24bit address
+		 * \param data word
+		 **********************************************************************/
+		void writeWord(uint32_t address, uint16_t data);
+		
+		/**@}*/
 		
 		//erase
 		void eraseChip(void);
