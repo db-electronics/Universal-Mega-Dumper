@@ -1,17 +1,16 @@
+/** \file dbDumper.h
+ *  \author René Richard
+ *  \brief This program allows to read and write to various game cartridges including: Genesis, Coleco, SMS, PCE - with possibility for future expansion.
+ *  
+ *  Target Hardware:
+ *  Teensy++2.0 with db Electronics TeensyDumper board rev >= 1.1
+ *  Arduino IDE settings:
+ *  Board Type  - Teensy++2.0
+ *  USB Type    - Serial
+ *  CPU Speed   - 16 MHz
+ */
+ 
  /*
-    Title:          dbDumper.h
-    Author:         René Richard
-    Description:
-        This library allows to read and write to various game cartridges
-        including: Genesis, SMS, PCE - with possibility for future
-        expansion.
-    Target Hardware:
-        Teensy++2.0 with db Electronics TeensyDumper board
-    Arduino IDE settings:
-        Board Type  - Teensy++2.0
-        USB Type    - Serial
-        CPU Speed   - 16 MHz
-
  LICENSE
  
     This file is part of dbDumper.
@@ -27,7 +26,7 @@
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+    along with dbDumper.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef dbDumper_h
@@ -43,43 +42,57 @@
 #define DATAH_DDR     DDRD
 #define DATAL_DDR     DDRC
 
+/** \class dbDumper
+ *  
+ *  \brief Teensy dbDumper class to read and write db Flash Carts
+ */
 class dbDumper
 {
 	public:
-		enum eMode{ undefined, coleco, genesis, pcengine };
+		/** eMode Type
+		 *  eMode is used by dbDumper to keep track of which mode is currently set
+		 */
+		enum eMode
+		{ 
+			undefined, 	/**< undefined mode */
+			coleco, 	/**< ColecoVision mode */
+			genesis, 	/**< Genesis Megadrive mode */
+			pcengine 	/**< PC Engine TG-16 mode */
+		};
+
 
 		dbDumper();
 		
 		void setMode(eMode);
 		eMode getMode() { return _mode; }
 
-		void resetCart(uint8_t);
+		void resetCart();
 		bool detectCart();
 		uint16_t getFlashID();
 
 		//read
-		uint8_t readByte(uint16_t);
-		uint16_t readWord(uint16_t);
-		uint8_t readByte(uint32_t);
-		uint16_t readWord(uint32_t);
-		void readWordBlock(uint32_t, uint8_t*, uint16_t);
-		void readByteBlock(uint32_t, uint8_t*, uint16_t);
+		uint8_t readByte(uint16_t address);
+		uint16_t readWord(uint16_t address);
+		uint8_t readByte(uint32_t address);
+		uint16_t readWord(uint32_t address);
+		void readWordBlock(uint32_t address, uint8_t * buf, uint16_t blockSize);
+		void readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize);
 
 		//write
-		void writeWord(uint32_t, uint16_t);
-		void writeWord(uint16_t, uint16_t);
-		void writeByte(uint32_t, uint8_t);
-		void writeByte(uint16_t, uint8_t);
+		void writeWord(uint32_t address, uint16_t data);
+		void writeWord(uint16_t address, uint16_t data);
+		void writeByte(uint32_t address, uint8_t data);
+		void writeByte(uint16_t address, uint8_t data);
 		
 		//erase
 		void eraseChip(void);
-		void eraseSector(uint16_t);
-		uint8_t toggleBit(uint8_t);
+		void eraseSector(uint16_t sectorAddress);
+		uint8_t toggleBit(uint8_t attempts);
 		
 		//program
-		void programByte(uint16_t, uint8_t);
-		void programByte(uint32_t, uint8_t);
-		void programWord(uint32_t, uint16_t);
+		void programByte(uint16_t address, uint8_t data, bool wait);
+		void programByte(uint32_t address, uint8_t data, bool wait);
+		void programWord(uint32_t address, uint16_t data, bool wait);
 		
 		//pin numbers UI
 		static const uint8_t nLED = 8;
@@ -90,8 +103,8 @@ class dbDumper
 		uint16_t _flashID;
 		eMode _mode;
 	
-		inline void _latchAddress(uint16_t);
-		inline void _latchAddress(uint32_t);
+		inline void _latchAddress(uint16_t address);
+		inline void _latchAddress(uint32_t address);
 		
 		void _colSoftwareIDEntry();
 		void _colSoftwareIDExit();

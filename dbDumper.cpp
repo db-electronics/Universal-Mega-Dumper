@@ -1,17 +1,16 @@
- /*
-    Title:          dbDumper.cpp
-    Author:         René Richard
-    Description:
-        This library allows to read and write to various game cartridges
-        including: Genesis, SMS, PCE - with possibility for future
-        expansion.
-    Target Hardware:
-        Teensy++2.0 with db Electronics TeensyDumper board rev 1.1 or greater
-    Arduino IDE settings:
-        Board Type  - Teensy++2.0
-        USB Type    - Serial
-        CPU Speed   - 16 MHz
+/** \file dbDumper.cpp
+ *  \author René Richard
+ *  \brief This program allows to read and write to various game cartridges including: Genesis, Coleco, SMS, PCE - with possibility for future expansion.
+ *  
+ *  Target Hardware:
+ *  Teensy++2.0 with db Electronics TeensyDumper board rev >= 1.1
+ *  Arduino IDE settings:
+ *  Board Type  - Teensy++2.0
+ *  USB Type    - Serial
+ *  CPU Speed   - 16 MHz
+ */
 
+ /*
  LICENSE
  
     This file is part of dbDumper.
@@ -21,13 +20,13 @@
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    Foobar is distributed in the hope that it will be useful,
+    dbDumper is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+    along with dbDumper.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "Arduino.h"
@@ -40,7 +39,7 @@ dbDumper::dbDumper()
 
 }
 
-void dbDumper::resetCart(uint8_t)
+void dbDumper::resetCart()
 {
 	digitalWrite(_resetPin, LOW);
 	delay(250);
@@ -98,7 +97,7 @@ void dbDumper::setMode(eMode mode)
 			digitalWrite(GEN_nTIME, HIGH);
 
 			_resetPin = GEN_nVRES;
-			resetCart(_resetPin);
+			resetCart();
 			_mode = genesis;
 
 			break;	
@@ -121,7 +120,7 @@ uint16_t dbDumper::readWord(uint32_t address)
 {
 	//only genesis mode reads word for now
 
-	uint16_t readData;
+	uint16_t readData; ///< Word data read from cartridge, is returned
 
   	_latchAddress(address);
 
@@ -147,7 +146,7 @@ uint16_t dbDumper::readWord(uint16_t address)
 {
 	//only genesis mode reads word for now
 
-	uint16_t readData;
+	uint16_t readData; ///< Word data read from cartridge, is returned
 
   	_latchAddress(address);
 
@@ -199,7 +198,6 @@ uint8_t dbDumper::readByte(uint32_t address)
 			}
 			break;
 		case coleco:
-			_colAddrRangeSet((uint16_t)address);
 			readData = DATAINL;
 			break;
 		default:
@@ -671,8 +669,10 @@ uint8_t dbDumper::toggleBit(uint8_t attempts)
   	return retValue;
 }
 
-void dbDumper::programByte(uint16_t address, uint8_t data)
+void dbDumper::programByte(uint16_t address, uint8_t data, bool wait)
 {
+	uint8_t readBack = ~data;
+	
   	switch(_mode)
   	{
 		case pcengine:
@@ -706,6 +706,16 @@ void dbDumper::programByte(uint16_t address, uint8_t data)
 			//determine which address range to use, look at the two MS bits
 			_colAddrRangeSet(address);
 			writeByte(address, data);
+			
+			//use data polling to validate end of program cycle
+			if(wait)
+			{
+				delayMicroseconds(4);
+				while(readBack != data)
+				{
+					readBack = readByte(address);
+				}
+			}
       		break;
       		
 		default:
@@ -713,8 +723,10 @@ void dbDumper::programByte(uint16_t address, uint8_t data)
   	}
 }
 
-void dbDumper::programByte(uint32_t address, uint8_t data)
+void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 {
+	uint8_t readBack = ~data;
+	
   	switch(_mode)
   	{
 		case pcengine:
@@ -747,14 +759,26 @@ void dbDumper::programByte(uint32_t address, uint8_t data)
 			//determine which address range to use, look at the two MS bits
 			_colAddrRangeSet((uint16_t)address);
 			writeByte((uint16_t)address, data);
+			
+			//use data polling to validate end of program cycle
+			if(wait)
+			{
+				delayMicroseconds(4);
+				while(readBack != data)
+				{
+					readBack = readByte((uint16_t)address);
+				}
+			}
       		break;
 		default:
 			break;
   	}
 }
 
-void dbDumper::programWord(uint32_t address, uint16_t data)
+void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
 {
+	uint16_t readBack = ~data;
+	
   	switch(_mode)
   	{
 		case genesis:
@@ -763,6 +787,16 @@ void dbDumper::programWord(uint32_t address, uint16_t data)
 			writeWord((uint16_t)0x02AA, 0x0055);
 			writeWord((uint16_t)0x0555, 0x00A0);
 			writeByte(address, data);
+			
+			//use data polling to validate end of program cycle
+			if(wait)
+			{
+				delayMicroseconds(4);
+				while(readBack != data)
+				{
+					readBack = readWord(address);
+				}
+			}
 			break;
 		default:
 			break;

@@ -23,9 +23,9 @@ long_line_column=72
 
 [files]
 current_page=1
-FILE_NAME_0=0;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FGit%2FArduino%2Flibraries%2FdbDumper%2Fcoleco.cpp;0;4
-FILE_NAME_1=15222;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FGit%2FArduino%2Flibraries%2FdbDumper%2FdbDumper.cpp;0;4
-FILE_NAME_2=0;C;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FGit%2FArduino%2Flibraries%2FdbDumper%2FdbDumper.h;0;4
+FILE_NAME_0=2178;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FGit%2FArduino%2Flibraries%2FdbDumper%2Fcoleco.cpp;0;4
+FILE_NAME_1=409;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FGit%2FArduino%2Flibraries%2FdbDumper%2FdbDumper.cpp;0;4
+FILE_NAME_2=0;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FGit%2FArduino%2Flibraries%2FdbDumper%2FdbDumper.h;0;4
 FILE_NAME_3=0;None;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FGit%2FArduino%2Flibraries%2FdbDumper%2Fkeywords.txt;0;4
 
 [VTE]
