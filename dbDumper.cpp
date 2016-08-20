@@ -104,11 +104,7 @@ void dbDumper::setMode(eMode mode)
 
 	switch(mode)
 	{
-		case coleco:
-			_colPinMode();
-			break;
 		case genesis:
-			
 			pinMode(GEN_SL1, INPUT);
 		  	pinMode(GEN_SR1, INPUT);
 		  	pinMode(GEN_nDTACK, OUTPUT);
@@ -128,7 +124,15 @@ void dbDumper::setMode(eMode mode)
 			resetCart();
 			_mode = genesis;
 
-			break;	
+			break;
+		case pcengine:
+			/** \todo add pcengine pin mode */
+			
+			break;
+		case coleco:
+			_colPinMode();
+			_mode = coleco;
+			break;
 		default:
 			//control signals default to all inputs
 		  	pinMode(CTRL0, INPUT);
@@ -157,34 +161,32 @@ uint16_t dbDumper::getFlashID()
 
   	switch(_mode)
   	{
+		//mx29f800 software ID detect word mode
 		case genesis:
-			//mx29f800 software ID detect word mode
 			writeWord((uint16_t)0x0555, 0x00AA);
 			writeWord((uint16_t)0x02AA, 0x0055);
 			writeWord((uint16_t)0x0555, 0x0090);
 			flashID = readWord((uint16_t)0x0001);
 			writeWord((uint16_t)0x0000, 0x00F0);
+			_flashID = flashID;
 			break;
+		//mx29f800 software ID detect byte mode
 		case pcengine:
-			//mx29f800 software ID detect byte mode
 			writeByte((uint16_t)0x0AAA, 0xAA);
 			writeByte((uint16_t)0x0555, 0x55);
 			writeByte((uint16_t)0x0AAA, 0x90);
 			flashID = (uint16_t)readByte((uint16_t)0x0002);
 			writeByte((uint16_t)0x0000, 0xF0);
+			_flashID = flashID;
 			break;
+		//SST39SF0x0 software ID detect
     	case coleco:
-			//SST39SF0x0 software ID detect
-
 			_colSoftwareIDEntry();
-			
 			flashID = (uint16_t)readByte((uint16_t)0x0000);
 			flashID <<= 8;
 			flashID |= (uint16_t)readByte((uint16_t)0x0001);
-			_flashID = flashID;
-
 			_colSoftwareIDExit();
-
+			_flashID = flashID;
       		break;
 		default:
       		flashID = 0xFFFF;
@@ -233,6 +235,9 @@ uint8_t dbDumper::readByte(uint16_t address)
 				readData = DATAINL;
 			}
 			break;
+		case pcengine:
+			readData = DATAINL;
+			break;
 		case coleco:
 			readData = DATAINL;
 			break;
@@ -262,6 +267,7 @@ uint8_t dbDumper::readByte(uint32_t address)
 	{
 		_colAddrRangeSet((uint16_t)address);
 	}
+	
 	//set data bus to inputs
 	DATAH_DDR = 0x00;
 	DATAL_DDR = 0x00;
@@ -281,6 +287,9 @@ uint8_t dbDumper::readByte(uint32_t address)
 			{
 				readData = DATAINL;
 			}
+			break;
+		case pcengine:
+			readData = DATAINL;
 			break;
 		case coleco:
 			readData = DATAINL;
@@ -306,9 +315,13 @@ void dbDumper::readByteBlock(uint16_t address, uint8_t * buf, uint16_t blockSize
 {
 	uint16_t i;
 
-	for( i = 0 ; i < blockSize ; i += 1 )
+	for( i = 0 ; i < blockSize ; i++ )
 	{
 		_latchAddress(address);
+		if( _mode == coleco )
+		{
+			_colAddrRangeSet((uint16_t)address);
+		}
 		
 		//set data bus to inputs
 		DATAH_DDR = 0x00;
@@ -329,6 +342,9 @@ void dbDumper::readByteBlock(uint16_t address, uint8_t * buf, uint16_t blockSize
 				{
 					buf[i] = DATAINL;
 				}
+				break;
+			case pcengine:
+				buf[i] = DATAINL;
 				break;
 			case coleco:
 				buf[i] = DATAINL;
@@ -355,9 +371,13 @@ void dbDumper::readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize
 {
 	uint16_t i;
 
-	for( i = 0 ; i < blockSize ; i += 1 )
+	for( i = 0 ; i < blockSize ; i++ )
 	{
 		_latchAddress(address);
+		if( _mode == coleco )
+		{
+			_colAddrRangeSet((uint16_t)address);
+		}
 		
 		//set data bus to inputs
 		DATAH_DDR = 0x00;
@@ -366,7 +386,30 @@ void dbDumper::readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize
 		// read the bus
 		digitalWrite(nCE, LOW);
 		digitalWrite(nRD, LOW);
-		buf[i] = DATAINL;
+		
+		//read genesis odd bytes from the high byte of the bus
+		switch(_mode)
+		{
+			case genesis:
+				if( (uint8_t)(address) & 0x01 )
+				{
+					buf[i] = DATAINH;
+				}else
+				{
+					buf[i] = DATAINL;
+				}
+				break;
+			case pcengine:
+				buf[i] = DATAINL;
+				break;
+			case coleco:
+				buf[i] = DATAINL;
+				break;
+			default:
+				buf[i] = DATAINL;
+				break;
+		}
+		
 		digitalWrite(nCE, HIGH);
 		digitalWrite(nRD, HIGH);
 		
@@ -400,6 +443,7 @@ uint16_t dbDumper::readWord(uint16_t address)
   	digitalWrite(nCE, LOW);
   	digitalWrite(nRD, LOW);
   
+	//convert to little endian while reading
   	readData = (uint16_t)DATAINL;
   	readData <<= 8;
   	readData |= (uint16_t)(DATAINH & 0x00FF);
@@ -433,6 +477,7 @@ uint16_t dbDumper::readWord(uint32_t address)
   	digitalWrite(nCE, LOW);
   	digitalWrite(nRD, LOW);
   
+	//convert to little endian while reading
   	readData = (uint16_t)DATAINL;
   	readData <<= 8;
   	readData |= (uint16_t)(DATAINH & 0x00FF);
@@ -450,7 +495,7 @@ uint16_t dbDumper::readWord(uint32_t address)
  * 
  * \warning setMode() must be called prior to using this function.
  * \warning upper 8 address bits (23..16) are not modified
- * \warning Data read as big endian.
+ * \warning converts to little endian
  **********************************************************************/
 void dbDumper::readWordBlock(uint16_t address, uint8_t * buf, uint16_t blockSize)
 {
@@ -467,6 +512,7 @@ void dbDumper::readWordBlock(uint16_t address, uint8_t * buf, uint16_t blockSize
 		// read the bus
 		digitalWrite(nCE, LOW);
 		digitalWrite(nRD, LOW);
+		//convert to little endian while reading
 		buf[i] = DATAINH;
 		buf[i+1] = DATAINL;
 		digitalWrite(nCE, HIGH);
@@ -499,6 +545,7 @@ void dbDumper::readWordBlock(uint32_t address, uint8_t * buf, uint16_t blockSize
 		// read the bus
 		digitalWrite(nCE, LOW);
 		digitalWrite(nRD, LOW);
+		//convert to little endian while reading
 		buf[i] = DATAINH;
 		buf[i+1] = DATAINL;
 		digitalWrite(nCE, HIGH);
@@ -577,7 +624,7 @@ void dbDumper::writeByte(uint32_t address, uint8_t data)
  * 
  * \warning setMode() must be called prior to using this function.
  * \warning upper 8 address bits (23..16) are not modified
- * \warning word is written as big endian
+ * \warning word is converted to big endian
  **********************************************************************/
 void dbDumper::writeWord(uint16_t address, uint16_t data)
 {
@@ -608,7 +655,7 @@ void dbDumper::writeWord(uint16_t address, uint16_t data)
  * address.
  * 
  * \warning setMode() must be called prior to using this function.
- * \warning word is written as big endian
+ * \warning word is converted to big endian
  **********************************************************************/
 void dbDumper::writeWord(uint32_t address, uint16_t data)
 {
@@ -634,6 +681,185 @@ void dbDumper::writeWord(uint32_t address, uint16_t data)
 	DATAL_DDR = 0x00;
 }
 
+/*******************************************************************//**
+ * The programByte function programs a byte into the flash array at a
+ * 16bit address. If the wait parameter is true the function will wait 
+ * for the program operation to complete using data polling before 
+ * returning.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ * \warning upper 8 address bits (23..16) are not modified
+ * \warning Sector or entire IC must be erased prior to programming
+ **********************************************************************/
+void dbDumper::programByte(uint16_t address, uint8_t data, bool wait)
+{
+	uint8_t readBack = ~data;
+	
+  	switch(_mode)
+  	{
+		//MX29F800 program byte
+		case pcengine:
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0xA0);
+			writeByte(address, data);
+			
+			//use data polling to validate end of program cycle
+			if(wait)
+			{
+				while(readBack != data)
+				{
+					readBack = readByte(address);
+				}
+			}
+			break;
+		//SST39SF0x0 program byte
+    	case coleco:
+			digitalWrite(COL_nBPRES, LOW);
+			digitalWrite(COL_A16, LOW);
+			digitalWrite(COL_A15, LOW);
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, LOW);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0xAA);
+
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, HIGH);
+			writeByte((uint16_t)0x2AAA, 0x55);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0xA0);
+			
+			//determine which address range to use, look at the two MS bits
+			_colAddrRangeSet(address);
+			writeByte(address, data);
+			
+			//use data polling to validate end of program cycle
+			if(wait)
+			{
+				while(readBack != data)
+				{
+					readBack = readByte(address);
+				}
+			}
+      		break;
+      		
+		default:
+			break;
+  	}
+}
+
+/*******************************************************************//**
+ * The programByte function programs a byte into the flash array at a
+ * 24bit address. If the wait parameter is true the function will wait 
+ * for the program operation to complete using data polling before 
+ * returning.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ * \warning Sector or entire IC must be erased prior to programming
+ **********************************************************************/
+void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
+{
+	uint8_t readBack = ~data;
+	
+  	switch(_mode)
+  	{
+		//MX29F800 program byte
+		case pcengine:
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0xA0);
+			writeByte(address, data);
+			
+			//use data polling to validate end of program cycle
+			if(wait)
+			{
+				while(readBack != data)
+				{
+					readBack = readByte((uint16_t)address);
+				}
+			}
+			break;
+		//SST39SF0x0 program byte
+		case coleco:
+			digitalWrite(COL_nBPRES, LOW);
+			digitalWrite(COL_A16, LOW);
+			digitalWrite(COL_A15, LOW);
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, LOW);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0xAA);
+
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, HIGH);
+			writeByte((uint16_t)0x2AAA, 0x55);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0xA0);
+			
+			//determine which address range to use, look at the two MS bits
+			_colAddrRangeSet((uint16_t)address);
+			writeByte((uint16_t)address, data);
+			
+			//use data polling to validate end of program cycle
+			if(wait)
+			{
+				while(readBack != data)
+				{
+					readBack = readByte((uint16_t)address);
+				}
+			}
+      		break;
+		default:
+			break;
+  	}
+}
+
+/*******************************************************************//**
+ * The programByte function programs a word into the flash array at a
+ * 24bit address. If the wait parameter is true the function will wait 
+ * for the program operation to complete using data polling before 
+ * returning.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ * \warning Sector or entire IC must be erased prior to programming
+ **********************************************************************/
+void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
+{
+	uint16_t readBack = ~data;
+	
+  	switch(_mode)
+  	{
+		//MX29F800 program word
+		case genesis:
+			writeWord((uint16_t)0x0555, 0x00AA);
+			writeWord((uint16_t)0x02AA, 0x0055);
+			writeWord((uint16_t)0x0555, 0x00A0);
+			writeByte(address, data);
+			
+			//use data polling to validate end of program cycle
+			if(wait)
+			{
+				while(readBack != data)
+				{
+					readBack = readWord(address);
+				}
+			}
+			break;
+		default:
+			break;
+  	}
+}
+
+/*******************************************************************//**
+ * The _latchAddress function latches a 24bit address to the cartridge
+ **********************************************************************/
 inline void dbDumper::_latchAddress(uint32_t address)
 {
 	uint8_t addrh,addrm,addrl;
@@ -659,6 +885,10 @@ inline void dbDumper::_latchAddress(uint32_t address)
 	digitalWrite(ALE_high, LOW);
 }
 
+/*******************************************************************//**
+ * The _latchAddress function latches a 16bit address to the cartridge
+ * \warning upper 8 address bits (23..16) are not modified
+ **********************************************************************/
 inline void dbDumper::_latchAddress(uint16_t address)
 {
 	uint8_t addrm,addrl;
@@ -682,8 +912,8 @@ void dbDumper::eraseChip()
 {
   	switch(_mode)
   	{
+		//mx29f800 chip erase word mode
 		case genesis:
-			//mx29f800 chip erase word mode
 			writeWord((uint16_t)0x0555, 0x00AA);
 			writeWord((uint16_t)0x02AA, 0x0055);
 			writeWord((uint16_t)0x0555, 0x0080);
@@ -691,8 +921,8 @@ void dbDumper::eraseChip()
 			writeWord((uint16_t)0x02AA, 0x0055);
 			writeWord((uint16_t)0x0555, 0x0010);
 			break;
+		//mx29f800 chip erase byte mode
 		case pcengine:
-			//mx29f800 chip erase byte mode
 			writeByte((uint16_t)0x0AAA, 0xAA);
 			writeByte((uint16_t)0x0555, 0x55);
 			writeByte((uint16_t)0x0AAA, 0x80);
@@ -700,8 +930,8 @@ void dbDumper::eraseChip()
 			writeByte((uint16_t)0x0555, 0x55);
 			writeByte((uint16_t)0x0AAA, 0x10);
 			break;
+		//SST39SF0x0 chip erase
     	case coleco:
-			//SST39SF0x0 chip erase
 			digitalWrite(COL_nBPRES, LOW);
 			digitalWrite(COL_A16, LOW);
 			digitalWrite(COL_A15, LOW);
@@ -814,8 +1044,9 @@ uint8_t dbDumper::toggleBit(uint8_t attempts)
 	
   	switch(_mode)
   	{
+		//mx29f800 toggle bit on bit 6
 		case genesis:
-			//mx29f800 toggle bit on bit 6
+			
 			uint16_t read16Value, old16Value;
 			
 			//first read should always be a 1 according to datasheet
@@ -836,8 +1067,10 @@ uint8_t dbDumper::toggleBit(uint8_t attempts)
 			}
 			break;
 		case pcengine:
+		
+		//SST39SF0x0 toggle bit on bit 6
     	case coleco:
-			//SST39SF0x0 toggle bit on bit 6
+			
 			uint8_t readValue, oldValue;
 			
 			//first read should always be a 1 according to datasheet
@@ -863,137 +1096,5 @@ uint8_t dbDumper::toggleBit(uint8_t attempts)
   	return retValue;
 }
 
-void dbDumper::programByte(uint16_t address, uint8_t data, bool wait)
-{
-	uint8_t readBack = ~data;
-	
-  	switch(_mode)
-  	{
-		case pcengine:
-			//MX29F800 program byte
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0xA0);
-			writeByte(address, data);
-			
-			break;
-    	case coleco:
-			//SST39SF0x0 program byte
-			digitalWrite(COL_nBPRES, LOW);
-			digitalWrite(COL_A16, LOW);
-			digitalWrite(COL_A15, LOW);
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, LOW);
 
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
-			writeByte((uint16_t)0x5555, 0xAA);
-
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, HIGH);
-			writeByte((uint16_t)0x2AAA, 0x55);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
-			writeByte((uint16_t)0x5555, 0xA0);
-			
-			//determine which address range to use, look at the two MS bits
-			_colAddrRangeSet(address);
-			writeByte(address, data);
-			
-			//use data polling to validate end of program cycle
-			if(wait)
-			{
-				delayMicroseconds(4);
-				while(readBack != data)
-				{
-					readBack = readByte(address);
-				}
-			}
-      		break;
-      		
-		default:
-			break;
-  	}
-}
-
-void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
-{
-	uint8_t readBack = ~data;
-	
-  	switch(_mode)
-  	{
-		case pcengine:
-			//MX29F800 program byte
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0xA0);
-			writeByte(address, data);
-			break;
-		case coleco:
-			//SST39SF0x0 program byte
-			digitalWrite(COL_nBPRES, LOW);
-			digitalWrite(COL_A16, LOW);
-			digitalWrite(COL_A15, LOW);
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, LOW);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
-			writeByte((uint16_t)0x5555, 0xAA);
-
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, HIGH);
-			writeByte((uint16_t)0x2AAA, 0x55);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
-			writeByte((uint16_t)0x5555, 0xA0);
-			
-			//determine which address range to use, look at the two MS bits
-			_colAddrRangeSet((uint16_t)address);
-			writeByte((uint16_t)address, data);
-			
-			//use data polling to validate end of program cycle
-			if(wait)
-			{
-				delayMicroseconds(4);
-				while(readBack != data)
-				{
-					readBack = readByte((uint16_t)address);
-				}
-			}
-      		break;
-		default:
-			break;
-  	}
-}
-
-void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
-{
-	uint16_t readBack = ~data;
-	
-  	switch(_mode)
-  	{
-		case genesis:
-			//MX29F800 program byte
-			writeWord((uint16_t)0x0555, 0x00AA);
-			writeWord((uint16_t)0x02AA, 0x0055);
-			writeWord((uint16_t)0x0555, 0x00A0);
-			writeByte(address, data);
-			
-			//use data polling to validate end of program cycle
-			if(wait)
-			{
-				delayMicroseconds(4);
-				while(readBack != data)
-				{
-					readBack = readWord(address);
-				}
-			}
-			break;
-		default:
-			break;
-  	}
-}
 

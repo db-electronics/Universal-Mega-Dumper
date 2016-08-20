@@ -68,32 +68,33 @@ class dbDumper
 
 		/*******************************************************************//**
 		 * \brief Reset the Flash IC in the catridge
+		 * \return void
 		**********************************************************************/
 		void resetCart();
 		
 		/*******************************************************************//**
 		 * \brief Set the operation mode of the dbDumper
-		 * 
 		 * \param eMode enum mode to set
+		 * \return true if cartridge asserts the #CART signal
 		 **********************************************************************/
 		bool detectCart();
 		
 		/*******************************************************************//**
 		 * \brief Set the operation mode of the dbDumper
-		 * 
 		 * \param eMode enum mode to set
+		 * \return void
 		 **********************************************************************/
 		void setMode(eMode);
 		
 		/*******************************************************************//**
 		 * \brief Set the operation mode of the dbDumper
-		 * 
-		 * \param eMode enum mode to set
+		 * \return eMode of currently set mode
 		 */
 		eMode getMode() { return _mode; }
 
 		/*******************************************************************//**
 		 * \brief Read the Manufacturer and Product ID in the Flash IC
+		 * \return uint16_t flashID
 		 **********************************************************************/
 		uint16_t getFlashID();
 
@@ -103,68 +104,67 @@ class dbDumper
 		 * This group of functions perform various read operations
 		 **********************************************************************/
 		/**@{*/
-		
 		/*******************************************************************//**
 		 * \brief Read a byte from a 16bit address
-		 * 
 		 * \param address 16bit address
+		 * \return byte from cartridge
 		 **********************************************************************/
 		uint8_t readByte(uint16_t address);
 		
 		/*******************************************************************//**
 		 * \brief Read a byte from a 24bit address
-		 * 
 		 * \param address 24bit address
+		 * \return byte from cartridge
 		 **********************************************************************/
 		uint8_t readByte(uint32_t address);
 		
 		/*******************************************************************//**
 		 * \brief Read a byte block from a 16 bit address
-		 * 
 		 * \param address 16bit address
 		 * \param buf a pointer to store the byte block
 		 * \param blockSize number of bytes to read from the block
+		 * \return void
 		 **********************************************************************/
 		void readByteBlock(uint16_t address, uint8_t * buf, uint16_t blockSize);
 		
 		/*******************************************************************//**
 		 * \brief Read a byte block from a 24 bit address
-		 * 
 		 * \param address 24bit address
 		 * \param buf a pointer to store the byte block
 		 * \param blockSize number of bytes to read from the block
+		 * \return void
 		 **********************************************************************/
 		void readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize);
 		
 		/*******************************************************************//**
 		 * \brief Read a word from a 16bit address
-		 * 
 		 * \param address 16bit address
+		 * \return word from cartridge
 		 **********************************************************************/
 		uint16_t readWord(uint16_t address);
 		
 		/*******************************************************************//**
 		 * \brief Read a word from a 24bit address
-		 * 
 		 * \param address 24bit address
+		 * \return word from cartridge
 		 **********************************************************************/
 		uint16_t readWord(uint32_t address);
 		
 		/*******************************************************************//**
 		 * \brief Read a word block from a 16 bit address
-		 * 
 		 * \param address 16bit address
 		 * \param buf a pointer to store the byte block
 		 * \param blockSize number of bytes to read from the block
+		 * \return void
 		 **********************************************************************/
 		void readWordBlock(uint32_t address, uint8_t * buf, uint16_t blockSize);
 		
 		/*******************************************************************//**
 		 * \brief Read a word block from a 24 bit address
-		 * 
 		 * \param address 24bit address
 		 * \param buf a pointer to store the byte block
 		 * \param blockSize number of bytes to read from the block
+		 * \return void
 		 **********************************************************************/
 		void readWordBlock(uint32_t address, uint8_t * buf, uint16_t blockSize);
 		
@@ -175,51 +175,81 @@ class dbDumper
 		 * This group of functions perform various write operations
 		 **********************************************************************/
 		/**@{*/
-		
 		/*******************************************************************//**
 		 * \brief Write a byte to a 16bit address
-		 * 
 		 * \param address 16bit address
 		 * \param data byte
+		 * \return void
 		 **********************************************************************/
 		void writeByte(uint16_t address, uint8_t data);
 		
 		/*******************************************************************//**
 		 * \brief Write a byte to a 24bit address
-		 * 
 		 * \param address 24bit address
 		 * \param data byte
+		 * \return void
 		 **********************************************************************/
 		void writeByte(uint32_t address, uint8_t data);
 		
 		/*******************************************************************//**
 		 * \brief Write a word to a 16bit address
-		 * 
 		 * \param address 16bit address
 		 * \param data word
+		 * \return void
 		 **********************************************************************/
 		void writeWord(uint16_t address, uint16_t data);
 		
 		/*******************************************************************//**
 		 * \brief Write a word to a 24bit address
-		 * 
 		 * \param address 24bit address
 		 * \param data word
+		 * \return void
 		 **********************************************************************/
 		void writeWord(uint32_t address, uint16_t data);
 		
 		/**@}*/
+
+
+		/*******************************************************************//** 
+		 * \name Program Functions
+		 * This group of functions perform various write operations
+		 **********************************************************************/
+		/**@{*/
+		/*******************************************************************//**
+		 * \brief Program a byte in the Flash IC
+		 * \param address 16bit address
+		 * \param data byte
+		 * \param wait Wait for completion using data polling to return from function
+		 * \return void
+		 **********************************************************************/
+		void programByte(uint16_t address, uint8_t data, bool wait);
 		
+		/*******************************************************************//**
+		 * \brief Program a byte in the Flash IC
+		 * \param address 24bit address
+		 * \param data byte
+		 * \param wait Wait for completion using data polling to return from function
+		 * \return void
+		 **********************************************************************/
+		void programByte(uint32_t address, uint8_t data, bool wait);
+		
+		/*******************************************************************//**
+		 * \brief Program a word in the Flash IC
+		 * \param address 24bit address
+		 * \param data word
+		 * \param wait Wait for completion using data polling to return from function
+		 * \return void
+		 **********************************************************************/
+		void programWord(uint32_t address, uint16_t data, bool wait);
+	
+		/**@}*/
+	
 		//erase
 		void eraseChip(void);
 		void eraseSector(uint16_t sectorAddress);
 		uint8_t toggleBit(uint8_t attempts);
 		
-		//program
-		void programByte(uint16_t address, uint8_t data, bool wait);
-		void programByte(uint32_t address, uint8_t data, bool wait);
-		void programWord(uint32_t address, uint16_t data, bool wait);
-		
+
 		//pin numbers UI
 		static const uint8_t nLED = 8;
 		static const uint8_t nPB = 9;

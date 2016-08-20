@@ -73,7 +73,6 @@ void dbDumper::_colPinMode()
 	digitalWrite(COL_n8000, LOW);
 
 	_resetPin = 45; //unused with coleco
-	_mode = coleco;
 }
 
 void dbDumper::_colAddrRangeSet(uint16_t address)
