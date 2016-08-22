@@ -29,6 +29,9 @@
 #include <SerialCommand.h>
 #include <dbDumper.h>
 
+#define WRITE_BLOCK_BUFFER_SIZE     128         //must be a power of 2
+#define WRITE_TIMEOUT_MS            10000
+
 SerialCommand SCmd;
 dbDumper db;
 
@@ -340,18 +343,49 @@ void dbTD_writeBlockCMD()
 {
     char *arg;
     uint32_t address = 0;
-    uint16_t blockSize = 0, i;
+    uint16_t blockSize = 0, i, j;
+
+    uint8_t buf[WRITE_BLOCK_BUFFER_SIZE];
+    uint8_t count = 0;
+
+    uint32_t timeout = millis();
     
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
-    
-    for( i=0 ; i < blockSize ; i++ )
+
+    //write bytes in chunks of WRITE_BLOCK_BUFFER_SIZE bytes 
+    for( i = 0 ; i < blockSize ; i += WRITE_BLOCK_BUFFER_SIZE )
     {
-        db.programByte(address, 0, true);
+        while( count < WRITE_BLOCK_BUFFER_SIZE )
+        {
+            if(Serial.available())
+            {
+                buf[count++] = Serial.read();
+                timeout = millis() + WRITE_TIMEOUT_MS;
+            }else
+            {
+                if( millis() > timeout )
+                {
+                    Serial.println(F("read timeout"));
+                    SCmd.clearBuffer();
+                    return;
+                }
+            }
+        }
+        
+        for( j = 0 ; j < WRITE_BLOCK_BUFFER_SIZE ; j++)
+        {
+            db.programByte(address++, buf[j], true); 
+        }
+        
+        count = 0;
+        Serial.println(i,HEX);
     }
+    
+    SCmd.clearBuffer();
 }
 
 

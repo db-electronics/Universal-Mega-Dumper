@@ -157,7 +157,7 @@ class dbDumper
 		 * \param blockSize number of bytes to read from the block
 		 * \return void
 		 **********************************************************************/
-		void readWordBlock(uint32_t address, uint8_t * buf, uint16_t blockSize);
+		void readWordBlock(uint16_t address, uint8_t * buf, uint16_t blockSize);
 		
 		/*******************************************************************//**
 		 * \brief Read a word block from a 24 bit address
