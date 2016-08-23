@@ -98,6 +98,17 @@ class dbDumper
 		 **********************************************************************/
 		uint16_t getFlashID();
 
+		/*******************************************************************//**
+		 * \brief Erase the entire Flash IC
+		 * \param bool wait
+		 * \return uint32_t time in millis operation took to complete
+		 **********************************************************************/
+		uint32_t eraseChip(bool wait);
+		
+		
+		void eraseSector(uint16_t sectorAddress);
+		uint8_t toggleBit(uint8_t attempts);
+
 
 		/*******************************************************************//**
 		 * \name Read Functions
@@ -244,12 +255,6 @@ class dbDumper
 	
 		/**@}*/
 	
-		//erase
-		void eraseChip(void);
-		void eraseSector(uint16_t sectorAddress);
-		uint8_t toggleBit(uint8_t attempts);
-		
-
 		//pin numbers UI
 		static const uint8_t nLED = 8;
 		static const uint8_t nPB = 9;
@@ -264,8 +269,6 @@ class dbDumper
 		
 		void _colSoftwareIDEntry();
 		void _colSoftwareIDExit();
-		void _colAddrRangeSet(uint16_t address);
-		void _colPinMode();
 
 		//pin numbers address control
 		static const uint8_t ALE_low = 26;

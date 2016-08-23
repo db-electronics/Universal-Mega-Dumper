@@ -130,7 +130,18 @@ void dbDumper::setMode(eMode mode)
 			
 			break;
 		case coleco:
-			_colPinMode();
+			pinMode(COL_nBPRES, OUTPUT);
+			digitalWrite(COL_nBPRES, LOW);
+			pinMode(COL_nE000, OUTPUT);
+			digitalWrite(COL_nE000, LOW);
+			pinMode(COL_nC000, OUTPUT);
+			digitalWrite(COL_nC000, LOW);
+			pinMode(COL_nA000, OUTPUT);
+			digitalWrite(COL_nA000, LOW);
+			pinMode(COL_n8000, OUTPUT);
+			digitalWrite(COL_n8000, LOW);
+
+			_resetPin = 45; //unused with coleco
 			_mode = coleco;
 			break;
 		default:
@@ -181,11 +192,36 @@ uint16_t dbDumper::getFlashID()
 			break;
 		//SST39SF0x0 software ID detect
     	case coleco:
-			_colSoftwareIDEntry();
+			digitalWrite(COL_nBPRES, LOW);
+			digitalWrite(COL_A16, LOW);
+			digitalWrite(COL_A15, LOW);
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, LOW);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555,0xAA);
+
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, HIGH);
+			writeByte((uint16_t)0x2AAA,0x55);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555,0x90);
+
+			digitalWrite(COL_A16, LOW);
+			digitalWrite(COL_A15, LOW);
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, LOW);
+			
 			flashID = (uint16_t)readByte((uint16_t)0x0000);
 			flashID <<= 8;
 			flashID |= (uint16_t)readByte((uint16_t)0x0001);
-			_colSoftwareIDExit();
+			
+			//exit software ID
+			writeByte((uint16_t)0x0000,0xF0);
+			
 			_flashID = flashID;
       		break;
 		default:
@@ -194,6 +230,94 @@ uint16_t dbDumper::getFlashID()
   	}
 
   	return flashID;
+}
+
+/*******************************************************************//**
+ * The setMode() function erases the entire chip. If the wait parameter
+ * is true the function will block with toggle bit until the erase 
+ * operation has completed. It will return the time in millis the
+ * operation required to complete.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ **********************************************************************/
+uint32_t dbDumper::eraseChip(bool wait)
+{
+	uint32_t startMillis;
+	
+  	switch(_mode)
+  	{
+		//mx29f800 chip erase word mode
+		case genesis:
+			writeWord((uint16_t)0x0555, 0x00AA);
+			writeWord((uint16_t)0x02AA, 0x0055);
+			writeWord((uint16_t)0x0555, 0x0080);
+			writeWord((uint16_t)0x0555, 0x00AA);
+			writeWord((uint16_t)0x02AA, 0x0055);
+			writeWord((uint16_t)0x0555, 0x0010);
+			break;
+		//mx29f800 chip erase byte mode
+		case pcengine:
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0x80);
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0x10);
+			break;
+		//SST39SF0x0 chip erase
+    	case coleco:
+			digitalWrite(COL_nBPRES, LOW);
+			digitalWrite(COL_A16, LOW);
+			digitalWrite(COL_A15, LOW);
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, LOW);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0xAA);
+
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, HIGH);
+			writeByte((uint16_t)0x2AAA, 0x55);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0x80);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0xAA);
+			
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, HIGH);
+			writeByte((uint16_t)0x2AAA, 0x55);
+
+			digitalWrite(COL_A14, HIGH);
+			digitalWrite(COL_A13, LOW);
+			writeByte((uint16_t)0x5555, 0x10);
+
+			digitalWrite(COL_A16, LOW);
+			digitalWrite(COL_A15, LOW);
+			digitalWrite(COL_A14, LOW);
+			digitalWrite(COL_A13, LOW);
+      		break;
+		default:
+			break;
+  	}
+  	
+  	// if wait parameter was specified, do toggle until operation is complete
+  	if(wait)
+  	{
+		startMillis = millis();
+		
+		// wait for 4 consecutive toggle bit success reads before exiting
+		while( toggleBit(4) != 4 );
+		return ( millis() - startMillis );
+		
+	}else
+	{
+		return 0;
+	}
 }
 
 /*******************************************************************//**
@@ -210,10 +334,6 @@ uint8_t dbDumper::readByte(uint16_t address)
 	uint8_t readData;
 	
 	_latchAddress(address);
-	if( _mode == coleco )
-	{
-		_colAddrRangeSet(address);
-	}
 
 	//set data bus to inputs
 	DATAH_DDR = 0x00;
@@ -262,10 +382,13 @@ uint8_t dbDumper::readByte(uint32_t address)
 {
 	uint8_t readData;
 
-	_latchAddress(address);
+	//in case we get here in Coleco mode with a 32bit address
 	if( _mode == coleco )
 	{
-		_colAddrRangeSet((uint16_t)address);
+		_latchAddress((uint16_t)address);
+	}else
+	{
+		_latchAddress(address);
 	}
 	
 	//set data bus to inputs
@@ -318,10 +441,6 @@ void dbDumper::readByteBlock(uint16_t address, uint8_t * buf, uint16_t blockSize
 	for( i = 0 ; i < blockSize ; i++ )
 	{
 		_latchAddress(address);
-		if( _mode == coleco )
-		{
-			_colAddrRangeSet((uint16_t)address);
-		}
 		
 		//set data bus to inputs
 		DATAH_DDR = 0x00;
@@ -373,10 +492,13 @@ void dbDumper::readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize
 
 	for( i = 0 ; i < blockSize ; i++ )
 	{
-		_latchAddress(address);
+		//in case we get here in Coleco mode with a 32bit address
 		if( _mode == coleco )
 		{
-			_colAddrRangeSet((uint16_t)address);
+			_latchAddress((uint16_t)address);
+		}else
+		{
+			_latchAddress(address);
 		}
 		
 		//set data bus to inputs
@@ -463,7 +585,7 @@ uint16_t dbDumper::readWord(uint16_t address)
  **********************************************************************/
 uint16_t dbDumper::readWord(uint32_t address)
 {
-	//only genesis mode reads word for now
+	//only genesis mode reads words
 
 	uint16_t readData;
 
@@ -733,8 +855,6 @@ void dbDumper::programByte(uint16_t address, uint8_t data, bool wait)
 			digitalWrite(COL_A13, LOW);
 			writeByte((uint16_t)0x5555, 0xA0);
 			
-			//determine which address range to use, look at the two MS bits
-			_colAddrRangeSet(address);
 			writeByte(address, data);
 			
 			//use data polling to validate end of program cycle
@@ -779,7 +899,7 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 			{
 				while(readBack != data)
 				{
-					readBack = readByte((uint16_t)address);
+					readBack = readByte(address);
 				}
 			}
 			break;
@@ -803,8 +923,7 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 			digitalWrite(COL_A13, LOW);
 			writeByte((uint16_t)0x5555, 0xA0);
 			
-			//determine which address range to use, look at the two MS bits
-			_colAddrRangeSet((uint16_t)address);
+			//cast to uint16_t in case we got here
 			writeByte((uint16_t)address, data);
 			
 			//use data polling to validate end of program cycle
@@ -812,6 +931,7 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 			{
 				while(readBack != data)
 				{
+					//cast to uint16_t in case we got here
 					readBack = readByte((uint16_t)address);
 				}
 			}
@@ -859,6 +979,7 @@ void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
 
 /*******************************************************************//**
  * The _latchAddress function latches a 24bit address to the cartridge
+ * \warning incompatible with Colecovision mode
  **********************************************************************/
 inline void dbDumper::_latchAddress(uint32_t address)
 {
@@ -886,7 +1007,9 @@ inline void dbDumper::_latchAddress(uint32_t address)
 }
 
 /*******************************************************************//**
- * The _latchAddress function latches a 16bit address to the cartridge
+ * The _latchAddress function latches a 16bit address to the cartridge.
+ * In Colecovision mode the 4 nCE lines are automatically handled wrt
+ * the address range.
  * \warning upper 8 address bits (23..16) are not modified
  **********************************************************************/
 inline void dbDumper::_latchAddress(uint16_t address)
@@ -905,71 +1028,48 @@ inline void dbDumper::_latchAddress(uint16_t address)
 	DATAOUTL = addrl;
 	digitalWrite(ALE_low, HIGH);
 	digitalWrite(ALE_low, LOW);
+	
+	if ( _mode == coleco )
+	{
+		uint16_t range;
+		
+		//determine which address range to use, look at the two MS bits
+		range = address & 0x6000;
+		switch(range)
+		{
+			case 0x0000:
+				digitalWrite(COL_nE000, HIGH);
+				digitalWrite(COL_nC000, HIGH);
+				digitalWrite(COL_nA000, HIGH);
+				digitalWrite(COL_n8000, LOW);
+				
+				break;
+			case 0x2000:
+				digitalWrite(COL_nE000, HIGH);
+				digitalWrite(COL_nC000, HIGH);
+				digitalWrite(COL_nA000, LOW);
+				digitalWrite(COL_n8000, HIGH);
+				
+				break;
+			case 0x4000:
+				digitalWrite(COL_nE000, HIGH);
+				digitalWrite(COL_nC000, LOW);
+				digitalWrite(COL_nA000, HIGH);
+				digitalWrite(COL_n8000, HIGH);
+				
+				break;
+			case 0x6000:
+				digitalWrite(COL_nE000, LOW);
+				digitalWrite(COL_nC000, HIGH);
+				digitalWrite(COL_nA000, HIGH);
+				digitalWrite(COL_n8000, HIGH);
+				
+				break;
+			default:
+				break;
+		}
+	}
 
-}
-
-void dbDumper::eraseChip()
-{
-  	switch(_mode)
-  	{
-		//mx29f800 chip erase word mode
-		case genesis:
-			writeWord((uint16_t)0x0555, 0x00AA);
-			writeWord((uint16_t)0x02AA, 0x0055);
-			writeWord((uint16_t)0x0555, 0x0080);
-			writeWord((uint16_t)0x0555, 0x00AA);
-			writeWord((uint16_t)0x02AA, 0x0055);
-			writeWord((uint16_t)0x0555, 0x0010);
-			break;
-		//mx29f800 chip erase byte mode
-		case pcengine:
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0x80);
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0x10);
-			break;
-		//SST39SF0x0 chip erase
-    	case coleco:
-			digitalWrite(COL_nBPRES, LOW);
-			digitalWrite(COL_A16, LOW);
-			digitalWrite(COL_A15, LOW);
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, LOW);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
-			writeByte((uint16_t)0x5555, 0xAA);
-
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, HIGH);
-			writeByte((uint16_t)0x2AAA, 0x55);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
-			writeByte((uint16_t)0x5555, 0x80);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
-			writeByte((uint16_t)0x5555, 0xAA);
-			
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, HIGH);
-			writeByte((uint16_t)0x2AAA, 0x55);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
-			writeByte((uint16_t)0x5555, 0x10);
-
-			digitalWrite(COL_A16, LOW);
-			digitalWrite(COL_A15, LOW);
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, LOW);
-      		break;
-		default:
-			break;
-  	}
 }
 
 void dbDumper::eraseSector(uint16_t sectorAddress)

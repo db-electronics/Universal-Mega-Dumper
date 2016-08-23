@@ -1,4 +1,5 @@
-/** \file TestDumper.ino
+/*******************************************************************//**
+ *  \file TestDumper.ino
  *  \author René Richard
  *  \brief This program allows to read and write to various game cartridges including: Genesis, Coleco, SMS, PCE - with possibility for future expansion.
  *  
@@ -8,7 +9,7 @@
  *  Board Type  - Teensy++2.0
  *  USB Type    - Serial
  *  CPU Speed   - 16 MHz
- */
+ **********************************************************************/
  
 /*
  LICENSE
@@ -35,10 +36,10 @@
 SerialCommand SCmd;
 dbDumper db;
 
-/** \brief Main loop
- *  
+/*******************************************************************//**
+ *  \brief Main loop
  *  \return Void
- */
+ **********************************************************************/
 void setup() {
 
     uint8_t i;
@@ -59,33 +60,32 @@ void setup() {
     }
 
     //register callbacks for SerialCommand
-    
-    //detect cart
-    SCmd.addCommand("dt",dbTD_detectCMD);
-    SCmd.addCommand("sm",dbTD_setModeCMD);
-    SCmd.addCommand("er",dbTD_eraseChipCMD);
-    SCmd.addCommand("id",dbTD_flashIDCMD);
-    SCmd.addCommand("rw",dbTD_readWordCMD);
-    SCmd.addCommand("rb",dbTD_readByteCMD);
-    SCmd.addCommand("wb",dbTD_writeByteCMD);
+    SCmd.addCommand("detect",dbTD_detectCMD);
+    SCmd.addCommand("setmode",dbTD_setModeCMD);
+    SCmd.addCommand("erase",dbTD_eraseChipCMD);
+    SCmd.addCommand("getid",dbTD_flashIDCMD);
+    SCmd.addCommand("readword",dbTD_readWordCMD);
+    SCmd.addCommand("readbyte",dbTD_readByteCMD);
+    SCmd.addCommand("progbyte",dbTD_programByteCMD);
+    SCmd.addCommand("progbblock",dbTD_programByteBlockCMD);
     SCmd.addDefaultHandler(unknownCMD);
 }
 
-/** \brief Main loop
- *  
+/*******************************************************************//**
+ *  \brief Main loop
  *  \return Void
- */
+ **********************************************************************/
 void loop()
 {
     SCmd.readSerial();
 }
 
 
-/** \brief Prints a list of registered commands on the console
- *  
+/*******************************************************************//**
+ *  \brief Prints a list of registered commands on the console
  *  \param command The unknown command
  *  \return Void
- */
+ **********************************************************************/
 void unknownCMD(const char *command)
 {
     Serial.println(F("Unrecognized command: \""));
@@ -95,16 +95,16 @@ void unknownCMD(const char *command)
 }
 
 
-/** \brief Detects whether a cart is connected to the dumper
- *  
+/*******************************************************************//**
+ *  \brief Detects whether a cart is connected to the dumper
  *  If a cart asserts the #CART signal it will be detected.
  *  Note that the mode must be set prior to issuing this command
  *  
  *  Usage:
- *  dt
+ *  detect
  *  
  *  \return Void
- */
+ **********************************************************************/
 void dbTD_detectCMD()
 {
     if(db.detectCart())
@@ -117,17 +117,17 @@ void dbTD_detectCMD()
 }
 
 
-/** \brief Sets the dumper mode
- *  
+/*******************************************************************//**
+ *  \brief Sets the dumper mode
  *  Configures the dumper's I/O for the corresponding system.
  *  Mode set is required to be issued prior to most other commands as most
  *  commands require a mode to function properly.
  *  
  *  Usage:
- *  sm c
+ *  setmode c
  *  
  *  \return Void
- */
+ **********************************************************************/
 void dbTD_setModeCMD()
 {
     char *arg;
@@ -136,6 +136,10 @@ void dbTD_setModeCMD()
     {
         case 'g':
             db.setMode(db.genesis);
+            Serial.println(F("mode set genesis")); 
+            break;
+        case 'p':
+            db.setMode(db.pcengine);
             Serial.println(F("mode set genesis")); 
             break;
         case 'c':
@@ -150,33 +154,54 @@ void dbTD_setModeCMD()
 }
 
 
-/** \brief Erases the contents of the cart
- *  
+/*******************************************************************//**
+ *  \brief Erases the contents of the cart
  *  Erases the correspoding the Flash IC on the cart.
  *  Requires set mode to be issued prior.
  *  
  *  Usage:
- *  er
+ *  erase
+ *  erase w
  *  
  *  \return Void
- */
+ **********************************************************************/
 void dbTD_eraseChipCMD()
 {
-    db.eraseChip(); 
+    char *arg;
+    uint32_t eraseTime;
+
+    arg = SCmd.next();
+    if( arg != NULL )
+    {
+        switch(*arg)
+        {
+            case 'w':
+                eraseTime = db.eraseChip(true);
+                Serial.print(F("erase executed in ")); 
+                Serial.print(eraseTime,DEC);
+                Serial.println(F("ms"));
+                break;
+            default:
+                break;
+        }
+    }else
+    {
+        db.eraseChip(false); 
+    }
 }
 
 
-/** \brief Get the Flash ID
- *  
+/*******************************************************************//**
+ *  \brief Get the Flash ID
  *  Reads the ID of the corresponding Flash IC.
  *  Requires set mode to be issued prior.
  *  
  *  Usage:
- *  id
- *  id h
+ *  getid
+ *  getid h
  *  
  *  \return Void
- */
+ **********************************************************************/
 void dbTD_flashIDCMD()
 {
     char *arg;
@@ -202,18 +227,18 @@ void dbTD_flashIDCMD()
 }
 
 
-/** \brief Read a word from the cartridge
- *  
+/*******************************************************************//**
+ *  \brief Read a word from the cartridge
  *  Read a 16bit word from the cartridge, only valid for 16bit buses.
  *  
  *  Usage:
- *  rw 0x0000
+ *  readword 0x0000
  *    - returns unformated word
- *  rw 0x0000 h
+ *  readword 0x0000 h
  *    - returns HEX formatted word with \n\r
  *  
  *  \return Void
- */
+ **********************************************************************/
 void dbTD_readWordCMD()
 {
     char *arg;
@@ -244,19 +269,19 @@ void dbTD_readWordCMD()
 }
 
 
-/** \brief Read a byte from the cartridge
- *  
+/*******************************************************************//**
+ *  \brief Read a byte from the cartridge
  *  Read an 8bit byte from the cartridge. In Coleco mode
  *  the address is forced to uint16_t.
  *  
  *  Usage:
- *  rb 0x0000
+ *  readbyte 0x0000
  *    - returns unformated byte
- *  rb 0x0000 h
+ *  readbyte 0x0000 h
  *    - returns HEX formatted byte with \n\r
  *  
  *  \return Void
- */
+ **********************************************************************/
 void dbTD_readByteCMD()
 {
     char *arg;
@@ -293,22 +318,22 @@ void dbTD_readByteCMD()
 }
 
 
-/** \brief Program a byte in the cartridge
- *  
+/*******************************************************************//**
+ *  \brief Program a byte in the cartridge
  *  Program a byte in the cartridge. Prior to progamming,
  *  the sector or entire chip must be erased. The function
  *  returns immediately without checking if the operation
  *  has completed (i.e. toggle bit)
  *  
  *  Usage:
- *  wb 0x0000 0x12
+ *  progbyte 0x0000 0x12
  *    - programs 0x12 into address 0x0000
- *  wb 412 12
+ *  progbyte 412 12
  *    - programs decimal 12 into address decimal 412
  *  
  *  \return Void
- */
-void dbTD_writeByteCMD()
+ **********************************************************************/
+void dbTD_programByteCMD()
 {
     char *arg;
     uint32_t address=0;
@@ -319,27 +344,34 @@ void dbTD_writeByteCMD()
     
     arg = SCmd.next(); 
     data = (uint8_t)strtoul(arg, (char**)0, 0);
-    
-    db.programByte(address, data, false);
+
+    //if coleco, force 16 bit address
+    if( db.getMode() == db.coleco )
+    {
+        db.programByte((uint16_t)address, data, false);
+    }else
+    {
+        db.programByte(address, data, false);
+    }
 }
 
 
-/** \brief Program a byte block in the cartridge
- *  
+/*******************************************************************//**
+ *  \brief Program a byte block in the cartridge
  *  Program a byte block in the cartridge. Prior to progamming,
  *  the sector or entire chip must be erased. The function
  *  returns immediately without checking if the operation
  *  has completed (i.e. toggle bit)
  *  
  *  Usage:
- *  wb 0x0000 0x12
+ *  progbblock 0x0000 0x12
  *    - programs 0x12 into address 0x0000
- *  wb 412 12
+ *  progbblock 412 12
  *    - programs decimal 12 into address decimal 412
  *  
  *  \return Void
- */
-void dbTD_writeBlockCMD()
+ **********************************************************************/
+void dbTD_programByteBlockCMD()
 {
     char *arg;
     uint32_t address = 0;
@@ -359,6 +391,7 @@ void dbTD_writeBlockCMD()
     //write bytes in chunks of WRITE_BLOCK_BUFFER_SIZE bytes 
     for( i = 0 ; i < blockSize ; i += WRITE_BLOCK_BUFFER_SIZE )
     {
+        //receive a block in buffer before writing to flash
         while( count < WRITE_BLOCK_BUFFER_SIZE )
         {
             if(Serial.available())
@@ -375,10 +408,18 @@ void dbTD_writeBlockCMD()
                 }
             }
         }
-        
+
+        //write the block in buffer to flash
         for( j = 0 ; j < WRITE_BLOCK_BUFFER_SIZE ; j++)
         {
-            db.programByte(address++, buf[j], true); 
+            //if coleco, force 16 bit address
+            if( db.getMode() == db.coleco )
+            {
+                db.programByte((uint16_t)address++, buf[j], true);
+            }else
+            {
+                db.programByte(address++, buf[j], true);
+            }
         }
         
         count = 0;
