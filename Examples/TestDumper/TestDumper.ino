@@ -36,6 +36,8 @@
 SerialCommand SCmd;
 dbDumper db;
 
+uint8_t buffer[WRITE_BLOCK_BUFFER_SIZE];
+
 /*******************************************************************//**
  *  \brief Main loop
  *  \return Void
@@ -43,7 +45,7 @@ dbDumper db;
 void setup() {
 
     uint8_t i;
-
+    
     //hello PC
     Serial.begin(38400);
     Serial.println(F("db Electronics TeensyDumper v0.2"));
@@ -205,9 +207,13 @@ void dbTD_eraseChipCMD()
 void dbTD_flashIDCMD()
 {
     char *arg;
+    
     uint16_t data;
+    
+    //read the flash ID
     data = db.getFlashID();
 
+	//check if we should output a formatted string
     arg = SCmd.next();
     if( arg != NULL )
     {
@@ -244,11 +250,15 @@ void dbTD_readWordCMD()
     char *arg;
     uint32_t address=0;
     uint16_t data;
-    arg = SCmd.next();
     
+    //get the address in the next argument
+    arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
+    
+    //read the word
     data = db.readWord(address);
 
+	//check if we should output a formatted string
     arg = SCmd.next();
     if( arg != NULL )
     {
@@ -287,11 +297,12 @@ void dbTD_readByteCMD()
     char *arg;
     uint32_t address = 0;
     uint8_t data;
-    arg = SCmd.next();
     
+    //get the address in the next argument
+    arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
-    //if coleco, force 16 bit address
+    //if coleco, force 16 bit address read
     if( db.getMode() == db.coleco )
     {
         data = db.readByte((uint16_t)address);
@@ -300,16 +311,17 @@ void dbTD_readByteCMD()
         data = db.readByte(address);
     }
 
+	//check if we should output a formatted string
     arg = SCmd.next();
     if( arg != NULL )
     {
         switch(*arg)
         {
-        case 'h':
-            Serial.println(data,HEX);
-            break;
-        default:
-            break;
+			case 'h':
+				Serial.println(data,HEX);
+				break;
+			default:
+				break;
         }
     }else
     {
@@ -337,15 +349,17 @@ void dbTD_programByteCMD()
 {
     char *arg;
     uint32_t address=0;
-    uint8_t data;
+    uint8_t data, readBack;
     
+    //get the address in the next argument
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
+    //get the data in the next argument
     arg = SCmd.next(); 
     data = (uint8_t)strtoul(arg, (char**)0, 0);
 
-    //if coleco, force 16 bit address
+    //if coleco, force 16 bit address program
     if( db.getMode() == db.coleco )
     {
         db.programByte((uint16_t)address, data, false);
@@ -353,38 +367,99 @@ void dbTD_programByteCMD()
     {
         db.programByte(address, data, false);
     }
+    
+    //check if we should verify the write
+    arg = SCmd.next();
+	if( arg != NULL )
+    {
+        switch(*arg)
+        {
+			case 'v':
+				delayMicroseconds(50);
+				readBack = db.readByte(address);
+				break;
+			default:
+				break;
+        }
+        
+        //compare values
+        if( readBack == data )
+        {
+			//check if we should output a formatted string
+			arg = SCmd.next();
+			if( arg != NULL )
+			{
+				switch(*arg)
+				{
+					case 'h':
+						Serial.print(F("ok 0x")); 
+						Serial.print(readBack,HEX);
+						Serial.print(F(" at address 0x")); 
+						Serial.println(address,HEX);
+						break;
+					default:
+						break;
+				}
+			}else
+			{
+				Serial.write((char)(data));
+			}
+		}else
+		{
+			//check if we should output a formatted string
+			arg = SCmd.next();
+			if( arg != NULL )
+			{
+				switch(*arg)
+				{
+					case 'h':
+						Serial.print(F("read 0x")); 
+						Serial.print(readBack,HEX);
+						Serial.print(F(" expected 0x")); 
+						Serial.print(data,HEX);
+						Serial.print(F(" at address 0x")); 
+						Serial.println(address,HEX);
+						break;
+					default:
+						break;
+				}
+			}else
+			{
+				Serial.write((char)(data));
+			}
+		}
+    }
+    
+    
 }
 
 
 /*******************************************************************//**
- *  \brief Program a byte block in the cartridge
- *  Program a byte block in the cartridge. Prior to progamming,
- *  the sector or entire chip must be erased. The function
- *  returns immediately without checking if the operation
- *  has completed (i.e. toggle bit)
+ * \brief Program a byte block in the cartridge
+ * Program a byte block in the cartridge. Prior to progamming,
+ * the sector or entire chip must be erased. The function uses data
+ * polling between each byte program to validate the operation. If no 
+ * data is received for WRITE_TIMEOUT_MS the function will abort.
  *  
- *  Usage:
- *  progbblock 0x0000 0x12
- *    - programs 0x12 into address 0x0000
- *  progbblock 412 12
- *    - programs decimal 12 into address decimal 412
+ * Usage:
+ * progbblock 0x0000 64 %64bytes%
+ *   - programs %64bytes% received starting at address 0x0000
  *  
- *  \return Void
+ * \return Void
  **********************************************************************/
 void dbTD_programByteBlockCMD()
 {
     char *arg;
     uint32_t address = 0;
     uint16_t blockSize = 0, i, j;
-
-    uint8_t buf[WRITE_BLOCK_BUFFER_SIZE];
     uint8_t count = 0;
-
     uint32_t timeout = millis();
     
+    //get the address in the next argument
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
+    //get the data in the next argument
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
 
@@ -396,7 +471,7 @@ void dbTD_programByteBlockCMD()
         {
             if(Serial.available())
             {
-                buf[count++] = Serial.read();
+                buffer[count++] = Serial.read();
                 timeout = millis() + WRITE_TIMEOUT_MS;
             }else
             {
@@ -415,10 +490,10 @@ void dbTD_programByteBlockCMD()
             //if coleco, force 16 bit address
             if( db.getMode() == db.coleco )
             {
-                db.programByte((uint16_t)address++, buf[j], true);
+                db.programByte((uint16_t)address++, buffer[j], true);
             }else
             {
-                db.programByte(address++, buf[j], true);
+                db.programByte(address++, buffer[j], true);
             }
         }
         
