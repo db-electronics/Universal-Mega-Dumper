@@ -350,7 +350,7 @@ void dbTD_programByteCMD()
     char *arg;
     uint32_t address=0;
     uint8_t data, readBack;
-    
+        
     //get the address in the next argument
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
@@ -358,6 +358,7 @@ void dbTD_programByteCMD()
     //get the data in the next argument
     arg = SCmd.next(); 
     data = (uint8_t)strtoul(arg, (char**)0, 0);
+	readBack = ~data;
 
     //if coleco, force 16 bit address program
     if( db.getMode() == db.coleco )

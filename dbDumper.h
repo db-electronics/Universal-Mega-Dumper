@@ -116,27 +116,11 @@ class dbDumper
 		 **********************************************************************/
 		/**@{*/
 		/*******************************************************************//**
-		 * \brief Read a byte from a 16bit address
-		 * \param address 16bit address
-		 * \return byte from cartridge
-		 **********************************************************************/
-		uint8_t readByte(uint16_t address);
-		
-		/*******************************************************************//**
 		 * \brief Read a byte from a 24bit address
 		 * \param address 24bit address
 		 * \return byte from cartridge
 		 **********************************************************************/
 		uint8_t readByte(uint32_t address);
-		
-		/*******************************************************************//**
-		 * \brief Read a byte block from a 16 bit address
-		 * \param address 16bit address
-		 * \param buf a pointer to store the byte block
-		 * \param blockSize number of bytes to read from the block
-		 * \return void
-		 **********************************************************************/
-		void readByteBlock(uint16_t address, uint8_t * buf, uint16_t blockSize);
 		
 		/*******************************************************************//**
 		 * \brief Read a byte block from a 24 bit address
@@ -148,27 +132,11 @@ class dbDumper
 		void readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize);
 		
 		/*******************************************************************//**
-		 * \brief Read a word from a 16bit address
-		 * \param address 16bit address
-		 * \return word from cartridge
-		 **********************************************************************/
-		uint16_t readWord(uint16_t address);
-		
-		/*******************************************************************//**
 		 * \brief Read a word from a 24bit address
 		 * \param address 24bit address
 		 * \return word from cartridge
 		 **********************************************************************/
 		uint16_t readWord(uint32_t address);
-		
-		/*******************************************************************//**
-		 * \brief Read a word block from a 16 bit address
-		 * \param address 16bit address
-		 * \param buf a pointer to store the byte block
-		 * \param blockSize number of bytes to read from the block
-		 * \return void
-		 **********************************************************************/
-		void readWordBlock(uint16_t address, uint8_t * buf, uint16_t blockSize);
 		
 		/*******************************************************************//**
 		 * \brief Read a word block from a 24 bit address
@@ -228,15 +196,6 @@ class dbDumper
 		/**@{*/
 		/*******************************************************************//**
 		 * \brief Program a byte in the Flash IC
-		 * \param address 16bit address
-		 * \param data byte
-		 * \param wait Wait for completion using data polling to return from function
-		 * \return void
-		 **********************************************************************/
-		void programByte(uint16_t address, uint8_t data, bool wait);
-		
-		/*******************************************************************//**
-		 * \brief Program a byte in the Flash IC
 		 * \param address 24bit address
 		 * \param data byte
 		 * \param wait Wait for completion using data polling to return from function
@@ -267,8 +226,9 @@ class dbDumper
 		inline void _latchAddress(uint16_t address);
 		inline void _latchAddress(uint32_t address);
 		
-		void _colSoftwareIDEntry();
-		void _colSoftwareIDExit();
+		//void _colSoftwareIDEntry();
+		//void _colSoftwareIDExit();
+		void _colAddrRangeSet(uint16_t address);
 
 		//pin numbers address control
 		static const uint8_t ALE_low = 26;
