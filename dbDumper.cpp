@@ -193,27 +193,9 @@ uint16_t dbDumper::getFlashID()
 		//SST39SF0x0 software ID detect
     	case coleco:
 			digitalWrite(COL_nBPRES, LOW);
-			digitalWrite(COL_A16, LOW);
-			digitalWrite(COL_A15, LOW);
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, LOW);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
 			writeByte((uint16_t)0x5555,0xAA);
-
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, HIGH);
 			writeByte((uint16_t)0x2AAA,0x55);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
 			writeByte((uint16_t)0x5555,0x90);
-
-			digitalWrite(COL_A16, LOW);
-			digitalWrite(COL_A15, LOW);
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, LOW);
 			
 			flashID = (uint16_t)readByte((uint16_t)0x0000);
 			flashID <<= 8;
@@ -267,39 +249,12 @@ uint32_t dbDumper::eraseChip(bool wait)
 		//SST39SF0x0 chip erase
     	case coleco:
 			digitalWrite(COL_nBPRES, LOW);
-			digitalWrite(COL_A16, LOW);
-			digitalWrite(COL_A15, LOW);
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, LOW);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
 			writeByte((uint16_t)0x5555, 0xAA);
-
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, HIGH);
 			writeByte((uint16_t)0x2AAA, 0x55);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
 			writeByte((uint16_t)0x5555, 0x80);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
 			writeByte((uint16_t)0x5555, 0xAA);
-			
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, HIGH);
 			writeByte((uint16_t)0x2AAA, 0x55);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
 			writeByte((uint16_t)0x5555, 0x10);
-
-			digitalWrite(COL_A16, LOW);
-			digitalWrite(COL_A15, LOW);
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, LOW);
       		break;
 		default:
 			break;
@@ -330,14 +285,7 @@ uint8_t dbDumper::readByte(uint32_t address)
 {
 	uint8_t readData;
 
-	//in case we get here in Coleco mode with a 32bit address
-	if( _mode == coleco )
-	{
-		_latchAddress((uint16_t)address);
-	}else
-	{
-		_latchAddress(address);
-	}
+	_latchAddress(address);
 	
 	//set data bus to inputs
 	DATAH_DDR = 0x00;
@@ -388,14 +336,7 @@ void dbDumper::readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize
 
 	for( i = 0 ; i < blockSize ; i++ )
 	{
-		//in case we get here in Coleco mode with a 32bit address
-		if( _mode == coleco )
-		{
-			_latchAddress((uint16_t)address);
-		}else
-		{
-			_latchAddress(address);
-		}
+		_latchAddress(address);
 		
 		//set data bus to inputs
 		DATAH_DDR = 0x00;
@@ -662,21 +603,8 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 		//SST39SF0x0 program byte
 		case coleco:
 			digitalWrite(COL_nBPRES, LOW);
-			digitalWrite(COL_A16, LOW);
-			digitalWrite(COL_A15, LOW);
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, LOW);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
 			writeByte((uint16_t)0x5555, 0xAA);
-
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, HIGH);
 			writeByte((uint16_t)0x2AAA, 0x55);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
 			writeByte((uint16_t)0x5555, 0xA0);
 			
 			//cast to uint16_t in case we got here
@@ -760,6 +688,13 @@ inline void dbDumper::_latchAddress(uint32_t address)
 	DATAOUTL = addrh;
 	digitalWrite(ALE_high, HIGH);
 	digitalWrite(ALE_high, LOW);
+	
+		// set the coleco address bits if in coleco mode
+	if( _mode == coleco)
+	{
+		_colAddrBitsSet(address);
+	}
+
 }
 
 /*******************************************************************//**
@@ -784,6 +719,12 @@ inline void dbDumper::_latchAddress(uint16_t address)
 	DATAOUTL = addrl;
 	digitalWrite(ALE_low, HIGH);
 	digitalWrite(ALE_low, LOW);
+	
+	// set the coleco address bits if in coleco mode
+	if( _mode == coleco)
+	{
+		_colAddrBitsSet(address);
+	}
 
 }
 
@@ -812,40 +753,14 @@ void dbDumper::eraseSector(uint16_t sectorAddress)
     	case coleco:
 			//SST39SF0x0 chip erase
 			digitalWrite(COL_nBPRES, LOW);
-			digitalWrite(COL_A16, LOW);
-			digitalWrite(COL_A15, LOW);
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, LOW);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
 			writeByte((uint16_t)0x5555, 0xAA);
-
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, HIGH);
 			writeByte((uint16_t)0x2AAA, 0x55);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
 			writeByte((uint16_t)0x5555, 0x80);
-
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
 			writeByte((uint16_t)0x5555, 0xAA);
-			
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, HIGH);
 			writeByte((uint16_t)0x2AAA, 0x55);
 
 			//sector address comes here
-			digitalWrite(COL_A14, HIGH);
-			digitalWrite(COL_A13, LOW);
 			writeByte((uint16_t)0x5555, 0x10);
-
-			digitalWrite(COL_A16, LOW);
-			digitalWrite(COL_A15, LOW);
-			digitalWrite(COL_A14, LOW);
-			digitalWrite(COL_A13, LOW);
       		break;
 		default:
 			break;
@@ -911,43 +826,182 @@ uint8_t dbDumper::toggleBit(uint8_t attempts)
   	return retValue;
 }
 
-void dbDumper::_colAddrRangeSet(uint16_t address)
+void dbDumper::_colAddrBitsSet(uint16_t address)
 {
-	uint16_t range;
+	//determine which address range to use, look at the four MS bits (A16..A0)
+	uint8_t smallRange = (uint8_t)(address >> 9);
 	
-	//determine which address range to use, look at the two MS bits
-	range = address & 0x6000;
-	switch(range)
+	switch(smallRange)
 	{
-		case 0x0000:
-			digitalWrite(COL_nE000, HIGH);
-			digitalWrite(COL_nC000, HIGH);
-			digitalWrite(COL_nA000, HIGH);
+		// bbba aaaa aaaa aaaa
+		// 1110 0000 0000 0000
+		case 0x00:
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, LOW);
+			digitalWrite(COL_nA000, LOW);
 			digitalWrite(COL_n8000, LOW);
-			
 			break;
-		case 0x2000:
-			digitalWrite(COL_nE000, HIGH);
-			digitalWrite(COL_nC000, HIGH);
+		case 0x10:
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, LOW);
 			digitalWrite(COL_nA000, LOW);
 			digitalWrite(COL_n8000, HIGH);
-			
 			break;
-		case 0x4000:
-			digitalWrite(COL_nE000, HIGH);
+		case 0x20:
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, LOW);
+			digitalWrite(COL_nA000, HIGH);
+			digitalWrite(COL_n8000, LOW);
+			break;
+		case 0x30:
+			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, LOW);
 			digitalWrite(COL_nA000, HIGH);
 			digitalWrite(COL_n8000, HIGH);
-			
 			break;
-		case 0x6000:
+		case 0x40:
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, LOW);
+			digitalWrite(COL_n8000, LOW);
+			break;
+		case 0x50:
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, LOW);
+			digitalWrite(COL_n8000, HIGH);
+			break;
+		case 0x60:
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, HIGH);
+			digitalWrite(COL_n8000, LOW);
+			break;
+		case 0x70:
 			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, HIGH);
 			digitalWrite(COL_nA000, HIGH);
 			digitalWrite(COL_n8000, HIGH);
-			
 			break;
 		default:
+			digitalWrite(COL_nE000, HIGH);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, HIGH);
+			digitalWrite(COL_n8000, HIGH);
+			break;
+	}
+}
+
+void dbDumper::_colAddrBitsSet(uint32_t address)
+{
+	//determine which address range to use, look at the four MS bits (A16..A0)
+	uint8_t smallRange = (uint8_t)(address >> 9);
+	
+	switch(smallRange)
+	{
+		// 000b bbba aaaa aaaa aaaa
+		// 0001 1110 0000 0000 0000
+		case 0x00:
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, LOW);
+			digitalWrite(COL_nA000, LOW);
+			digitalWrite(COL_n8000, LOW);
+			break;
+		case 0x10:
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, LOW);
+			digitalWrite(COL_nA000, LOW);
+			digitalWrite(COL_n8000, HIGH);
+			break;
+		case 0x20:
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, LOW);
+			digitalWrite(COL_nA000, HIGH);
+			digitalWrite(COL_n8000, LOW);
+			break;
+		case 0x30:
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, LOW);
+			digitalWrite(COL_nA000, HIGH);
+			digitalWrite(COL_n8000, HIGH);
+			break;
+		case 0x40:
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, LOW);
+			digitalWrite(COL_n8000, LOW);
+			break;
+		case 0x50:
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, LOW);
+			digitalWrite(COL_n8000, HIGH);
+			break;
+		case 0x60:
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, HIGH);
+			digitalWrite(COL_n8000, LOW);
+			break;
+		case 0x70:
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, HIGH);
+			digitalWrite(COL_n8000, HIGH);
+			break;
+		case 0x80:
+			digitalWrite(COL_nE000, HIGH);
+			digitalWrite(COL_nC000, LOW);
+			digitalWrite(COL_nA000, LOW);
+			digitalWrite(COL_n8000, LOW);
+			break;
+		case 0x90:
+			digitalWrite(COL_nE000, HIGH);
+			digitalWrite(COL_nC000, LOW);
+			digitalWrite(COL_nA000, LOW);
+			digitalWrite(COL_n8000, HIGH);
+			break;
+		case 0xA0:
+			digitalWrite(COL_nE000, HIGH);
+			digitalWrite(COL_nC000, LOW);
+			digitalWrite(COL_nA000, HIGH);
+			digitalWrite(COL_n8000, LOW);
+			break;
+		case 0xB0:
+			digitalWrite(COL_nE000, HIGH);
+			digitalWrite(COL_nC000, LOW);
+			digitalWrite(COL_nA000, HIGH);
+			digitalWrite(COL_n8000, HIGH);
+			break;
+		case 0xC0:
+			digitalWrite(COL_nE000, HIGH);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, LOW);
+			digitalWrite(COL_n8000, LOW);
+			break;
+		case 0xD0:
+			digitalWrite(COL_nE000, HIGH);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, LOW);
+			digitalWrite(COL_n8000, HIGH);
+			break;
+		case 0xE0:
+			digitalWrite(COL_nE000, HIGH);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, HIGH);
+			digitalWrite(COL_n8000, LOW);
+			break;
+		case 0xF0:
+			digitalWrite(COL_nE000, HIGH);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, HIGH);
+			digitalWrite(COL_n8000, HIGH);
+			break;
+		default:
+			digitalWrite(COL_nE000, HIGH);
+			digitalWrite(COL_nC000, HIGH);
+			digitalWrite(COL_nA000, HIGH);
+			digitalWrite(COL_n8000, HIGH);
 			break;
 	}
 }
@@ -958,7 +1012,7 @@ void dbDumper::_colAddrRangeSet(uint16_t address)
  * these carts require each 8KB segment of the ROM to be remapped for
  * a reduced parts count address decoding scheme.
  **********************************************************************/
-inline uint32_t dbDumper::_convColecoAddr(uint16_t address)
+inline uint32_t dbDumper::convColecoAddr(uint16_t address)
 {
 	uint16_t range;
 	
@@ -967,33 +1021,25 @@ inline uint32_t dbDumper::_convColecoAddr(uint16_t address)
 	address &= 0x1FFF;
 	switch(range)
 	{
+		// 000b bbba aaaa aaaa aaaa
+		// 0001 1100 0000 0000 0000
 		case 0x0000:
-			digitalWrite(COL_nE000, HIGH); //A16
-			digitalWrite(COL_nC000, HIGH); //A15
-			digitalWrite(COL_nA000, HIGH); //A14
-			digitalWrite(COL_n8000, LOW);  //A13
-			return 0x00000000 | address;
+			return ( 0x0001C000 | (uint32_t)address);
 			break;
+		// 000b bbba aaaa aaaa aaaa	
+		// 0001 1010 0000 0000 0000
 		case 0x2000:
-			digitalWrite(COL_nE000, HIGH);
-			digitalWrite(COL_nC000, HIGH);
-			digitalWrite(COL_nA000, LOW);
-			digitalWrite(COL_n8000, HIGH);
-			
+			return ( 0x0001A000 | (uint32_t)address);
 			break;
+		// 000b bbba aaaa aaaa aaaa	
+		// 0001 0110 0000 0000 0000
 		case 0x4000:
-			digitalWrite(COL_nE000, HIGH);
-			digitalWrite(COL_nC000, LOW);
-			digitalWrite(COL_nA000, HIGH);
-			digitalWrite(COL_n8000, HIGH);
-			
+			return ( 0x00016000 | (uint32_t)address);
 			break;
+		// 000b bbba aaaa aaaa aaaa	
+		// 0000 1110 0000 0000 0000
 		case 0x6000:
-			digitalWrite(COL_nE000, LOW);
-			digitalWrite(COL_nC000, HIGH);
-			digitalWrite(COL_nA000, HIGH);
-			digitalWrite(COL_n8000, HIGH);
-			
+			return ( 0x00007000 | (uint32_t)address);
 			break;
 		default:
 			break;

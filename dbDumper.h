@@ -213,7 +213,14 @@ class dbDumper
 		void programWord(uint32_t address, uint16_t data, bool wait);
 	
 		/**@}*/
-	
+
+		/*******************************************************************//**
+		 * \brief Convert a 32KB Coleco ROM address for db Coleco Cart (1Mbit)
+		 * \param address 15bit address
+		 * \return uint32_t corrected address
+		 **********************************************************************/
+		inline uint32_t convColecoAddr(uint16_t address);
+
 		//pin numbers UI
 		static const uint8_t nLED = 8;
 		static const uint8_t nPB = 9;
@@ -228,7 +235,8 @@ class dbDumper
 		
 		//void _colSoftwareIDEntry();
 		//void _colSoftwareIDExit();
-		void _colAddrRangeSet(uint16_t address);
+		void _colAddrBitsSet(uint16_t address);
+		void _colAddrBitsSet(uint32_t address);
 
 		//pin numbers address control
 		static const uint8_t ALE_low = 26;
