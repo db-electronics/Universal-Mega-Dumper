@@ -177,7 +177,7 @@ uint16_t dbDumper::getFlashID()
 			writeWord((uint16_t)0x0555, 0x00AA);
 			writeWord((uint16_t)0x02AA, 0x0055);
 			writeWord((uint16_t)0x0555, 0x0090);
-			flashID = readWord((uint16_t)0x0001);
+			flashID = readWord(0x0001);
 			writeWord((uint16_t)0x0000, 0x00F0);
 			_flashID = flashID;
 			break;
@@ -186,7 +186,7 @@ uint16_t dbDumper::getFlashID()
 			writeByte((uint16_t)0x0AAA, 0xAA);
 			writeByte((uint16_t)0x0555, 0x55);
 			writeByte((uint16_t)0x0AAA, 0x90);
-			flashID = (uint16_t)readByte((uint16_t)0x0002);
+			flashID = (uint16_t)readByte(0x0002);
 			writeByte((uint16_t)0x0000, 0xF0);
 			_flashID = flashID;
 			break;
@@ -197,9 +197,9 @@ uint16_t dbDumper::getFlashID()
 			writeByte((uint16_t)0x2AAA,0x55);
 			writeByte((uint16_t)0x5555,0x90);
 			
-			flashID = (uint16_t)readByte((uint16_t)0x0000);
+			flashID = (uint16_t)readByte(0x0000);
 			flashID <<= 8;
-			flashID |= (uint16_t)readByte((uint16_t)0x0001);
+			flashID |= (uint16_t)readByte(0x0001);
 			
 			//exit software ID
 			writeByte((uint16_t)0x0000,0xF0);
@@ -473,6 +473,13 @@ void dbDumper::writeByte(uint16_t address, uint8_t data)
 	//set data bus to inputs
 	DATAH_DDR = 0x00;
 	DATAL_DDR = 0x00;
+	
+#ifdef _DEBUG_DB
+	Serial.print(F("w ")); 
+	Serial.print(address,HEX);
+	Serial.print(F(" : ")); 
+	Serial.println(data,HEX);
+#endif
 }
 
 /*******************************************************************//**
@@ -502,6 +509,13 @@ void dbDumper::writeByte(uint32_t address, uint8_t data)
 	//set data bus to inputs
 	DATAH_DDR = 0x00;
 	DATAL_DDR = 0x00;
+
+#ifdef _DEBUG_DB
+	Serial.print(F("w ")); 
+	Serial.print(address,HEX);
+	Serial.print(F(" : ")); 
+	Serial.println(data,HEX);
+#endif
 }
 
 /*******************************************************************//**
@@ -607,8 +621,7 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 			writeByte((uint16_t)0x2AAA, 0x55);
 			writeByte((uint16_t)0x5555, 0xA0);
 			
-			//cast to uint16_t in case we got here
-			writeByte((uint16_t)address, data);
+			writeByte(address, data);
 			
 			//use data polling to validate end of program cycle
 			if(wait)
@@ -616,7 +629,7 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 				while(readBack != data)
 				{
 					//cast to uint16_t in case we got here
-					readBack = readByte((uint16_t)address);
+					readBack = readByte(address);
 				}
 			}
       		break;
@@ -668,6 +681,13 @@ void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
 inline void dbDumper::_latchAddress(uint32_t address)
 {
 	uint8_t addrh,addrm,addrl;
+	
+	// set the coleco address bits if in coleco mode
+	if( _mode == coleco)
+	{
+		_colAddrBitsSet(address);
+	}
+	
 	//separate address into 3 bytes for address latches
 	addrl = (uint8_t)(address & 0xFF);
 	addrm = (uint8_t)(address>>8 & 0xFF);
@@ -689,11 +709,7 @@ inline void dbDumper::_latchAddress(uint32_t address)
 	digitalWrite(ALE_high, HIGH);
 	digitalWrite(ALE_high, LOW);
 	
-		// set the coleco address bits if in coleco mode
-	if( _mode == coleco)
-	{
-		_colAddrBitsSet(address);
-	}
+		
 
 }
 
@@ -706,6 +722,13 @@ inline void dbDumper::_latchAddress(uint32_t address)
 inline void dbDumper::_latchAddress(uint16_t address)
 {
 	uint8_t addrm,addrl;
+	
+	// set the coleco address bits if in coleco mode
+	if( _mode == coleco)
+	{
+		_colAddrBitsSet(address);
+	}
+	
 	//separate address into 2 bytes for address latches
 	addrl = (uint8_t)(address & 0xFF);
 	addrm = (uint8_t)(address>>8 & 0xFF);
@@ -720,12 +743,6 @@ inline void dbDumper::_latchAddress(uint16_t address)
 	digitalWrite(ALE_low, HIGH);
 	digitalWrite(ALE_low, LOW);
 	
-	// set the coleco address bits if in coleco mode
-	if( _mode == coleco)
-	{
-		_colAddrBitsSet(address);
-	}
-
 }
 
 void dbDumper::eraseSector(uint16_t sectorAddress)
@@ -829,8 +846,12 @@ uint8_t dbDumper::toggleBit(uint8_t attempts)
 void dbDumper::_colAddrBitsSet(uint16_t address)
 {
 	//determine which address range to use, look at the four MS bits (A16..A0)
-	uint8_t smallRange = (uint8_t)(address >> 9);
+	uint8_t smallRange = (uint8_t)(address >> 13);
 	
+#ifdef _DEBUG_DB	
+	Serial.println(smallRange,HEX);
+#endif
+
 	switch(smallRange)
 	{
 		// bbba aaaa aaaa aaaa
@@ -841,53 +862,53 @@ void dbDumper::_colAddrBitsSet(uint16_t address)
 			digitalWrite(COL_nA000, LOW);
 			digitalWrite(COL_n8000, LOW);
 			break;
-		case 0x10:
+		case 0x01:
 			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, LOW);
 			digitalWrite(COL_nA000, LOW);
 			digitalWrite(COL_n8000, HIGH);
 			break;
-		case 0x20:
+		case 0x02:
 			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, LOW);
 			digitalWrite(COL_nA000, HIGH);
 			digitalWrite(COL_n8000, LOW);
 			break;
-		case 0x30:
+		case 0x03:
 			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, LOW);
 			digitalWrite(COL_nA000, HIGH);
 			digitalWrite(COL_n8000, HIGH);
 			break;
-		case 0x40:
+		case 0x04:
 			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, HIGH);
 			digitalWrite(COL_nA000, LOW);
 			digitalWrite(COL_n8000, LOW);
 			break;
-		case 0x50:
+		case 0x05:
 			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, HIGH);
 			digitalWrite(COL_nA000, LOW);
 			digitalWrite(COL_n8000, HIGH);
 			break;
-		case 0x60:
+		case 0x06:
 			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, HIGH);
 			digitalWrite(COL_nA000, HIGH);
 			digitalWrite(COL_n8000, LOW);
 			break;
-		case 0x70:
+		case 0x07:
 			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, HIGH);
 			digitalWrite(COL_nA000, HIGH);
 			digitalWrite(COL_n8000, HIGH);
 			break;
 		default:
-			digitalWrite(COL_nE000, HIGH);
-			digitalWrite(COL_nC000, HIGH);
-			digitalWrite(COL_nA000, HIGH);
-			digitalWrite(COL_n8000, HIGH);
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, LOW);
+			digitalWrite(COL_nA000, LOW);
+			digitalWrite(COL_n8000, LOW);
 			break;
 	}
 }
@@ -895,8 +916,12 @@ void dbDumper::_colAddrBitsSet(uint16_t address)
 void dbDumper::_colAddrBitsSet(uint32_t address)
 {
 	//determine which address range to use, look at the four MS bits (A16..A0)
-	uint8_t smallRange = (uint8_t)(address >> 9);
-	
+	uint8_t smallRange = (uint8_t)(address >> 13);
+
+#ifdef _DEBUG_DB	
+	Serial.println(smallRange,HEX);
+#endif
+
 	switch(smallRange)
 	{
 		// 000b bbba aaaa aaaa aaaa
@@ -907,101 +932,101 @@ void dbDumper::_colAddrBitsSet(uint32_t address)
 			digitalWrite(COL_nA000, LOW);
 			digitalWrite(COL_n8000, LOW);
 			break;
-		case 0x10:
+		case 0x01:
 			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, LOW);
 			digitalWrite(COL_nA000, LOW);
 			digitalWrite(COL_n8000, HIGH);
 			break;
-		case 0x20:
+		case 0x02:
 			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, LOW);
 			digitalWrite(COL_nA000, HIGH);
 			digitalWrite(COL_n8000, LOW);
 			break;
-		case 0x30:
+		case 0x03:
 			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, LOW);
 			digitalWrite(COL_nA000, HIGH);
 			digitalWrite(COL_n8000, HIGH);
 			break;
-		case 0x40:
+		case 0x04:
 			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, HIGH);
 			digitalWrite(COL_nA000, LOW);
 			digitalWrite(COL_n8000, LOW);
 			break;
-		case 0x50:
+		case 0x05:
 			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, HIGH);
 			digitalWrite(COL_nA000, LOW);
 			digitalWrite(COL_n8000, HIGH);
 			break;
-		case 0x60:
+		case 0x06:
 			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, HIGH);
 			digitalWrite(COL_nA000, HIGH);
 			digitalWrite(COL_n8000, LOW);
 			break;
-		case 0x70:
+		case 0x07:
 			digitalWrite(COL_nE000, LOW);
 			digitalWrite(COL_nC000, HIGH);
 			digitalWrite(COL_nA000, HIGH);
 			digitalWrite(COL_n8000, HIGH);
 			break;
-		case 0x80:
+		case 0x08:
 			digitalWrite(COL_nE000, HIGH);
 			digitalWrite(COL_nC000, LOW);
 			digitalWrite(COL_nA000, LOW);
 			digitalWrite(COL_n8000, LOW);
 			break;
-		case 0x90:
+		case 0x09:
 			digitalWrite(COL_nE000, HIGH);
 			digitalWrite(COL_nC000, LOW);
 			digitalWrite(COL_nA000, LOW);
 			digitalWrite(COL_n8000, HIGH);
 			break;
-		case 0xA0:
+		case 0x0A:
 			digitalWrite(COL_nE000, HIGH);
 			digitalWrite(COL_nC000, LOW);
 			digitalWrite(COL_nA000, HIGH);
 			digitalWrite(COL_n8000, LOW);
 			break;
-		case 0xB0:
+		case 0x0B:
 			digitalWrite(COL_nE000, HIGH);
 			digitalWrite(COL_nC000, LOW);
 			digitalWrite(COL_nA000, HIGH);
 			digitalWrite(COL_n8000, HIGH);
 			break;
-		case 0xC0:
+		case 0x0C:
 			digitalWrite(COL_nE000, HIGH);
 			digitalWrite(COL_nC000, HIGH);
 			digitalWrite(COL_nA000, LOW);
 			digitalWrite(COL_n8000, LOW);
 			break;
-		case 0xD0:
+		case 0x0D:
 			digitalWrite(COL_nE000, HIGH);
 			digitalWrite(COL_nC000, HIGH);
 			digitalWrite(COL_nA000, LOW);
 			digitalWrite(COL_n8000, HIGH);
 			break;
-		case 0xE0:
+		case 0x0E:
 			digitalWrite(COL_nE000, HIGH);
 			digitalWrite(COL_nC000, HIGH);
 			digitalWrite(COL_nA000, HIGH);
 			digitalWrite(COL_n8000, LOW);
 			break;
-		case 0xF0:
+		case 0x0F:
 			digitalWrite(COL_nE000, HIGH);
 			digitalWrite(COL_nC000, HIGH);
 			digitalWrite(COL_nA000, HIGH);
 			digitalWrite(COL_n8000, HIGH);
 			break;
 		default:
-			digitalWrite(COL_nE000, HIGH);
-			digitalWrite(COL_nC000, HIGH);
-			digitalWrite(COL_nA000, HIGH);
-			digitalWrite(COL_n8000, HIGH);
+			digitalWrite(COL_nE000, LOW);
+			digitalWrite(COL_nC000, LOW);
+			digitalWrite(COL_nA000, LOW);
+			digitalWrite(COL_n8000, LOW);
 			break;
 	}
 }
@@ -1012,7 +1037,7 @@ void dbDumper::_colAddrBitsSet(uint32_t address)
  * these carts require each 8KB segment of the ROM to be remapped for
  * a reduced parts count address decoding scheme.
  **********************************************************************/
-inline uint32_t dbDumper::convColecoAddr(uint16_t address)
+uint32_t dbDumper::convColecoAddr(uint32_t address)
 {
 	uint16_t range;
 	
@@ -1044,5 +1069,6 @@ inline uint32_t dbDumper::convColecoAddr(uint16_t address)
 		default:
 			break;
 	}
+	return 0;
 }
 

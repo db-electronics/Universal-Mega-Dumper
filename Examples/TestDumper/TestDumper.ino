@@ -71,6 +71,8 @@ void setup() {
     SCmd.addCommand("progbyte",dbTD_programByteCMD);
     SCmd.addCommand("progbblock",dbTD_programByteBlockCMD);
     SCmd.addDefaultHandler(unknownCMD);
+    
+    SCmd.clearBuffer();
 }
 
 /*******************************************************************//**
@@ -138,18 +140,18 @@ void dbTD_setModeCMD()
     {
         case 'g':
             db.setMode(db.genesis);
-            Serial.println(F("mode set genesis")); 
+            Serial.println(F("mode = genesis")); 
             break;
         case 'p':
             db.setMode(db.pcengine);
-            Serial.println(F("mode set genesis")); 
+            Serial.println(F("mode = genesis")); 
             break;
         case 'c':
             db.setMode(db.coleco);
-            Serial.println(F("mode set coleco")); 
+            Serial.println(F("mode = coleco")); 
             break;
         default:
-            Serial.println(F("mode set undefined")); 
+            Serial.println(F("mode = undefined")); 
             db.setMode(db.undefined);
             break;
     }  
@@ -220,6 +222,7 @@ void dbTD_flashIDCMD()
         switch(*arg)
         {
             case 'h':
+				Serial.print(F("ID is 0x")); 
                 Serial.println(data,HEX);
                 break;
             default:
@@ -302,14 +305,12 @@ void dbTD_readByteCMD()
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
-    //if coleco, force 16 bit address read
     if( db.getMode() == db.coleco )
     {
-        data = db.readByte((uint16_t)address);
-    }else
-    {
-        data = db.readByte(address);
-    }
+		address = db.convColecoAddr(address);
+	}
+    
+	data = db.readByte(address);
 
 	//check if we should output a formatted string
     arg = SCmd.next();
@@ -363,11 +364,10 @@ void dbTD_programByteCMD()
     //if coleco, force 16 bit address program
     if( db.getMode() == db.coleco )
     {
-        db.programByte((uint16_t)address, data, false);
-    }else
-    {
-        db.programByte(address, data, false);
+		address = db.convColecoAddr(address);      
     }
+    
+    db.programByte(address, data, false);
     
     //check if we should verify the write
     arg = SCmd.next();

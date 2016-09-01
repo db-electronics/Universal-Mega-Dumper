@@ -33,6 +33,8 @@
 #ifndef dbDumper_h
 #define dbDumper_h
 
+#define _DEBUG_DB
+
   //define pins
 #define DATAOUTH      PORTD		/**< PORTD used for high byte of databus output */
 #define DATAOUTL      PORTC		/**< PORTD used for low byte of databus output */
@@ -219,7 +221,7 @@ class dbDumper
 		 * \param address 15bit address
 		 * \return uint32_t corrected address
 		 **********************************************************************/
-		inline uint32_t convColecoAddr(uint16_t address);
+		uint32_t convColecoAddr(uint32_t address);
 
 		//pin numbers UI
 		static const uint8_t nLED = 8;
