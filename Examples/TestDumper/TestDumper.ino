@@ -48,7 +48,7 @@ void setup() {
     
     //hello PC
     Serial.begin(38400);
-    Serial.println(F("db Electronics TeensyDumper v0.2"));
+    //Serial.println(F("db Electronics TeensyDumper v0.2"));
 
     db.setMode(db.genesis);
 
@@ -62,6 +62,7 @@ void setup() {
     }
 
     //register callbacks for SerialCommand
+    SCmd.addCommand("flash",dbTD_flashCMD);
     SCmd.addCommand("detect",dbTD_detectCMD);
     SCmd.addCommand("setmode",dbTD_setModeCMD);
     SCmd.addCommand("erase",dbTD_eraseChipCMD);
@@ -84,6 +85,21 @@ void loop()
     SCmd.readSerial();
 }
 
+/*******************************************************************//**
+ *  \brief Auto responce for detection on PC side
+ *  
+ *  Usage:
+ *  flash
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_flashCMD()
+{
+    Serial.println(F("thunder"));
+    digitalWrite(db.nLED, LOW);
+	delay(500);
+	digitalWrite(db.nLED, HIGH);
+}
 
 /*******************************************************************//**
  *  \brief Prints a list of registered commands on the console
