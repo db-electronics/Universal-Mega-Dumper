@@ -97,7 +97,7 @@ void dbTD_flashCMD()
 {
     Serial.println(F("thunder"));
     digitalWrite(db.nLED, LOW);
-	delay(500);
+	delay(100);
 	digitalWrite(db.nLED, HIGH);
 }
 
