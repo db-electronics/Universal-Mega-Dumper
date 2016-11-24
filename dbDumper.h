@@ -33,7 +33,7 @@
 #ifndef dbDumper_h
 #define dbDumper_h
 
-#define _DEBUG_DB
+//#define _DEBUG_DB
 
   //define pins
 #define DATAOUTH      PORTD		/**< PORTD used for high byte of databus output */
