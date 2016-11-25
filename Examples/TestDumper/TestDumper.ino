@@ -360,9 +360,8 @@ void dbTD_readByteCMD()
 void dbTD_readByteBlockCMD()
 {
     char *arg;
-    uint8_t *buf;
     uint32_t address = 0;
-    uint16_t blockSize = 0, i;
+    uint16_t blockSize = 0;
 
     //get the address in the next argument
     arg = SCmd.next();
@@ -372,15 +371,8 @@ void dbTD_readByteBlockCMD()
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
     
-    for( i = 0; i < blockSize; i++ )
-    {
-		if( db.getMode() == db.CV )
-		{
-			address = db.convColecoAddr(address);
-		}
-		db.readByteBlock(address, blockSize);
-	}
-	
+	db.readByteBlock(address, blockSize);
+
     Serial.write( db.buffer, blockSize);
 }
 
