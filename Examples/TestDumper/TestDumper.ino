@@ -360,6 +360,7 @@ void dbTD_readByteCMD()
 void dbTD_readByteBlockCMD()
 {
     char *arg;
+    uint8_t *buf;
     uint32_t address = 0;
     uint16_t blockSize = 0, i;
 
@@ -380,7 +381,7 @@ void dbTD_readByteBlockCMD()
 		db.readByteBlock(address, blockSize);
 	}
 	
-    //Serial.write( &(db.buffer[0]), blockSize);
+    Serial.write( db.buffer, blockSize);
 }
 
 /*******************************************************************//**

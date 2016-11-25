@@ -372,11 +372,9 @@ void dbDumper::readByteBlock(uint32_t address, uint16_t blockSize)
 		digitalWrite(nCE, HIGH);
 		digitalWrite(nRD, HIGH);
 		
-		//Serial.write( *(buf + i) );
-		
 		address += 1;
 	}
-	Serial.write( buffer, blockSize );
+	//Serial.write( buffer, blockSize );
 }
 
 /*******************************************************************//**
