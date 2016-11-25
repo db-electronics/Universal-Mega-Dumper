@@ -122,7 +122,7 @@ void dbDumper::setMode(eMode mode)
 
 			_resetPin = GEN_nVRES;
 			resetCart();
-			_mode = genesis;
+			_mode = MD;
 
 			break;
 		case TG:
@@ -142,7 +142,7 @@ void dbDumper::setMode(eMode mode)
 			digitalWrite(COL_n8000, LOW);
 
 			_resetPin = 45; //unused with coleco
-			_mode = coleco;
+			_mode = CV;
 			break;
 		default:
 			//control signals default to all inputs

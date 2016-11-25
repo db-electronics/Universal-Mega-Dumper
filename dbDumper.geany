@@ -23,10 +23,10 @@ long_line_column=72
 
 [files]
 current_page=3
-FILE_NAME_0=21465;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FGit%2FArduino%2Flibraries%2FdbDumper%2FdbDumper.cpp;0;4
-FILE_NAME_1=2358;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FGit%2FArduino%2Flibraries%2FdbDumper%2FdbDumper.h;0;4
+FILE_NAME_0=4358;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FGit%2FArduino%2Flibraries%2FdbDumper%2FdbDumper.cpp;0;4
+FILE_NAME_1=2352;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FGit%2FArduino%2Flibraries%2FdbDumper%2FdbDumper.h;0;4
 FILE_NAME_2=600;None;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FGit%2FArduino%2Flibraries%2FdbDumper%2Fkeywords.txt;0;4
-FILE_NAME_3=4755;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FGit%2FArduino%2Flibraries%2FdbDumper%2FExamples%2FTestDumper%2FTestDumper.ino;0;4
+FILE_NAME_3=6645;C++;0;EUTF-8;1;1;0;%2Fhome%2Frene%2FGit%2FArduino%2Flibraries%2FdbDumper%2FExamples%2FTestDumper%2FTestDumper.ino;0;4
 
 [VTE]
 last_dir=/home/rene

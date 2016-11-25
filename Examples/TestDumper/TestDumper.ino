@@ -50,7 +50,7 @@ void setup() {
     Serial.begin(38400);
     //Serial.println(F("db Electronics TeensyDumper v0.2"));
 
-    db.setMode(db.genesis);
+    db.setMode(db.MD);
 
     //flash to show we're alive
     for( i=0 ; i<4 ; i++ )
@@ -155,16 +155,16 @@ void dbTD_setModeCMD()
     switch(*arg)
     {
         case 'g':
-            db.setMode(db.genesis);
-            Serial.println(F("mode = genesis")); 
+            db.setMode(db.MD);
+            Serial.println(F("mode = g")); 
             break;
         case 'p':
-            db.setMode(db.pcengine);
-            Serial.println(F("mode = genesis")); 
+            db.setMode(db.TG);
+            Serial.println(F("mode = p")); 
             break;
         case 'c':
-            db.setMode(db.coleco);
-            Serial.println(F("mode = coleco")); 
+            db.setMode(db.CV);
+            Serial.println(F("mode = c")); 
             break;
         default:
             Serial.println(F("mode = undefined")); 
@@ -237,8 +237,7 @@ void dbTD_flashIDCMD()
     {
         switch(*arg)
         {
-            case 'h':
-				Serial.print(F("ID is 0x")); 
+            case 'h': 
                 Serial.println(data,HEX);
                 break;
             default:
@@ -321,7 +320,7 @@ void dbTD_readByteCMD()
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
-    if( db.getMode() == db.coleco )
+    if( db.getMode() == db.CV )
     {
 		address = db.convColecoAddr(address);
 	}
@@ -378,7 +377,7 @@ void dbTD_programByteCMD()
 	readBack = ~data;
 
     //if coleco, force 16 bit address program
-    if( db.getMode() == db.coleco )
+    if( db.getMode() == db.CV )
     {
 		address = db.convColecoAddr(address);      
     }
@@ -505,7 +504,7 @@ void dbTD_programByteBlockCMD()
         for( j = 0 ; j < WRITE_BLOCK_BUFFER_SIZE ; j++)
         {
             //if coleco, force 16 bit address
-            if( db.getMode() == db.coleco )
+            if( db.getMode() == db.CV )
             {
                 db.programByte((uint16_t)address++, buffer[j], true);
             }else
