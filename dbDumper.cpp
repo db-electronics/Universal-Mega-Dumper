@@ -104,7 +104,7 @@ void dbDumper::setMode(eMode mode)
 
 	switch(mode)
 	{
-		case genesis:
+		case MD:
 			pinMode(GEN_SL1, INPUT);
 		  	pinMode(GEN_SR1, INPUT);
 		  	pinMode(GEN_nDTACK, OUTPUT);
@@ -125,11 +125,11 @@ void dbDumper::setMode(eMode mode)
 			_mode = genesis;
 
 			break;
-		case pcengine:
+		case TG:
 			/** \todo add pcengine pin mode */
 			
 			break;
-		case coleco:
+		case CV:
 			pinMode(COL_nBPRES, OUTPUT);
 			digitalWrite(COL_nBPRES, LOW);
 			pinMode(COL_nE000, OUTPUT);
@@ -173,7 +173,7 @@ uint16_t dbDumper::getFlashID()
   	switch(_mode)
   	{
 		//mx29f800 software ID detect word mode
-		case genesis:
+		case MD:
 			writeWord((uint16_t)0x0555, 0x00AA);
 			writeWord((uint16_t)0x02AA, 0x0055);
 			writeWord((uint16_t)0x0555, 0x0090);
@@ -182,7 +182,7 @@ uint16_t dbDumper::getFlashID()
 			_flashID = flashID;
 			break;
 		//mx29f800 software ID detect byte mode
-		case pcengine:
+		case TG:
 			writeByte((uint16_t)0x0AAA, 0xAA);
 			writeByte((uint16_t)0x0555, 0x55);
 			writeByte((uint16_t)0x0AAA, 0x90);
@@ -191,7 +191,7 @@ uint16_t dbDumper::getFlashID()
 			_flashID = flashID;
 			break;
 		//SST39SF0x0 software ID detect
-    	case coleco:
+    	case CV:
 			digitalWrite(COL_nBPRES, LOW);
 			writeByte((uint16_t)0x5555,0xAA);
 			writeByte((uint16_t)0x2AAA,0x55);
@@ -229,7 +229,7 @@ uint32_t dbDumper::eraseChip(bool wait)
   	switch(_mode)
   	{
 		//mx29f800 chip erase word mode
-		case genesis:
+		case MD:
 			writeWord((uint16_t)0x0555, 0x00AA);
 			writeWord((uint16_t)0x02AA, 0x0055);
 			writeWord((uint16_t)0x0555, 0x0080);
@@ -238,7 +238,7 @@ uint32_t dbDumper::eraseChip(bool wait)
 			writeWord((uint16_t)0x0555, 0x0010);
 			break;
 		//mx29f800 chip erase byte mode
-		case pcengine:
+		case TG:
 			writeByte((uint16_t)0x0AAA, 0xAA);
 			writeByte((uint16_t)0x0555, 0x55);
 			writeByte((uint16_t)0x0AAA, 0x80);
@@ -247,7 +247,7 @@ uint32_t dbDumper::eraseChip(bool wait)
 			writeByte((uint16_t)0x0AAA, 0x10);
 			break;
 		//SST39SF0x0 chip erase
-    	case coleco:
+    	case CV:
 			digitalWrite(COL_nBPRES, LOW);
 			writeByte((uint16_t)0x5555, 0xAA);
 			writeByte((uint16_t)0x2AAA, 0x55);
@@ -298,7 +298,7 @@ uint8_t dbDumper::readByte(uint32_t address)
 	//read genesis odd bytes from the high byte of the bus
 	switch(_mode)
 	{
-		case genesis:
+		case MD:
 			if( (uint8_t)(address) & 0x01 )
 			{
 				readData = DATAINH;
@@ -307,10 +307,10 @@ uint8_t dbDumper::readByte(uint32_t address)
 				readData = DATAINL;
 			}
 			break;
-		case pcengine:
+		case TG:
 			readData = DATAINL;
 			break;
-		case coleco:
+		case CV:
 			readData = DATAINL;
 			break;
 		default:
@@ -349,7 +349,7 @@ void dbDumper::readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize
 		//read genesis odd bytes from the high byte of the bus
 		switch(_mode)
 		{
-			case genesis:
+			case MD:
 				if( (uint8_t)(address) & 0x01 )
 				{
 					buf[i] = DATAINH;
@@ -358,10 +358,10 @@ void dbDumper::readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize
 					buf[i] = DATAINL;
 				}
 				break;
-			case pcengine:
+			case TG:
 				buf[i] = DATAINL;
 				break;
-			case coleco:
+			case CV:
 				buf[i] = DATAINL;
 				break;
 			default:
@@ -599,7 +599,7 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
   	switch(_mode)
   	{
 		//MX29F800 program byte
-		case pcengine:
+		case TG:
 			writeByte((uint16_t)0x0AAA, 0xAA);
 			writeByte((uint16_t)0x0555, 0x55);
 			writeByte((uint16_t)0x0AAA, 0xA0);
@@ -615,7 +615,7 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 			}
 			break;
 		//SST39SF0x0 program byte
-		case coleco:
+		case CV:
 			digitalWrite(COL_nBPRES, LOW);
 			writeByte((uint16_t)0x5555, 0xAA);
 			writeByte((uint16_t)0x2AAA, 0x55);
@@ -654,7 +654,7 @@ void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
   	switch(_mode)
   	{
 		//MX29F800 program word
-		case genesis:
+		case MD:
 			writeWord((uint16_t)0x0555, 0x00AA);
 			writeWord((uint16_t)0x02AA, 0x0055);
 			writeWord((uint16_t)0x0555, 0x00A0);
@@ -683,7 +683,7 @@ inline void dbDumper::_latchAddress(uint32_t address)
 	uint8_t addrh,addrm,addrl;
 	
 	// set the coleco address bits if in coleco mode
-	if( _mode == coleco)
+	if( _mode == CV)
 	{
 		_colAddrBitsSet(address);
 	}
@@ -724,7 +724,7 @@ inline void dbDumper::_latchAddress(uint16_t address)
 	uint8_t addrm,addrl;
 	
 	// set the coleco address bits if in coleco mode
-	if( _mode == coleco)
+	if( _mode == CV)
 	{
 		_colAddrBitsSet(address);
 	}
@@ -749,7 +749,7 @@ void dbDumper::eraseSector(uint16_t sectorAddress)
 {
   	switch(_mode)
   	{
-		case genesis:
+		case MD:
 			//mx29f800 chip erase word mode
 			writeWord((uint16_t)0x0555, 0x00AA);
 			writeWord((uint16_t)0x02AA, 0x0055);
@@ -758,7 +758,7 @@ void dbDumper::eraseSector(uint16_t sectorAddress)
 			writeWord((uint16_t)0x02AA, 0x0055);
 			writeWord((uint16_t)0x0555, 0x0010);
 			break;
-		case pcengine:
+		case TG:
 			//mx29f800 chip erase byte mode
 			writeByte((uint16_t)0x0AAA, 0xAA);
 			writeByte((uint16_t)0x0555, 0x55);
@@ -767,7 +767,7 @@ void dbDumper::eraseSector(uint16_t sectorAddress)
 			writeByte((uint16_t)0x0555, 0x55);
 			writeByte((uint16_t)0x0AAA, 0x10);
 			break;
-    	case coleco:
+    	case CV:
 			//SST39SF0x0 chip erase
 			digitalWrite(COL_nBPRES, LOW);
 			writeByte((uint16_t)0x5555, 0xAA);
@@ -792,7 +792,7 @@ uint8_t dbDumper::toggleBit(uint8_t attempts)
   	switch(_mode)
   	{
 		//mx29f800 toggle bit on bit 6
-		case genesis:
+		case MD:
 			
 			uint16_t read16Value, old16Value;
 			
@@ -813,10 +813,10 @@ uint8_t dbDumper::toggleBit(uint8_t attempts)
 				old16Value = read16Value;
 			}
 			break;
-		case pcengine:
+		case TG:
 		
 		//SST39SF0x0 toggle bit on bit 6
-    	case coleco:
+    	case CV:
 			
 			uint8_t readValue, oldValue;
 			

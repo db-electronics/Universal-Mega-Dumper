@@ -58,9 +58,9 @@ class dbDumper
 		enum eMode
 		{ 
 			undefined, 	/**< Undefined mode */
-			coleco, 	/**< ColecoVision mode */
-			genesis, 	/**< Genesis Megadrive mode */
-			pcengine 	/**< PC Engine TG-16 mode */
+			CV, 		/**< ColecoVision mode */
+			MD, 		/**< Genesis Megadrive mode */
+			TG		 	/**< PC Engine TG-16 mode */
 		};
 
 		/*******************************************************************//**
