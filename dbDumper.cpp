@@ -330,7 +330,7 @@ uint8_t dbDumper::readByte(uint32_t address)
  * 
  * \warning setMode() must be called prior to using this function.
  **********************************************************************/
-void dbDumper::readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize)
+void dbDumper::readByteBlock(uint32_t address, uint16_t blockSize)
 {
 	uint16_t i;
 
@@ -352,28 +352,31 @@ void dbDumper::readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize
 			case MD:
 				if( (uint8_t)(address) & 0x01 )
 				{
-					buf[i] = DATAINH;
+					buffer[i] = DATAINH;
 				}else
 				{
-					buf[i] = DATAINL;
+					buffer[i] = DATAINL;
 				}
 				break;
 			case TG:
-				buf[i] = DATAINL;
+				buffer[i] = DATAINL;
 				break;
 			case CV:
-				buf[i] = DATAINL;
+				buffer[i] = DATAINL;
 				break;
 			default:
-				buf[i] = DATAINL;
+				buffer[i] = DATAINL;
 				break;
 		}
 		
 		digitalWrite(nCE, HIGH);
 		digitalWrite(nRD, HIGH);
 		
+		//Serial.write( *(buf + i) );
+		
 		address += 1;
 	}
+	Serial.write( buffer, blockSize );
 }
 
 /*******************************************************************//**

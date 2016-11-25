@@ -30,7 +30,7 @@
 #include <SerialCommand.h>
 #include <dbDumper.h>
 
-#define WRITE_BLOCK_BUFFER_SIZE     128         //must be a power of 2
+#define WRITE_BLOCK_BUFFER_SIZE     256         //must be a power of 2
 #define WRITE_TIMEOUT_MS            10000
 
 SerialCommand SCmd;
@@ -69,6 +69,7 @@ void setup() {
     SCmd.addCommand("getid",dbTD_flashIDCMD);
     SCmd.addCommand("readword",dbTD_readWordCMD);
     SCmd.addCommand("readbyte",dbTD_readByteCMD);
+    SCmd.addCommand("readbblock",dbTD_readByteBlockCMD);
     SCmd.addCommand("progbyte",dbTD_programByteCMD);
     SCmd.addCommand("progbblock",dbTD_programByteBlockCMD);
     SCmd.addDefaultHandler(unknownCMD);
@@ -345,6 +346,42 @@ void dbTD_readByteCMD()
     }
 }
 
+/*******************************************************************//**
+ *  \brief Read a block of bytes from the cartridge
+ *  Read an 8bit byte from the cartridge. In Coleco mode
+ *  the address is forced to uint16_t.
+ *  
+ *  Usage:
+ *  readbbyte 0x0000 128
+ *    - returns 128 unformated bytes
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_readByteBlockCMD()
+{
+    char *arg;
+    uint32_t address = 0;
+    uint16_t blockSize = 0, i;
+
+    //get the address in the next argument
+    arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the size in the next argument
+    arg = SCmd.next(); 
+    blockSize = strtoul(arg, (char**)0, 0);
+    
+    for( i = 0; i < blockSize; i++ )
+    {
+		if( db.getMode() == db.CV )
+		{
+			address = db.convColecoAddr(address);
+		}
+		db.readByteBlock(address, blockSize);
+	}
+	
+    //Serial.write( &(db.buffer[0]), blockSize);
+}
 
 /*******************************************************************//**
  *  \brief Program a byte in the cartridge
@@ -475,7 +512,7 @@ void dbTD_programByteBlockCMD()
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
-    //get the data in the next argument
+    //get the size in the next argument
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
 

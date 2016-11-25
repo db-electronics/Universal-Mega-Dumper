@@ -51,6 +51,8 @@ class dbDumper
 {
 	public:
 
+		uint8_t buffer[1024];
+
 		/*******************************************************************//**
 		 * \brief eMode Type
 		 * eMode is used by dbDumper to keep track of which mode is currently set
@@ -127,11 +129,10 @@ class dbDumper
 		/*******************************************************************//**
 		 * \brief Read a byte block from a 24 bit address
 		 * \param address 24bit address
-		 * \param buf a pointer to store the byte block
 		 * \param blockSize number of bytes to read from the block
 		 * \return void
 		 **********************************************************************/
-		void readByteBlock(uint32_t address, uint8_t * buf, uint16_t blockSize);
+		void readByteBlock(uint32_t address, uint16_t blockSize);
 		
 		/*******************************************************************//**
 		 * \brief Read a word from a 24bit address
