@@ -51,8 +51,6 @@ class dbDumper
 {
 	public:
 
-		uint8_t buffer[1024];
-
 		/*******************************************************************//**
 		 * \brief eMode Type
 		 * eMode is used by dbDumper to keep track of which mode is currently set

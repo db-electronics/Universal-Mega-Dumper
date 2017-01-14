@@ -333,48 +333,54 @@ uint8_t dbDumper::readByte(uint32_t address)
 void dbDumper::readByteBlock(uint32_t address, uint16_t blockSize)
 {
 	uint16_t i;
+	uint8_t readData;
 
 	for( i = 0 ; i < blockSize ; i++ )
 	{
-		_latchAddress(address);
+		readData = readByte(address++);
+		Serial.write( (char)(readData) );
+		delay(1);
+		//_latchAddress(address);
 		
-		//set data bus to inputs
-		DATAH_DDR = 0x00;
-		DATAL_DDR = 0x00;
+		////set data bus to inputs
+		//DATAH_DDR = 0x00;
+		//DATAL_DDR = 0x00;
 		
-		// read the bus
-		digitalWrite(nCE, LOW);
-		digitalWrite(nRD, LOW);
+		////read the bus
+		//digitalWrite(nCE, LOW);
+		//digitalWrite(nRD, LOW);
 		
-		//read genesis odd bytes from the high byte of the bus
-		switch(_mode)
-		{
-			case MD:
-				if( (uint8_t)(address) & 0x01 )
-				{
-					buffer[i] = DATAINH;
-				}else
-				{
-					buffer[i] = DATAINL;
-				}
-				break;
-			case TG:
-				buffer[i] = DATAINL;
-				break;
-			case CV:
-				buffer[i] = DATAINL;
-				break;
-			default:
-				buffer[i] = DATAINL;
-				break;
-		}
+		////read genesis odd bytes from the high byte of the bus
+		//switch(_mode)
+		//{
+			//case MD:
+				//if( (uint8_t)(address) & 0x01 )
+				//{
+					//readData = DATAINH;
+				//}else
+				//{
+					//readData = DATAINL;
+				//}
+				//break;
+			//case TG:
+				//readData = DATAINL;
+				//break;
+			//case CV:
+				//readData = DATAINL;
+				//break;
+			//default:
+				//readData = DATAINL;
+				//break;
+		//}
 		
-		digitalWrite(nCE, HIGH);
-		digitalWrite(nRD, HIGH);
+		//digitalWrite(nCE, HIGH);
+		//digitalWrite(nRD, HIGH);
 		
-		address += 1;
+		//Serial.write(readData);
+		
+		//address += 1;
 	}
-	//Serial.write( buffer, blockSize );
+	//Serial.write( buf, blockSize );
 }
 
 /*******************************************************************//**

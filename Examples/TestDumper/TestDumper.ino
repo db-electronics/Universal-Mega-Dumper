@@ -70,6 +70,7 @@ void setup() {
     SCmd.addCommand("readword",dbTD_readWordCMD);
     SCmd.addCommand("readbyte",dbTD_readByteCMD);
     SCmd.addCommand("readbblock",dbTD_readByteBlockCMD);
+    SCmd.addCommand("readwblock",dbTD_readWordBlockCMD);
     SCmd.addCommand("progbyte",dbTD_programByteCMD);
     SCmd.addCommand("progbblock",dbTD_programByteBlockCMD);
     SCmd.addDefaultHandler(unknownCMD);
@@ -361,19 +362,73 @@ void dbTD_readByteBlockCMD()
 {
     char *arg;
     uint32_t address = 0;
-    uint16_t blockSize = 0;
+    uint16_t blockSize = 0, i;
+    uint8_t data;
 
     //get the address in the next argument
-    arg = SCmd.next();
+	arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
     //get the size in the next argument
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
     
-	db.readByteBlock(address, blockSize);
+    //Serial.print(F("address "));
+	//Serial.print(address, HEX);
+	//Serial.print(F(" size " ));
+	//Serial.println(blockSize, HEX);
+    
+    //arg = SCmd.next();
+    //if( arg != NULL )
+    //{
+		//Serial.print(F("address "));
+		//Serial.print(address, HEX);
+		//Serial.print(F(" size " ));
+		//Serial.println(blockSize, HEX);
+	//}
+	
+    for( i = 0; i < blockSize; i++ )
+    {
+		data = db.readByte(address++);
+		Serial.print(F("address "));
+		Serial.print(address, HEX);
+		Serial.print(F(" data " ));
+		Serial.println(data, HEX);
+		//Serial.write((char)(data));
+	}
+}
 
-    Serial.write( db.buffer, blockSize);
+/*******************************************************************//**
+ *  \brief Read a block of words from the cartridge
+ *  
+ *  Usage:
+ *  readbbyte 0x0000 128
+ *    - returns 128 unformated bytes
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_readWordBlockCMD()
+{
+    char *arg;
+    uint32_t address = 0;
+    uint32_t blockSize = 0, i;
+    uint16_t data;
+
+    //get the address in the next argument
+	arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the size in the next argument
+    arg = SCmd.next(); 
+    blockSize = strtoul(arg, (char**)0, 0);
+	
+    for( i = 0; i < blockSize; i += 2 )
+    {
+		data = db.readWord(address);
+		address += 2;
+		Serial.write((char)(data));
+        Serial.write((char)(data>>8));
+	}
 }
 
 /*******************************************************************//**
