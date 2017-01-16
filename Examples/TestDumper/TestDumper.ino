@@ -88,7 +88,20 @@ void loop()
 }
 
 /*******************************************************************//**
- *  \brief Auto responce for detection on PC side
+ *  \brief Prints a list of registered commands on the console
+ *  \param command The unknown command
+ *  \return Void
+ **********************************************************************/
+void unknownCMD(const char *command)
+{
+    Serial.println(F("Unrecognized command: \""));
+    Serial.println(command);
+    Serial.println(F("\". Registered Commands:"));
+    Serial.println(SCmd.getCommandList());  //Returns all registered commands
+}
+
+/*******************************************************************//**
+ *  \brief Auto response for detection on PC side
  *  
  *  Usage:
  *  flash
@@ -104,21 +117,7 @@ void dbTD_flashCMD()
 }
 
 /*******************************************************************//**
- *  \brief Prints a list of registered commands on the console
- *  \param command The unknown command
- *  \return Void
- **********************************************************************/
-void unknownCMD(const char *command)
-{
-    Serial.println(F("Unrecognized command: \""));
-    Serial.println(command);
-    Serial.println(F("\". Registered Commands:"));
-    Serial.println(SCmd.getCommandList());  //Returns all registered commands
-}
-
-
-/*******************************************************************//**
- *  \brief Detects whether a cart is connected to the dumper
+ *  \brief Detects the state of the #CART signal
  *  If a cart asserts the #CART signal it will be detected.
  *  Note that the mode must be set prior to issuing this command
  *  
@@ -197,6 +196,7 @@ void dbTD_eraseChipCMD()
     {
         switch(*arg)
         {
+			//wait for operation to complete, measure time
             case 'w':
                 eraseTime = db.eraseChip(true);
                 Serial.print(F("erase executed in ")); 
@@ -372,29 +372,11 @@ void dbTD_readByteBlockCMD()
     //get the size in the next argument
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
-    
-    //Serial.print(F("address "));
-	//Serial.print(address, HEX);
-	//Serial.print(F(" size " ));
-	//Serial.println(blockSize, HEX);
-    
-    //arg = SCmd.next();
-    //if( arg != NULL )
-    //{
-		//Serial.print(F("address "));
-		//Serial.print(address, HEX);
-		//Serial.print(F(" size " ));
-		//Serial.println(blockSize, HEX);
-	//}
 	
     for( i = 0; i < blockSize; i++ )
     {
 		data = db.readByte(address++);
-		Serial.print(F("address "));
-		Serial.print(address, HEX);
-		Serial.print(F(" data " ));
-		Serial.println(data, HEX);
-		//Serial.write((char)(data));
+		Serial.write((char)(data));
 	}
 }
 
@@ -422,6 +404,7 @@ void dbTD_readWordBlockCMD()
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
 	
+	//read words from block, output converts to little endian
     for( i = 0; i < blockSize; i += 2 )
     {
 		data = db.readWord(address);
