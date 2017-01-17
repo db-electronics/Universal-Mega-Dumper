@@ -71,6 +71,8 @@ void setup() {
     SCmd.addCommand("readbyte",dbTD_readByteCMD);
     SCmd.addCommand("readbblock",dbTD_readByteBlockCMD);
     SCmd.addCommand("readwblock",dbTD_readWordBlockCMD);
+    SCmd.addCommand("writebyte",dbTD_writeByteCMD);
+    SCmd.addCommand("writeword",dbTD_writeWordCMD);
     SCmd.addCommand("progbyte",dbTD_programByteCMD);
     SCmd.addCommand("progbblock",dbTD_programByteBlockCMD);
     SCmd.addDefaultHandler(unknownCMD);
@@ -199,16 +201,14 @@ void dbTD_eraseChipCMD()
 			//wait for operation to complete, measure time
             case 'w':
                 eraseTime = db.eraseChip(true);
-                Serial.print(F("erase executed in ")); 
-                Serial.print(eraseTime,DEC);
-                Serial.println(F("ms"));
+                Serial.println(eraseTime,DEC);
                 break;
             default:
                 break;
         }
     }else
     {
-        db.eraseChip(false); 
+        db.eraseChip(false);
     }
 }
 
@@ -412,6 +412,65 @@ void dbTD_readWordBlockCMD()
 		Serial.write((char)(data));
         Serial.write((char)(data>>8));
 	}
+}
+
+/*******************************************************************//**
+ *  \brief Write a byte to the cartridge
+ *  Not to confuse with programming, write does not attempt to modify
+ *  the flash array.
+ *  
+ *  Usage:
+ *  writebyte 0x100 0xFE
+ *    - writes 0xFE to address 0x100
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_writeByteCMD()
+{
+    char *arg;
+    uint32_t address = 0;
+    uint8_t data;
+
+    //get the address in the next argument
+	arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the word in the next argument
+    arg = SCmd.next(); 
+    data = strtoul(arg, (char**)0, 0);
+	
+	//write word
+	db.writeByte(address, data);
+}
+
+/*******************************************************************//**
+ *  \brief Write a word to the cartridge
+ *  Not to confuse with programming, write does not attempt to modify
+ *  the flash array.
+ *  
+ *  Usage:
+ *  writeword 0x100 0xFE5A
+ *    - writes 0xFE5A to address 0x100
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_writeWordCMD()
+{
+    char *arg;
+    uint32_t address = 0;
+    uint16_t data;
+
+    //get the address in the next argument
+	arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    address &= 0xFFFFFFFE;
+    
+    //get the word in the next argument
+    arg = SCmd.next(); 
+    data = strtoul(arg, (char**)0, 0);
+	
+	//write word
+	db.writeWord(address, data);
 }
 
 /*******************************************************************//**

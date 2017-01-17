@@ -173,13 +173,21 @@ uint16_t dbDumper::getFlashID()
   	switch(_mode)
   	{
 		//mx29f800 software ID detect word mode
+		//A1 of Dumper connected to A0 of MX29F800
+		//Automatic big endian on word mode
 		case MD:
-			writeWord((uint16_t)0x0555, 0x00AA);
-			writeWord((uint16_t)0x02AA, 0x0055);
-			writeWord((uint16_t)0x0555, 0x0090);
-			flashID = readWord(0x0001);
-			writeWord((uint16_t)0x0000, 0x00F0);
+			//writeWord(0x00000555, 0xAA00);
+			//writeWord(0x000002AA, 0x5500);
+			//writeWord(0x00000555, 0x9000);
+			//flashID = readWord(0x00000001);
+			//writeWord(0x00000000, 0xF000);
+			writeWord( (0x00000555 << 1), 0xAA00);
+			writeWord( (0x000002AA << 1), 0x5500);
+			writeWord( (0x00000555 << 1), 0x9000);
+			flashID = readWord( 0x00000001 << 1);
+			writeWord(0x00000000, 0xF000);
 			_flashID = flashID;
+			
 			break;
 		//mx29f800 software ID detect byte mode
 		case TG:
@@ -230,12 +238,12 @@ uint32_t dbDumper::eraseChip(bool wait)
   	{
 		//mx29f800 chip erase word mode
 		case MD:
-			writeWord((uint16_t)0x0555, 0x00AA);
-			writeWord((uint16_t)0x02AA, 0x0055);
-			writeWord((uint16_t)0x0555, 0x0080);
-			writeWord((uint16_t)0x0555, 0x00AA);
-			writeWord((uint16_t)0x02AA, 0x0055);
-			writeWord((uint16_t)0x0555, 0x0010);
+			writeWord( (0x00000555 << 1), 0xAA00);
+			writeWord( (0x000002AA << 1), 0x5500);
+			writeWord( (0x00000555 << 1), 0x8000);
+			writeWord( (0x00000555 << 1), 0xAA00);
+			writeWord( (0x000002AA << 1), 0x5500);
+			writeWord( (0x00000555 << 1), 0x1000);
 			break;
 		//mx29f800 chip erase byte mode
 		case TG:
@@ -467,15 +475,42 @@ void dbDumper::writeByte(uint16_t address, uint8_t data)
 	DATAH_DDR = 0xFF;
 	DATAL_DDR = 0xFF;
 
-	//put word on bus
-	DATAOUTL = data;
-
-	// write to the bus
-	digitalWrite(nCE, LOW);
-	digitalWrite(nWR, LOW);
-	delayMicroseconds(1);
-	digitalWrite(nWR, HIGH);
-	digitalWrite(nCE, HIGH);
+	//write genesis odd bytes to the high byte of the bus
+	switch(_mode)
+	{
+		case MD:
+			if( (uint8_t)(address) & 0x01 )
+			{
+				DATAOUTH = data;
+				// write to the bus
+				digitalWrite(nCE, LOW);
+				digitalWrite(GEN_nLWR, LOW);
+				delayMicroseconds(1);
+				digitalWrite(GEN_nLWR, HIGH);
+				digitalWrite(nCE, HIGH);
+			}else
+			{
+				DATAOUTL = data;
+				digitalWrite(nCE, LOW);
+				digitalWrite(GEN_nUWR, LOW);
+				delayMicroseconds(1);
+				digitalWrite(GEN_nUWR, HIGH);
+				digitalWrite(nCE, HIGH);
+			}
+			
+			break;
+		case TG:
+		case CV:
+		default:
+			DATAOUTL = data;
+			// write to the bus
+			digitalWrite(nCE, LOW);
+			digitalWrite(nWR, LOW);
+			delayMicroseconds(1);
+			digitalWrite(nWR, HIGH);
+			digitalWrite(nCE, HIGH);
+			break;
+	}
   
 	//set data bus to inputs
 	DATAH_DDR = 0x00;
@@ -503,16 +538,43 @@ void dbDumper::writeByte(uint32_t address, uint8_t data)
 	DATAH_DDR = 0xFF;
 	DATAL_DDR = 0xFF;
 
-	//put word on bus
-	DATAOUTL = data;
-
-	// write to the bus
-	digitalWrite(nCE, LOW);
-	digitalWrite(nWR, LOW);
-	delayMicroseconds(1);
-	digitalWrite(nWR, HIGH);
-	digitalWrite(nCE, HIGH);
-  
+	//write genesis odd bytes to the high byte of the bus
+	switch(_mode)
+	{
+		case MD:
+			if( (uint8_t)(address) & 0x01 )
+			{
+				DATAOUTH = data;
+				// write to the bus
+				digitalWrite(nCE, LOW);
+				digitalWrite(GEN_nLWR, LOW);
+				delayMicroseconds(1);
+				digitalWrite(GEN_nLWR, HIGH);
+				digitalWrite(nCE, HIGH);
+			}else
+			{
+				DATAOUTL = data;
+				digitalWrite(nCE, LOW);
+				digitalWrite(GEN_nUWR, LOW);
+				delayMicroseconds(1);
+				digitalWrite(GEN_nUWR, HIGH);
+				digitalWrite(nCE, HIGH);
+			}
+			
+			break;
+		case TG:
+		case CV:
+		default:
+			DATAOUTL = data;
+			// write to the bus
+			digitalWrite(nCE, LOW);
+			digitalWrite(nWR, LOW);
+			delayMicroseconds(1);
+			digitalWrite(nWR, HIGH);
+			digitalWrite(nCE, HIGH);
+			break;
+	}
+	
 	//set data bus to inputs
 	DATAH_DDR = 0x00;
 	DATAL_DDR = 0x00;
@@ -523,40 +585,6 @@ void dbDumper::writeByte(uint32_t address, uint8_t data)
 	Serial.print(F(" : ")); 
 	Serial.println(data,HEX);
 #endif
-}
-
-/*******************************************************************//**
- * The writeWord function strobes a word into the cartridge at a 16bit
- * address. The upper 8 address bits (23..16) are not modified
- * by this function so this can be used to perform quicker successive
- * writes within a 64k boundary.
- * 
- * \warning setMode() must be called prior to using this function.
- * \warning upper 8 address bits (23..16) are not modified
- * \warning word is converted to big endian
- **********************************************************************/
-void dbDumper::writeWord(uint16_t address, uint16_t data)
-{
-	_latchAddress(address);
-
-	//set data bus to outputs
-	DATAH_DDR = 0xFF;
-	DATAL_DDR = 0xFF;
-
-	//put word on bus
-	DATAOUTH = (uint8_t)(data);
-	DATAOUTL = (uint8_t)(data>>8);
-
-	// write to the bus
-	digitalWrite(nCE, LOW);
-	digitalWrite(nWR, LOW);
-	delayMicroseconds(1);
-	digitalWrite(nWR, HIGH);
-	digitalWrite(nCE, HIGH);
-  
-	//set data bus to inputs
-	DATAH_DDR = 0x00;
-	DATAL_DDR = 0x00;
 }
 
 /*******************************************************************//**
@@ -662,10 +690,10 @@ void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
   	{
 		//MX29F800 program word
 		case MD:
-			writeWord((uint16_t)0x0555, 0x00AA);
-			writeWord((uint16_t)0x02AA, 0x0055);
-			writeWord((uint16_t)0x0555, 0x00A0);
-			writeByte(address, data);
+			writeWord( (0x00000555 << 1), 0xAA00);
+			writeWord( (0x000002AA << 1), 0x5500);
+			writeWord( (0x00000555 << 1), 0xA000);
+			writeWord( address, data );
 			
 			//use data polling to validate end of program cycle
 			if(wait)
@@ -804,12 +832,12 @@ uint8_t dbDumper::toggleBit(uint8_t attempts)
 			uint16_t read16Value, old16Value;
 			
 			//first read should always be a 1 according to datasheet
-			old16Value = readWord((uint16_t)0x0000) & 0x0040;
+			old16Value = readWord(0x00000000) & 0x0040;
 			
 			for( i=0; i<attempts; i++ )
 			{
 				//successive reads compare this read to the previous one for toggle bit
-				read16Value = readWord((uint16_t)0x0000) & 0x0040;
+				read16Value = readWord(0x00000000) & 0x0040;
 				if( old16Value == read16Value )
 				{
 					retValue += 1;
