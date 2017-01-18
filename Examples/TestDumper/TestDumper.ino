@@ -74,6 +74,7 @@ void setup() {
     SCmd.addCommand("writebyte",dbTD_writeByteCMD);
     SCmd.addCommand("writeword",dbTD_writeWordCMD);
     SCmd.addCommand("progbyte",dbTD_programByteCMD);
+    SCmd.addCommand("progword",dbTD_programWordCMD);
     SCmd.addCommand("progbblock",dbTD_programByteBlockCMD);
     SCmd.addDefaultHandler(unknownCMD);
     
@@ -647,5 +648,43 @@ void dbTD_programByteBlockCMD()
     SCmd.clearBuffer();
 }
 
+/*******************************************************************//**
+ *  \brief Program a word in the cartridge
+ *  Program a word in the cartridge. Prior to progamming,
+ *  the sector or entire chip must be erased. The function
+ *  returns immediately without checking if the operation
+ *  has completed (i.e. toggle bit)
+ *  
+ *  Usage:
+ *  progword 0x0000 0x12
+ *    - programs 0x12 into address 0x0000
+ *  progword 412 12
+ *    - programs decimal 12 into address decimal 412
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_programWordCMD()
+{
+    char *arg;
+    uint32_t address=0;
+    uint16_t data, readBack;
+        
+    //get the address in the next argument
+    arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the data in the next argument
+    arg = SCmd.next(); 
+    data = (uint16_t)strtoul(arg, (char**)0, 0);
+	readBack = ~data;
+
+    //if coleco, force 16 bit address program
+    if( db.getMode() == db.CV )
+    {
+		address = db.convColecoAddr(address);      
+    }
+    
+    db.programWord(address, data, false);
+}
 
 
