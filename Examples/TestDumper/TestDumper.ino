@@ -74,8 +74,9 @@ void setup() {
     SCmd.addCommand("writebyte",dbTD_writeByteCMD);
     SCmd.addCommand("writeword",dbTD_writeWordCMD);
     SCmd.addCommand("progbyte",dbTD_programByteCMD);
-    SCmd.addCommand("progword",dbTD_programWordCMD);
     SCmd.addCommand("progbblock",dbTD_programByteBlockCMD);
+    SCmd.addCommand("progword",dbTD_programWordCMD);
+    SCmd.addCommand("progwblock",dbTD_programWordBlockCMD);
     SCmd.addDefaultHandler(unknownCMD);
     
     SCmd.clearBuffer();
@@ -210,6 +211,7 @@ void dbTD_eraseChipCMD()
     }else
     {
         db.eraseChip(false);
+        Serial.println(F("erase no wait"));
     }
 }
 
@@ -677,14 +679,59 @@ void dbTD_programWordCMD()
     arg = SCmd.next(); 
     data = (uint16_t)strtoul(arg, (char**)0, 0);
 	readBack = ~data;
-
-    //if coleco, force 16 bit address program
-    if( db.getMode() == db.CV )
-    {
-		address = db.convColecoAddr(address);      
-    }
     
     db.programWord(address, data, false);
 }
 
+/*******************************************************************//**
+ *  \brief Program a word block in the cartridge
+ *  Program a word in the cartridge. Prior to progamming,
+ *  the sector or entire chip must be erased. The function
+ *  returns immediately without checking if the operation
+ *  has completed (i.e. toggle bit)
+ *  
+ *  Usage:
+ *  progword 0x0000 0x12
+ *    - programs 0x12 into address 0x0000
+ *  progword 412 12
+ *    - programs decimal 12 into address decimal 412
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_programWordBlockCMD()
+{
+    char *arg;
+    uint32_t address=0;
+    uint16_t data, size;
+    uint8_t count=0;
+    
+    char writeBuffer[64];
+        
+    //get the address in the next argument
+    arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the size in the next argument
+    arg = SCmd.next();
+    size = strtoul(arg, (char**)0, 0);
+    
+    //receive size bytes
+    while( count < size )
+    {
+		if( Serial.available() )
+		{
+			writeBuffer[count++] = Serial.read();
+		}
+	}
+	
+	//program size/2 words
+	for( count = 0; count < size; count += 2 )
+	{
+		data = (uint16_t)(writeBuffer[count+1] << 8);
+		data |= (uint16_t)(writeBuffer[count]);
+		db.programWord(address, data, true);
+		address += 2;
+	}
+	Serial.println(F("done"));
+}
 

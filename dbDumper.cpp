@@ -232,7 +232,7 @@ uint16_t dbDumper::getFlashID()
  **********************************************************************/
 uint32_t dbDumper::eraseChip(bool wait)
 {
-	uint32_t startMillis;
+	uint32_t startMillis, intervalMillis;
 	
   	switch(_mode)
   	{
@@ -272,9 +272,20 @@ uint32_t dbDumper::eraseChip(bool wait)
   	if(wait)
   	{
 		startMillis = millis();
+		intervalMillis = startMillis;
 		
 		// wait for 4 consecutive toggle bit success reads before exiting
-		while( toggleBit(4) != 4 );
+		while( toggleBit(4) != 4 )
+		{
+			if( (millis() - intervalMillis) > 250 )
+			{
+				//PC side app expects a "." before timeout
+				intervalMillis = millis();
+				Serial.print(".");
+			}
+		}
+		//Send something other than a "." to indicate we are done
+		Serial.print("!");
 		return ( millis() - startMillis );
 		
 	}else
@@ -695,13 +706,10 @@ void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
 			writeWord( (0x00000555 << 1), 0xA000);
 			writeWord( address, data );
 			
-			//use data polling to validate end of program cycle
+			//use toggle bit to validate end of program cycle
 			if(wait)
 			{
-				while(readBack != data)
-				{
-					readBack = readWord(address);
-				}
+				while( toggleBit(4) != 4 );
 			}
 			break;
 		default:
@@ -831,13 +839,13 @@ uint8_t dbDumper::toggleBit(uint8_t attempts)
 			
 			uint16_t read16Value, old16Value;
 			
-			//first read should always be a 1 according to datasheet
-			old16Value = readWord(0x00000000) & 0x0040;
+			//first read of bit 6 - big endian
+			old16Value = readWord(0x00000000) & 0x4000;
 			
 			for( i=0; i<attempts; i++ )
 			{
 				//successive reads compare this read to the previous one for toggle bit
-				read16Value = readWord(0x00000000) & 0x0040;
+				read16Value = readWord(0x00000000) & 0x4000;
 				if( old16Value == read16Value )
 				{
 					retValue += 1;
