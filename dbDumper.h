@@ -172,6 +172,14 @@ class dbDumper
 		void writeByte(uint32_t address, uint8_t data);
 		
 		/*******************************************************************//**
+		 * \brief Write a word to a 16bit address
+		 * \param address 16bit address
+		 * \param data word
+		 * \return void
+		 **********************************************************************/
+		void writeWord(uint16_t address, uint16_t data);
+		
+		/*******************************************************************//**
 		 * \brief Write a word to a 24bit address
 		 * \param address 24bit address
 		 * \param data word

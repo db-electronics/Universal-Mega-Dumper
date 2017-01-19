@@ -36,7 +36,12 @@
 SerialCommand SCmd;
 dbDumper db;
 
-uint8_t buffer[WRITE_BLOCK_BUFFER_SIZE];
+union{
+	char 		chr[1024];
+	uint16_t 	word[512];
+} writeBuffer;
+
+char buffer[2]; //TODO get rid of this buffer, use above union instead
 
 /*******************************************************************//**
  *  \brief Main loop
@@ -47,7 +52,7 @@ void setup() {
     uint8_t i;
     
     //hello PC
-    Serial.begin(38400);
+    Serial.begin(115200);
     //Serial.println(F("db Electronics TeensyDumper v0.2"));
 
     db.setMode(db.MD);
@@ -705,8 +710,11 @@ void dbTD_programWordBlockCMD()
     uint16_t data, size;
     uint8_t count=0;
     
-    char writeBuffer[64];
-        
+    //union{
+		//char chr[128];
+		//uint16_t word[64];
+	//} writeBuffer;
+	        
     //get the address in the next argument
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
@@ -716,22 +724,26 @@ void dbTD_programWordBlockCMD()
     size = strtoul(arg, (char**)0, 0);
     
     //receive size bytes
+    Serial.read(); //there's an extra byte here for some reason - discard
+    
     while( count < size )
     {
 		if( Serial.available() )
 		{
-			writeBuffer[count++] = Serial.read();
+			writeBuffer.chr[count++] = Serial.read();
 		}
 	}
 	
+	SCmd.clearBuffer();
+	
 	//program size/2 words
-	for( count = 0; count < size; count += 2 )
+	count = 0;
+	while( count < ( size >> 1) )
 	{
-		data = (uint16_t)(writeBuffer[count+1] << 8);
-		data |= (uint16_t)(writeBuffer[count]);
-		db.programWord(address, data, true);
+		db.programWord(address, writeBuffer.word[count++], true);
 		address += 2;
 	}
+	
 	Serial.println(F("done"));
 }
 

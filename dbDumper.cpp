@@ -181,11 +181,11 @@ uint16_t dbDumper::getFlashID()
 			//writeWord(0x00000555, 0x9000);
 			//flashID = readWord(0x00000001);
 			//writeWord(0x00000000, 0xF000);
-			writeWord( (0x00000555 << 1), 0xAA00);
-			writeWord( (0x000002AA << 1), 0x5500);
-			writeWord( (0x00000555 << 1), 0x9000);
-			flashID = readWord( 0x00000001 << 1);
-			writeWord(0x00000000, 0xF000);
+			writeWord( (uint16_t)(0x0555 << 1), 0xAA00);
+			writeWord( (uint16_t)(0x02AA << 1), 0x5500);
+			writeWord( (uint16_t)(0x0555 << 1), 0x9000);
+			flashID = readWord( (uint16_t)(0x0001 << 1) );
+			writeWord( (uint16_t)0x0000, 0xF000);
 			_flashID = flashID;
 			
 			break;
@@ -238,12 +238,12 @@ uint32_t dbDumper::eraseChip(bool wait)
   	{
 		//mx29f800 chip erase word mode
 		case MD:
-			writeWord( (0x00000555 << 1), 0xAA00);
-			writeWord( (0x000002AA << 1), 0x5500);
-			writeWord( (0x00000555 << 1), 0x8000);
-			writeWord( (0x00000555 << 1), 0xAA00);
-			writeWord( (0x000002AA << 1), 0x5500);
-			writeWord( (0x00000555 << 1), 0x1000);
+			writeWord( (uint16_t)(0x0555 << 1), 0xAA00);
+			writeWord( (uint16_t)(0x02AA << 1), 0x5500);
+			writeWord( (uint16_t)(0x0555 << 1), 0x8000);
+			writeWord( (uint16_t)(0x0555 << 1), 0xAA00);
+			writeWord( (uint16_t)(0x02AA << 1), 0x5500);
+			writeWord( (uint16_t)(0x0555 << 1), 0x1000);
 			break;
 		//mx29f800 chip erase byte mode
 		case TG:
@@ -599,7 +599,7 @@ void dbDumper::writeByte(uint32_t address, uint8_t data)
 }
 
 /*******************************************************************//**
- * The writeWord function strobes a word into the cartridge at a 16bit
+ * The writeWord function strobes a word into the cartridge at a 24bit
  * address.
  * 
  * \warning setMode() must be called prior to using this function.
@@ -620,7 +620,38 @@ void dbDumper::writeWord(uint32_t address, uint16_t data)
 	// write to the bus
 	digitalWrite(nCE, LOW);
 	digitalWrite(nWR, LOW);
-	delayMicroseconds(1);
+	//delayMicroseconds(1);
+	digitalWrite(nWR, HIGH);
+	digitalWrite(nCE, HIGH);
+  
+	//set data bus to inputs
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
+}
+
+/*******************************************************************//**
+ * The writeWord function strobes a word into the cartridge at a 16bit
+ * address.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ * \warning word is converted to big endian
+ **********************************************************************/
+void dbDumper::writeWord(uint16_t address, uint16_t data)
+{
+	_latchAddress(address);
+
+	//set data bus to outputs
+	DATAH_DDR = 0xFF;
+	DATAL_DDR = 0xFF;
+
+	//put word on bus
+	DATAOUTH = (uint8_t)(data);
+	DATAOUTL = (uint8_t)(data>>8);
+
+	// write to the bus
+	digitalWrite(nCE, LOW);
+	digitalWrite(nWR, LOW);
+	//delayMicroseconds(1);
 	digitalWrite(nWR, HIGH);
 	digitalWrite(nCE, HIGH);
   
@@ -701,15 +732,15 @@ void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
   	{
 		//MX29F800 program word
 		case MD:
-			writeWord( (0x00000555 << 1), 0xAA00);
-			writeWord( (0x000002AA << 1), 0x5500);
-			writeWord( (0x00000555 << 1), 0xA000);
-			writeWord( address, data );
+			writeWord( (uint16_t)(0x0555 << 1), 0xAA00);
+			writeWord( (uint16_t)(0x02AA << 1), 0x5500);
+			writeWord( (uint16_t)(0x0555 << 1), 0xA000);
+			writeWord( (uint32_t)address, data );
 			
 			//use toggle bit to validate end of program cycle
 			if(wait)
 			{
-				while( toggleBit(4) != 4 );
+				while( toggleBit(2) != 2 );
 			}
 			break;
 		default:
@@ -840,12 +871,12 @@ uint8_t dbDumper::toggleBit(uint8_t attempts)
 			uint16_t read16Value, old16Value;
 			
 			//first read of bit 6 - big endian
-			old16Value = readWord(0x00000000) & 0x4000;
+			old16Value = readWord((uint16_t)0x0000) & 0x4000;
 			
 			for( i=0; i<attempts; i++ )
 			{
 				//successive reads compare this read to the previous one for toggle bit
-				read16Value = readWord(0x00000000) & 0x4000;
+				read16Value = readWord((uint16_t)0x0000) & 0x4000;
 				if( old16Value == read16Value )
 				{
 					retValue += 1;
