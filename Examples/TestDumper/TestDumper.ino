@@ -330,11 +330,6 @@ void dbTD_readByteCMD()
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
-    if( db.getMode() == db.CV )
-    {
-		address = db.convColecoAddr(address);
-	}
-    
 	data = db.readByte(address);
 
 	//check if we should output a formatted string
@@ -514,7 +509,7 @@ void dbTD_programByteCMD()
     //if coleco, force 16 bit address program
     if( db.getMode() == db.CV )
     {
-		address = db.convColecoAddr(address);      
+		address = (uint16_t)(address);      
     }
     
     db.programByte(address, data, false);

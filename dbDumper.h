@@ -215,12 +215,6 @@ class dbDumper
 	
 		/**@}*/
 
-		/*******************************************************************//**
-		 * \brief Convert a 32KB Coleco ROM address for db Coleco Cart (1Mbit)
-		 * \param address 15bit address
-		 * \return uint32_t corrected address
-		 **********************************************************************/
-		uint32_t convColecoAddr(uint32_t address);
 
 		//pin numbers UI
 		static const uint8_t nLED = 8;
@@ -233,11 +227,6 @@ class dbDumper
 	
 		inline void _latchAddress(uint16_t address);
 		inline void _latchAddress(uint32_t address);
-		
-		//void _colSoftwareIDEntry();
-		//void _colSoftwareIDExit();
-		void _colAddrBitsSet(uint16_t address);
-		void _colAddrBitsSet(uint32_t address);
 
 		//pin numbers address control
 		static const uint8_t ALE_low = 26;
