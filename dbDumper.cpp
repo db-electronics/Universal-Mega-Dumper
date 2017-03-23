@@ -685,10 +685,7 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 			//use data polling to validate end of program cycle
 			if(wait)
 			{
-				while(readBack != data)
-				{
-					readBack = readByte(address);
-				}
+				while( toggleBit(2) != 2 );
 			}
 			break;
 		//SST39SF0x0 program byte
@@ -703,11 +700,7 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 			//use data polling to validate end of program cycle
 			if(wait)
 			{
-				while(readBack != data)
-				{
-					//cast to uint16_t in case we got here
-					readBack = readByte(address);
-				}
+				while( toggleBit(2) != 2 );
 			}
       		break;
 		default:
@@ -875,8 +868,28 @@ uint8_t dbDumper::toggleBit(uint8_t attempts)
 				old16Value = read16Value;
 			}
 			break;
+		//mx29f800 toggle bit on bit 6
 		case TG:
 		
+			uint8_t readValue, oldValue;
+			
+			//first read of bit 6 - big endian
+			oldValue = readByte((uint16_t)0x0000) & 0x40;
+			
+			for( i=0; i<attempts; i++ )
+			{
+				//successive reads compare this read to the previous one for toggle bit
+				readValue = readByte((uint16_t)0x0000) & 0x40;
+				if( oldValue == readValue )
+				{
+					retValue += 1;
+				}else
+				{
+					retValue = 0;
+				}
+				old16Value = read16Value;
+			}
+			break;
 		//SST39SF0x0 toggle bit on bit 6
     	case CV:
 			

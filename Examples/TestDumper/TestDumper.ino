@@ -37,7 +37,7 @@ SerialCommand SCmd;
 dbDumper db;
 
 union{
-	char 		chr[1024];
+	char 		byte[1024];
 	uint16_t 	word[512];
 } writeBuffer;
 
@@ -596,58 +596,40 @@ void dbTD_programByteCMD()
 void dbTD_programByteBlockCMD()
 {
     char *arg;
-    uint32_t address = 0;
-    uint16_t blockSize = 0, i, j;
-    uint8_t count = 0;
-    uint32_t timeout = millis();
-    
+    uint32_t address=0;
+    uint16_t size;
+    uint8_t count=0, data;
+	        
     //get the address in the next argument
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
     //get the size in the next argument
-    arg = SCmd.next(); 
-    blockSize = strtoul(arg, (char**)0, 0);
-
-    //write bytes in chunks of WRITE_BLOCK_BUFFER_SIZE bytes 
-    for( i = 0 ; i < blockSize ; i += WRITE_BLOCK_BUFFER_SIZE )
-    {
-        //receive a block in buffer before writing to flash
-        while( count < WRITE_BLOCK_BUFFER_SIZE )
-        {
-            if(Serial.available())
-            {
-                buffer[count++] = Serial.read();
-                timeout = millis() + WRITE_TIMEOUT_MS;
-            }else
-            {
-                if( millis() > timeout )
-                {
-                    Serial.println(F("read timeout"));
-                    SCmd.clearBuffer();
-                    return;
-                }
-            }
-        }
-
-        //write the block in buffer to flash
-        for( j = 0 ; j < WRITE_BLOCK_BUFFER_SIZE ; j++)
-        {
-            //if coleco, force 16 bit address
-            if( db.getMode() == db.CV )
-            {
-                db.programByte((uint16_t)address++, buffer[j], true);
-            }else
-            {
-                db.programByte(address++, buffer[j], true);
-            }
-        }
-        
-        count = 0;
-        Serial.println(i,HEX);
-    }
+    arg = SCmd.next();
+    size = strtoul(arg, (char**)0, 0);
     
-    SCmd.clearBuffer();
+    //receive size bytes
+    Serial.read(); //there's an extra byte here for some reason - discard
+    
+    while( count < size )
+    {
+		if( Serial.available() )
+		{
+			writeBuffer.byte[count++] = Serial.read();
+		}
+	}
+	
+	SCmd.clearBuffer();
+	
+	//program size bytes
+	count = 0;
+	while( count < size )
+	{
+		db.programByte(address, writeBuffer.byte[count++], true);
+		address++;
+	}
+	
+	Serial.println(F("done"));
 }
 
 /*******************************************************************//**
@@ -704,11 +686,6 @@ void dbTD_programWordBlockCMD()
     uint32_t address=0;
     uint16_t data, size;
     uint8_t count=0;
-    
-    //union{
-		//char chr[128];
-		//uint16_t word[64];
-	//} writeBuffer;
 	        
     //get the address in the next argument
     arg = SCmd.next();
@@ -725,7 +702,7 @@ void dbTD_programWordBlockCMD()
     {
 		if( Serial.available() )
 		{
-			writeBuffer.chr[count++] = Serial.read();
+			writeBuffer.byte[count++] = Serial.read();
 		}
 	}
 	
