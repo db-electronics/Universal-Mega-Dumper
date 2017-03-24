@@ -169,8 +169,12 @@ void dbTD_setModeCMD()
             Serial.println(F("mode = g")); 
             break;
         case 'p':
-            db.setMode(db.TG);
+            db.setMode(db.PC);
             Serial.println(F("mode = p")); 
+            break;
+        case 't':
+            db.setMode(db.TG);
+            Serial.println(F("mode = t")); 
             break;
         case 'c':
             db.setMode(db.CV);
@@ -330,7 +334,7 @@ void dbTD_readByteCMD()
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
-	data = db.readByte(address);
+	data = db.readByte(address, true);
 
 	//check if we should output a formatted string
     arg = SCmd.next();
@@ -378,7 +382,7 @@ void dbTD_readByteBlockCMD()
 	
     for( i = 0; i < blockSize; i++ )
     {
-		data = db.readByte(address++);
+		data = db.readByte(address++, true);
 		Serial.write((char)(data));
 	}
 }
@@ -522,7 +526,7 @@ void dbTD_programByteCMD()
         {
 			case 'v':
 				delayMicroseconds(50);
-				readBack = db.readByte(address);
+				readBack = db.readByte(address, true);
 				break;
 			default:
 				break;
@@ -598,7 +602,7 @@ void dbTD_programByteBlockCMD()
     char *arg;
     uint32_t address=0;
     uint16_t size;
-    uint8_t count=0, data;
+    uint8_t count=0;
 	        
     //get the address in the next argument
     arg = SCmd.next();
@@ -651,7 +655,7 @@ void dbTD_programWordCMD()
 {
     char *arg;
     uint32_t address=0;
-    uint16_t data, readBack;
+    uint16_t data;
         
     //get the address in the next argument
     arg = SCmd.next();
@@ -660,7 +664,6 @@ void dbTD_programWordCMD()
     //get the data in the next argument
     arg = SCmd.next(); 
     data = (uint16_t)strtoul(arg, (char**)0, 0);
-	readBack = ~data;
     
     db.programWord(address, data, false);
 }
@@ -684,7 +687,7 @@ void dbTD_programWordBlockCMD()
 {
     char *arg;
     uint32_t address=0;
-    uint16_t data, size;
+    uint16_t size;
     uint8_t count=0;
 	        
     //get the address in the next argument

@@ -60,7 +60,8 @@ class dbDumper
 			undefined, 	/**< Undefined mode */
 			CV, 		/**< ColecoVision mode */
 			MD, 		/**< Genesis Megadrive mode */
-			TG		 	/**< PC Engine TG-16 mode */
+			TG,		 	/**< TG-16 mode */
+			PC		 	/**< PC Engine mode */
 		};
 
 		/*******************************************************************//**
@@ -120,17 +121,10 @@ class dbDumper
 		/*******************************************************************//**
 		 * \brief Read a byte from a 24bit address
 		 * \param address 24bit address
+		 * \param external read called from outside class
 		 * \return byte from cartridge
 		 **********************************************************************/
-		uint8_t readByte(uint32_t address);
-		
-		/*******************************************************************//**
-		 * \brief Read a byte block from a 24 bit address
-		 * \param address 24bit address
-		 * \param blockSize number of bytes to read from the block
-		 * \return void
-		 **********************************************************************/
-		void readByteBlock(uint32_t address, uint16_t blockSize);
+		uint8_t readByte(uint32_t address, bool external);
 		
 		/*******************************************************************//**
 		 * \brief Read a word from a 24bit address
@@ -138,15 +132,6 @@ class dbDumper
 		 * \return word from cartridge
 		 **********************************************************************/
 		uint16_t readWord(uint32_t address);
-		
-		/*******************************************************************//**
-		 * \brief Read a word block from a 24 bit address
-		 * \param address 24bit address
-		 * \param buf a pointer to store the byte block
-		 * \param blockSize number of bytes to read from the block
-		 * \return void
-		 **********************************************************************/
-		void readWordBlock(uint32_t address, uint8_t * buf, uint16_t blockSize);
 		
 		/**@}*/
 		
@@ -227,6 +212,8 @@ class dbDumper
 	
 		inline void _latchAddress(uint16_t address);
 		inline void _latchAddress(uint32_t address);
+
+		uint8_t reverseByte(uint8_t data);
 
 		//pin numbers address control
 		static const uint8_t ALE_low = 26;
