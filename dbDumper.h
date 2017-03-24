@@ -248,6 +248,9 @@ class dbDumper
 		static const uint8_t CTRL6 = 44;
 		static const uint8_t CTRL7 = 45;
 
+		//Turbografx-16 pin functions
+		static const uint8_t TG_nRST = 38;
+
 		//Coleco pin functions
 		static const uint8_t COL_nBPRES = 39;
 		static const uint8_t COL_nE000 = 38;

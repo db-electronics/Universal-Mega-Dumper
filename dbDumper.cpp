@@ -126,7 +126,21 @@ void dbDumper::setMode(eMode mode)
 
 			break;
 		case TG:
-			/** \todo add pcengine pin mode */
+			pinMode(TG_nRST, OUTPUT);
+			digitalWrite(TG_nRST, HIGH);
+			
+		  	pinMode(CTRL1, INPUT);
+		  	pinMode(CTRL2, INPUT);
+		  	pinMode(CTRL3, INPUT);
+			pinMode(CTRL4, INPUT);
+			pinMode(CTRL5, INPUT);
+			pinMode(CTRL6, INPUT);
+			pinMode(CTRL7, INPUT);
+			
+			_resetPin = TG_nRST;
+			resetCart();
+			
+			_mode = TG;
 			
 			break;
 		case CV:
@@ -842,15 +856,15 @@ void dbDumper::eraseSector(uint16_t sectorAddress)
 uint8_t dbDumper::toggleBit(uint8_t attempts)
 {
 	uint8_t retValue = 0;
+	uint16_t read16Value, old16Value;
+	uint8_t readValue, oldValue;
 	uint8_t i;
 	
   	switch(_mode)
   	{
 		//mx29f800 toggle bit on bit 6
 		case MD:
-			
-			uint16_t read16Value, old16Value;
-			
+
 			//first read of bit 6 - big endian
 			old16Value = readWord((uint16_t)0x0000) & 0x4000;
 			
@@ -871,8 +885,6 @@ uint8_t dbDumper::toggleBit(uint8_t attempts)
 		//mx29f800 toggle bit on bit 6
 		case TG:
 		
-			uint8_t readValue, oldValue;
-			
 			//first read of bit 6 - big endian
 			oldValue = readByte((uint16_t)0x0000) & 0x40;
 			
@@ -887,13 +899,11 @@ uint8_t dbDumper::toggleBit(uint8_t attempts)
 				{
 					retValue = 0;
 				}
-				old16Value = read16Value;
+				oldValue = readValue;
 			}
 			break;
 		//SST39SF0x0 toggle bit on bit 6
     	case CV:
-			
-			uint8_t readValue, oldValue;
 			
 			//first read should always be a 1 according to datasheet
 			oldValue = readByte((uint16_t)0x0000) & 0x40;
