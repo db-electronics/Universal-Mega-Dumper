@@ -27,7 +27,9 @@
 */
 
 #include <SoftwareSerial.h>
-#include <SerialCommand.h>
+#include <SerialCommand.h>			// https://github.com/PaulStoffregen/SerialFlash
+#include <SerialFlash.h>			// https://github.com/PaulStoffregen/SerialFlash
+#include <SPI.h>
 #include <dbDumper.h>
 
 #define WRITE_BLOCK_BUFFER_SIZE     256         //must be a power of 2
@@ -35,6 +37,8 @@
 
 SerialCommand SCmd;
 dbDumper db;
+
+const int FlashChipSelect = 20; 	// digital pin for flash chip CS pin
 
 union{
 	char 		byte[1024];
@@ -65,6 +69,10 @@ void setup() {
         digitalWrite(db.nLED, HIGH);
         delay(250);
     }
+
+	if (!SerialFlash.begin(FlashChipSelect)) {
+		error("Unable to access SPI Flash chip");
+	}
 
     //register callbacks for SerialCommand
     SCmd.addCommand("flash",dbTD_flashCMD);
