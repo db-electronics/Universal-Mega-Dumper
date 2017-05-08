@@ -103,6 +103,8 @@ void setup() {
     SCmd.addCommand("sflgetid",dbTD_sflIDCMD);
     SCmd.addCommand("sflerase",dbTD_sflErase);
     SCmd.addCommand("sflwrite",dbTD_sflWriteFile);
+    SCmd.addCommand("sfllist",dbTD_sflListFiles);
+    SCmd.addCommand("sflread",dbTD_sflReadFile);
     
     SCmd.addDefaultHandler(unknownCMD);
     SCmd.clearBuffer();
@@ -185,6 +187,50 @@ void dbTD_sflErase()
 }
 
 /*******************************************************************//**
+ *  \brief Read a file from the serial flash
+ *  
+ *  Usage:
+ *  sflread file.bin
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_sflReadFile()
+{
+	char *arg;
+	uint8_t i;
+	uint32_t fileSize, pos=0;
+	char fileName[13]; 		//Max filename length (8.3 plus a null char terminator)
+	
+	//get the file name
+    arg = SCmd.next();
+    i = 0;
+    while( (*arg != 0) && ( i < 12) )
+    {
+		fileName[i++] = *(arg++);
+	}
+	fileName[i] = 0; //null char terminator
+	
+	flashFile = SerialFlash.open(fileName);
+	flashFile.read(writeBuffer.byte, 16);
+	
+	for (i=0; i<16; i++)
+	{
+		Serial.print(writeBuffer.byte[i], HEX);
+	}
+	Serial.println();
+	
+	if (flashFile)
+	{
+		Serial.println(F("found"));
+		
+	}else
+	{
+		Serial.println(F("error"));
+	}
+	flashFile.close();
+}
+
+/*******************************************************************//**
  *  \brief Write a file to the serial flash
  *  
  *  Usage:
@@ -202,47 +248,78 @@ void dbTD_sflWriteFile()
 	//get the file name
     arg = SCmd.next();
     i = 0;
-    while( (*arg != 0) || (i < 13) )
+    while( (*arg != 0) && ( i < 12) )
     {
 		fileName[i++] = *(arg++);
 	}
 	fileName[i] = 0; //null char terminator
 
 	//test filename capture
-	i = 0;
-	Serial.print(F("filename = '"));
-	while( fileName[i] != 0 )
-	{
-		Serial.write(fileName[i++]);
-	}
-    Serial.println(F("'"));
+	//i = 0;
+	//Serial.print(F("filename = '"));
+	//while( fileName[i] != 0 )
+	//{
+		//Serial.write(fileName[i++]);
+	//}
+    //Serial.println(F("'"));
 
 	//get the size in the next argument
     arg = SCmd.next();
     fileSize = strtoul(arg, (char**)0, 0);
-
-	//Serial.read(); //there's an extra byte here for some reason - discard
-
-	//SerialFlash.create(fileName, fileSize);
-	//flashFile = SerialFlash.open(fileName);
-	//while( pos < fileSize )
-	//{
-		//// fill buffer from USB
-		//count = 0;
-		//while( count < FLASH_BUFFER_SIZE )
-		//{
-			//if( Serial.available() )
-			//{
-				//writeBuffer.byte[count++] = Serial.read();
-			//}
-		//}
-		//// write buffer to serial flash file
-		//flashFile.write(writeBuffer.byte, FLASH_BUFFER_SIZE);
-		//Serial.println(F("rdy"));
-	//}
+	//Serial.print(F("size = "));
+    //Serial.println(fileSize, DEC);
     
-    Serial.print(F("size = "));
-    Serial.println(fileSize, HEX);
+	Serial.read(); //there's an extra byte here for some reason - discard
+
+	SerialFlash.create(fileName, fileSize);
+	flashFile = SerialFlash.open(fileName);
+	while( pos < fileSize )
+	{
+		// fill buffer from USB
+		count = 0;
+		while( count < FLASH_BUFFER_SIZE )
+		{
+			if( Serial.available() )
+			{
+				writeBuffer.byte[count++] = Serial.read();
+			}
+		}
+		// write buffer to serial flash file
+		flashFile.write(writeBuffer.byte, FLASH_BUFFER_SIZE);
+		pos += FLASH_BUFFER_SIZE;
+		Serial.println(F("rdy"));
+	}
+	flashFile.close();
+}
+
+/*******************************************************************//**
+ *  \brief List Files in the Serial Flash
+ *  
+ *  Usage:
+ *  sfllist
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_sflListFiles()
+{
+	//W25Q128FVSIG
+	char fileName[64];
+    uint32_t fileSize;
+    
+    SerialFlash.opendir();
+    while (1) {
+		if (SerialFlash.readdir(fileName, sizeof(fileName), fileSize))
+		{
+		  Serial.print(fileName);
+		  Serial.print(";");
+		  Serial.print(fileSize, DEC);
+		  Serial.print(",");
+		}else 
+		{
+			Serial.println();
+			break; // no more files
+		}
+	}
 }
 
 /*******************************************************************//**

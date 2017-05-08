@@ -244,15 +244,15 @@ class dbDumper
 		static const uint8_t TG_nRST = 38;
 
 		//Coleco pin functions
-		static const uint8_t COL_nBPRES = 39;
-		static const uint8_t COL_nE000 = 38;
-		static const uint8_t COL_A16 = 38;
-		static const uint8_t COL_nC000 = 40;
-		static const uint8_t COL_A15 = 40;
-		static const uint8_t COL_nA000 = 41;
-		static const uint8_t COL_A14 = 41;
-		static const uint8_t COL_n8000 = 43;
-		static const uint8_t COL_A13 = 43;	
+		//static const uint8_t COL_nBPRES = 39;
+		//static const uint8_t COL_nE000 = 38;
+		//static const uint8_t COL_A16 = 38;
+		//static const uint8_t COL_nC000 = 40;
+		//static const uint8_t COL_A15 = 40;
+		//static const uint8_t COL_nA000 = 41;
+		//static const uint8_t COL_A14 = 41;
+		//static const uint8_t COL_n8000 = 43;
+		//static const uint8_t COL_A13 = 43;	
 
 		//Genesis pin functions
 		static const uint8_t GEN_SL1 = 38;

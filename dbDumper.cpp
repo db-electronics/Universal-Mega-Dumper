@@ -161,16 +161,16 @@ void dbDumper::setMode(eMode mode)
 			
 			break;
 		case CV:
-			pinMode(COL_nBPRES, OUTPUT);
-			digitalWrite(COL_nBPRES, LOW);
-			pinMode(COL_nE000, OUTPUT);
-			digitalWrite(COL_nE000, LOW);
-			pinMode(COL_nC000, OUTPUT);
-			digitalWrite(COL_nC000, LOW);
-			pinMode(COL_nA000, OUTPUT);
-			digitalWrite(COL_nA000, LOW);
-			pinMode(COL_n8000, OUTPUT);
-			digitalWrite(COL_n8000, LOW);
+			//pinMode(COL_nBPRES, OUTPUT);
+			//digitalWrite(COL_nBPRES, LOW);
+			//pinMode(COL_nE000, OUTPUT);
+			//digitalWrite(COL_nE000, LOW);
+			//pinMode(COL_nC000, OUTPUT);
+			//digitalWrite(COL_nC000, LOW);
+			//pinMode(COL_nA000, OUTPUT);
+			//digitalWrite(COL_nA000, LOW);
+			//pinMode(COL_n8000, OUTPUT);
+			//digitalWrite(COL_n8000, LOW);
 
 			_resetPin = 45; //unused with coleco
 			_mode = CV;
@@ -250,7 +250,6 @@ uint32_t dbDumper::getFlashID()
 			
 		//SST39SF0x0 software ID detect
     	case CV:
-			digitalWrite(COL_nBPRES, LOW);
 			writeByte((uint16_t)0x5555,0xAA);
 			writeByte((uint16_t)0x2AAA,0x55);
 			writeByte((uint16_t)0x5555,0x90);
@@ -318,7 +317,6 @@ uint32_t dbDumper::eraseChip(bool wait, uint8_t chip)
 			break;
 		//SST39SF0x0 chip erase
     	case CV:
-			digitalWrite(COL_nBPRES, LOW);
 			writeByte((uint16_t)0x5555, 0xAA);
 			writeByte((uint16_t)0x2AAA, 0x55);
 			writeByte((uint16_t)0x5555, 0x80);
@@ -682,7 +680,6 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 			break;
 		//SST39SF0x0 program byte
 		case CV:
-			digitalWrite(COL_nBPRES, LOW);
 			writeByte((uint16_t)0x5555, 0xAA);
 			writeByte((uint16_t)0x2AAA, 0x55);
 			writeByte((uint16_t)0x5555, 0xA0);
@@ -718,8 +715,8 @@ void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
 			if ( address < GEN_CHIP_1_BASE )
 			{
 				writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
-				writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
-				writeWord( (uint32_t)(0x000555 << 1), 0xA000);
+				writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
+				writeWord( (uint16_t)(0x000555 << 1), 0xA000);
 				writeWord( (uint32_t)address, data );
 				//use toggle bit to validate end of program cycle
 				if(wait)
@@ -729,8 +726,8 @@ void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
 			}else
 			{
 				writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
-				writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
-				writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xA000);
+				writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
+				writeWord( (uint16_t)(0x000555 << 1), 0xA000);
 				writeWord( (uint32_t)address, data );
 				//use toggle bit to validate end of program cycle
 				if(wait)
@@ -828,7 +825,6 @@ void dbDumper::eraseSector(uint16_t sectorAddress)
 			break;
     	case CV:
 			//SST39SF0x0 chip erase
-			digitalWrite(COL_nBPRES, LOW);
 			writeByte((uint16_t)0x5555, 0xAA);
 			writeByte((uint16_t)0x2AAA, 0x55);
 			writeByte((uint16_t)0x5555, 0x80);
