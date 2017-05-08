@@ -35,10 +35,15 @@
 #define WRITE_BLOCK_BUFFER_SIZE     256         //must be a power of 2
 #define WRITE_TIMEOUT_MS            10000
 
+#define FLASH_BUFFER_SIZE    		512
+
 SerialCommand SCmd;
 dbDumper db;
 
 const int FlashChipSelect = 20; 	// digital pin for flash chip CS pin
+SerialFlashFile flashFile;
+uint8_t sflid[5];
+uint32_t sflSize;
 
 union{
 	char 		byte[1024];
@@ -71,10 +76,13 @@ void setup() {
     }
 
 	if (!SerialFlash.begin(FlashChipSelect)) {
-		error("Unable to access SPI Flash chip");
+		//error("Unable to access SPI Flash chip");
+	}else
+	{
+		SerialFlash.readID(sflid);
 	}
 
-    //register callbacks for SerialCommand
+    //register callbacks for SerialCommand related to the cartridge
     SCmd.addCommand("flash",dbTD_flashCMD);
     SCmd.addCommand("detect",dbTD_detectCMD);
     SCmd.addCommand("setmode",dbTD_setModeCMD);
@@ -90,8 +98,13 @@ void setup() {
     SCmd.addCommand("progbblock",dbTD_programByteBlockCMD);
     SCmd.addCommand("progword",dbTD_programWordCMD);
     SCmd.addCommand("progwblock",dbTD_programWordBlockCMD);
-    SCmd.addDefaultHandler(unknownCMD);
     
+    //register callbacks for SerialCommand related to the onboard serial flash
+    SCmd.addCommand("sflgetid",dbTD_sflIDCMD);
+    SCmd.addCommand("sflerase",dbTD_sflErase);
+    SCmd.addCommand("sflwrite",dbTD_sflWriteFile);
+    
+    SCmd.addDefaultHandler(unknownCMD);
     SCmd.clearBuffer();
 }
 
@@ -115,6 +128,121 @@ void unknownCMD(const char *command)
     Serial.println(command);
     Serial.println(F("\". Registered Commands:"));
     Serial.println(SCmd.getCommandList());  //Returns all registered commands
+}
+
+/*******************************************************************//**
+ *  \brief Read the onboard serial flash ID
+ *  
+ *  Usage:
+ *  sflgetid
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_sflIDCMD()
+{
+	//W25Q128FVSIG
+    Serial.write(sflid[0]);
+    Serial.write(sflid[1]);
+    Serial.write(sflid[2]);
+    Serial.write(sflid[3]);
+    Serial.write(sflid[4]);
+}
+
+/*******************************************************************//**
+ *  \brief Erase the serial flash
+ *  
+ *  Usage:
+ *  sflerase
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_sflErase()
+{
+	char *arg;
+
+    arg = SCmd.next();
+    if( arg != NULL )
+    {
+        switch(*arg)
+        {
+			//wait for operation to complete, measure time
+            case 'w':
+                SerialFlash.eraseAll();
+				while (SerialFlash.ready() == false) {
+					// wait, 30 seconds to 2 minutes for most chips
+					delay(500);
+					Serial.print(".");
+				}
+				Serial.print("!");
+                break;
+            default:
+                break;
+        }
+    }else
+    {
+        SerialFlash.eraseAll();
+    }
+}
+
+/*******************************************************************//**
+ *  \brief Write a file to the serial flash
+ *  
+ *  Usage:
+ *  sflwrite rom.bin 4096 xx[0] xx[1] xx[2] ... xx[4095] 
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_sflWriteFile()
+{
+	char *arg;
+	uint16_t i, count;
+	uint32_t fileSize, pos=0;
+	char fileName[13]; 		//Max filename length (8.3 plus a null char terminator)
+
+	//get the file name
+    arg = SCmd.next();
+    i = 0;
+    while( (*arg != 0) || (i < 13) )
+    {
+		fileName[i++] = *(arg++);
+	}
+	fileName[i] = 0; //null char terminator
+
+	//test filename capture
+	i = 0;
+	Serial.print(F("filename = '"));
+	while( fileName[i] != 0 )
+	{
+		Serial.write(fileName[i++]);
+	}
+    Serial.println(F("'"));
+
+	//get the size in the next argument
+    arg = SCmd.next();
+    fileSize = strtoul(arg, (char**)0, 0);
+
+	//Serial.read(); //there's an extra byte here for some reason - discard
+
+	//SerialFlash.create(fileName, fileSize);
+	//flashFile = SerialFlash.open(fileName);
+	//while( pos < fileSize )
+	//{
+		//// fill buffer from USB
+		//count = 0;
+		//while( count < FLASH_BUFFER_SIZE )
+		//{
+			//if( Serial.available() )
+			//{
+				//writeBuffer.byte[count++] = Serial.read();
+			//}
+		//}
+		//// write buffer to serial flash file
+		//flashFile.write(writeBuffer.byte, FLASH_BUFFER_SIZE);
+		//Serial.println(F("rdy"));
+	//}
+    
+    Serial.print(F("size = "));
+    Serial.println(fileSize, HEX);
 }
 
 /*******************************************************************//**
@@ -210,7 +338,11 @@ void dbTD_setModeCMD()
 void dbTD_eraseChipCMD()
 {
     char *arg;
-    uint32_t eraseTime;
+	uint8_t chip;
+
+	//get the chip number in the next argument
+    arg = SCmd.next();
+    chip = (uint8_t)strtoul(arg, (char**)0, 0);
 
     arg = SCmd.next();
     if( arg != NULL )
@@ -219,16 +351,14 @@ void dbTD_eraseChipCMD()
         {
 			//wait for operation to complete, measure time
             case 'w':
-                eraseTime = db.eraseChip(true);
-                Serial.println(eraseTime,DEC);
+                db.eraseChip(true, chip);
                 break;
             default:
                 break;
         }
     }else
     {
-        db.eraseChip(false);
-        Serial.println(F("erase no wait"));
+        db.eraseChip(false, chip);
     }
 }
 
@@ -248,7 +378,7 @@ void dbTD_flashIDCMD()
 {
     char *arg;
     
-    uint16_t data;
+    uint32_t data;
     
     //read the flash ID
     data = db.getFlashID();
@@ -269,6 +399,8 @@ void dbTD_flashIDCMD()
     {
         Serial.write((char)(data));
         Serial.write((char)(data>>8));
+        Serial.write((char)(data>>16));
+        Serial.write((char)(data>>24));
     }
 }
 

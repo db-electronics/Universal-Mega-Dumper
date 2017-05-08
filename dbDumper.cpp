@@ -197,9 +197,9 @@ void dbDumper::setMode(eMode mode)
  * 
  * \warning setMode() must be called prior to using this function.
  **********************************************************************/
-uint16_t dbDumper::getFlashID()
+uint32_t dbDumper::getFlashID()
 {
-  	uint16_t flashID = 0;
+  	uint32_t flashID = 0;
 
   	switch(_mode)
   	{
@@ -212,11 +212,25 @@ uint16_t dbDumper::getFlashID()
 			//writeWord(0x00000555, 0x9000);
 			//flashID = readWord(0x00000001);
 			//writeWord(0x00000000, 0xF000);
-			writeWord( (uint16_t)(0x0555 << 1), 0xAA00);
-			writeWord( (uint16_t)(0x02AA << 1), 0x5500);
-			writeWord( (uint16_t)(0x0555 << 1), 0x9000);
-			flashID = readWord( (uint16_t)(0x0001 << 1) );
-			writeWord( (uint16_t)0x0000, 0xF000);
+			writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+			writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+			writeWord( (uint32_t)(0x000555 << 1), 0x9000);
+			flashID = (uint32_t)readWord( (uint16_t)(0x000001 << 1) );
+			
+			//exit software ID
+			writeWord( (uint32_t)0x000000, 0xF000);
+			
+			flashID <<= 16;
+			
+			//try for second chip
+			writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
+			writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
+			writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x9000);
+			flashID |= (uint32_t)readWord( (0x000001 << 1) + GEN_CHIP_1_BASE );
+			
+			//exit software ID
+			writeWord( (uint32_t)0x000000  + GEN_CHIP_1_BASE, 0xF000);
+			
 			_flashID = flashID;
 			
 			break;
@@ -226,10 +240,14 @@ uint16_t dbDumper::getFlashID()
 			writeByte((uint16_t)0x0AAA, 0xAA);
 			writeByte((uint16_t)0x0555, 0x55);
 			writeByte((uint16_t)0x0AAA, 0x90);
-			flashID = (uint16_t)readByte(0x0002, false);
+			flashID = (uint32_t)readByte(0x0002, false);
+			
+			//exit software ID
 			writeByte((uint16_t)0x0000, 0xF0);
+			
 			_flashID = flashID;
 			break;
+			
 		//SST39SF0x0 software ID detect
     	case CV:
 			digitalWrite(COL_nBPRES, LOW);
@@ -237,9 +255,9 @@ uint16_t dbDumper::getFlashID()
 			writeByte((uint16_t)0x2AAA,0x55);
 			writeByte((uint16_t)0x5555,0x90);
 			
-			flashID = (uint16_t)readByte(0x0000, false);
+			flashID = (uint32_t)readByte(0x0000, false);
 			flashID <<= 8;
-			flashID |= (uint16_t)readByte(0x0001, false);
+			flashID |= (uint32_t)readByte(0x0001, false);
 			
 			//exit software ID
 			writeByte((uint16_t)0x0000,0xF0);
@@ -247,7 +265,7 @@ uint16_t dbDumper::getFlashID()
 			_flashID = flashID;
       		break;
 		default:
-      		flashID = 0xFFFF;
+      		flashID = 0xFFFFFFFF;
       	break;
   	}
 
@@ -262,7 +280,7 @@ uint16_t dbDumper::getFlashID()
  * 
  * \warning setMode() must be called prior to using this function.
  **********************************************************************/
-uint32_t dbDumper::eraseChip(bool wait)
+uint32_t dbDumper::eraseChip(bool wait, uint8_t chip)
 {
 	uint32_t startMillis, intervalMillis;
 	
@@ -270,12 +288,23 @@ uint32_t dbDumper::eraseChip(bool wait)
   	{
 		//mx29f800 chip erase word mode
 		case MD:
-			writeWord( (uint16_t)(0x0555 << 1), 0xAA00);
-			writeWord( (uint16_t)(0x02AA << 1), 0x5500);
-			writeWord( (uint16_t)(0x0555 << 1), 0x8000);
-			writeWord( (uint16_t)(0x0555 << 1), 0xAA00);
-			writeWord( (uint16_t)(0x02AA << 1), 0x5500);
-			writeWord( (uint16_t)(0x0555 << 1), 0x1000);
+			if (chip == 0)
+			{
+				writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+				writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+				writeWord( (uint32_t)(0x000555 << 1), 0x8000);
+				writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+				writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+				writeWord( (uint32_t)(0x000555 << 1), 0x1000);
+			}else if (chip == 1)
+			{
+				writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
+				writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
+				writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x8000);
+				writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
+				writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
+				writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x1000);				
+			}
 			break;
 		//mx29f800 chip erase byte mode
 		case PC:
@@ -308,7 +337,7 @@ uint32_t dbDumper::eraseChip(bool wait)
 		intervalMillis = startMillis;
 		
 		// wait for 4 consecutive toggle bit success reads before exiting
-		while( toggleBit(4) != 4 )
+		while( toggleBit(4, chip) != 4 )
 		{
 			if( (millis() - intervalMillis) > 250 )
 			{
@@ -635,7 +664,7 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 			//use data polling to validate end of program cycle
 			if(wait)
 			{
-				while( toggleBit(2) != 2 );
+				while( toggleBit(2, 0) != 2 );
 			}
 			break;
 		//MX29F800 program byte
@@ -648,7 +677,7 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 			//use data polling to validate end of program cycle
 			if(wait)
 			{
-				while( toggleBit(2) != 2 );
+				while( toggleBit(2, 0) != 2 );
 			}
 			break;
 		//SST39SF0x0 program byte
@@ -663,7 +692,7 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 			//use data polling to validate end of program cycle
 			if(wait)
 			{
-				while( toggleBit(2) != 2 );
+				while( toggleBit(2, 0) != 2 );
 			}
       		break;
 		default:
@@ -682,21 +711,34 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
  **********************************************************************/
 void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
 {
-
   	switch(_mode)
   	{
 		//MX29F800 program word
 		case MD:
-			writeWord( (uint16_t)(0x0555 << 1), 0xAA00);
-			writeWord( (uint16_t)(0x02AA << 1), 0x5500);
-			writeWord( (uint16_t)(0x0555 << 1), 0xA000);
-			writeWord( (uint32_t)address, data );
-			
-			//use toggle bit to validate end of program cycle
-			if(wait)
+			if ( address < GEN_CHIP_1_BASE )
 			{
-				while( toggleBit(2) != 2 );
+				writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+				writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+				writeWord( (uint32_t)(0x000555 << 1), 0xA000);
+				writeWord( (uint32_t)address, data );
+				//use toggle bit to validate end of program cycle
+				if(wait)
+				{
+					while( toggleBit(2, 0) != 2 );
+				}
+			}else
+			{
+				writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
+				writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
+				writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xA000);
+				writeWord( (uint32_t)address, data );
+				//use toggle bit to validate end of program cycle
+				if(wait)
+				{
+					while( toggleBit(2, 1) != 2 );
+				}
 			}
+			
 			break;
 		default:
 			break;
@@ -801,25 +843,31 @@ void dbDumper::eraseSector(uint16_t sectorAddress)
   	}
 }
 
-uint8_t dbDumper::toggleBit(uint8_t attempts)
+uint8_t dbDumper::toggleBit(uint8_t attempts, uint8_t chip)
 {
 	uint8_t retValue = 0;
 	uint16_t read16Value, old16Value;
 	uint8_t readValue, oldValue;
 	uint8_t i;
 	
+	uint32_t baseAddress = 0;
+	
   	switch(_mode)
   	{
 		//mx29f800 toggle bit on bit 6
 		case MD:
-
+			if( chip == 1 )
+			{
+				baseAddress =  + GEN_CHIP_1_BASE;
+			}
+			
 			//first read of bit 6 - big endian
-			old16Value = readWord((uint16_t)0x0000) & 0x4000;
+			old16Value = readWord((uint32_t)baseAddress) & 0x4000;
 			
 			for( i=0; i<attempts; i++ )
 			{
 				//successive reads compare this read to the previous one for toggle bit
-				read16Value = readWord((uint16_t)0x0000) & 0x4000;
+				read16Value = readWord((uint32_t)baseAddress) & 0x4000;
 				if( old16Value == read16Value )
 				{
 					retValue += 1;

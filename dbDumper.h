@@ -97,20 +97,21 @@ class dbDumper
 
 		/*******************************************************************//**
 		 * \brief Read the Manufacturer and Product ID in the Flash IC
-		 * \return uint16_t flashID
+		 * \return uint32_t flashID
 		 **********************************************************************/
-		uint16_t getFlashID();
+		uint32_t getFlashID();
 
 		/*******************************************************************//**
 		 * \brief Erase the entire Flash IC
 		 * \param bool wait
+		 * \param uint8_t chip
 		 * \return uint32_t time in millis operation took to complete
 		 **********************************************************************/
-		uint32_t eraseChip(bool wait);
+		uint32_t eraseChip(bool wait, uint8_t chip);
 		
 		
 		void eraseSector(uint16_t sectorAddress);
-		uint8_t toggleBit(uint8_t attempts);
+		uint8_t toggleBit(uint8_t attempts, uint8_t chip);
 
 
 		/*******************************************************************//**
@@ -207,13 +208,17 @@ class dbDumper
 
 	private:
 		uint8_t _resetPin;
-		uint16_t _flashID;
+		uint32_t _flashID;
 		eMode _mode;
 	
 		inline void _latchAddress(uint16_t address);
 		inline void _latchAddress(uint32_t address);
 
 		uint8_t reverseByte(uint8_t data);
+
+		//Genesis multichip base addresses for M29F800
+		static const uint32_t GEN_CHIP_0_BASE = 0x000000;
+		static const uint32_t GEN_CHIP_1_BASE = 0x100000;
 
 		//pin numbers address control
 		static const uint8_t ALE_low = 26;
