@@ -32,9 +32,8 @@
 #include <SPI.h>
 #include <dbDumper.h>
 
-#define WRITE_BLOCK_BUFFER_SIZE     256         //must be a power of 2
 #define WRITE_TIMEOUT_MS            10000
-
+#define DATA_BUFFER_SIZE			2048
 #define FLASH_BUFFER_SIZE    		512
 
 SerialCommand SCmd;
@@ -46,11 +45,9 @@ uint8_t sflid[5];
 uint32_t sflSize;
 
 union{
-	char 		byte[1024];
-	uint16_t 	word[512];
-} writeBuffer;
-
-char buffer[2]; //TODO get rid of this buffer, use above union instead
+	char 		byte[DATA_BUFFER_SIZE];
+	uint16_t 	word[DATA_BUFFER_SIZE/2];
+} dataBuffer;
 
 /*******************************************************************//**
  *  \brief Main loop
@@ -133,6 +130,22 @@ void unknownCMD(const char *command)
 }
 
 /*******************************************************************//**
+ *  \brief Auto response for detection on PC side
+ *  
+ *  Usage:
+ *  flash
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_flashCMD()
+{
+    Serial.println(F("thunder"));
+    digitalWrite(db.nLED, LOW);
+	delay(100);
+	digitalWrite(db.nLED, HIGH);
+}
+
+/*******************************************************************//**
  *  \brief Read the onboard serial flash ID
  *  
  *  Usage:
@@ -172,7 +185,10 @@ void dbTD_sflErase()
                 SerialFlash.eraseAll();
 				while (SerialFlash.ready() == false) {
 					// wait, 30 seconds to 2 minutes for most chips
-					delay(500);
+					digitalWrite(db.nLED, LOW);
+					delay(250);
+					digitalWrite(db.nLED, HIGH);
+					delay(250);
 					Serial.print(".");
 				}
 				Serial.print("!");
@@ -211,17 +227,14 @@ void dbTD_sflReadFile()
 	fileName[i] = 0; //null char terminator
 	
 	flashFile = SerialFlash.open(fileName);
-	flashFile.read(writeBuffer.byte, 16);
-	
-	for (i=0; i<16; i++)
-	{
-		Serial.print(writeBuffer.byte[i], HEX);
-	}
-	Serial.println();
-	
 	if (flashFile)
 	{
 		Serial.println(F("found"));
+		Serial.println(flashFile.size(),DEC);
+		SCmd.clearBuffer();
+		//flashFile.read(dataBuffer.byte, FLASH_BUFFER_SIZE );
+		//wait for PC side to be ready to receive
+		//Serial.read();
 		
 	}else
 	{
@@ -235,7 +248,8 @@ void dbTD_sflReadFile()
  *  
  *  Usage:
  *  sflwrite rom.bin 4096 xx[0] xx[1] xx[2] ... xx[4095] 
- *  
+ *  Filename must be  
+ * 
  *  \return Void
  **********************************************************************/
 void dbTD_sflWriteFile()
@@ -281,11 +295,11 @@ void dbTD_sflWriteFile()
 		{
 			if( Serial.available() )
 			{
-				writeBuffer.byte[count++] = Serial.read();
+				dataBuffer.byte[count++] = Serial.read();
 			}
 		}
 		// write buffer to serial flash file
-		flashFile.write(writeBuffer.byte, FLASH_BUFFER_SIZE);
+		flashFile.write(dataBuffer.byte, FLASH_BUFFER_SIZE);
 		pos += FLASH_BUFFER_SIZE;
 		Serial.println(F("rdy"));
 	}
@@ -320,22 +334,6 @@ void dbTD_sflListFiles()
 			break; // no more files
 		}
 	}
-}
-
-/*******************************************************************//**
- *  \brief Auto response for detection on PC side
- *  
- *  Usage:
- *  flash
- *  
- *  \return Void
- **********************************************************************/
-void dbTD_flashCMD()
-{
-    Serial.println(F("thunder"));
-    digitalWrite(db.nLED, LOW);
-	delay(100);
-	digitalWrite(db.nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -403,12 +401,12 @@ void dbTD_setModeCMD()
 
 /*******************************************************************//**
  *  \brief Erases the contents of the cart
- *  Erases the correspoding the Flash IC on the cart.
+ *  Erases the correspoding Flash IC on the cart.
  *  Requires set mode to be issued prior.
  *  
  *  Usage:
- *  erase
- *  erase w
+ *  erase 0
+ *  erase 1 w
  *  
  *  \return Void
  **********************************************************************/
@@ -836,7 +834,7 @@ void dbTD_programByteBlockCMD()
     {
 		if( Serial.available() )
 		{
-			writeBuffer.byte[count++] = Serial.read();
+			dataBuffer.byte[count++] = Serial.read();
 		}
 	}
 	
@@ -846,7 +844,7 @@ void dbTD_programByteBlockCMD()
 	count = 0;
 	while( count < size )
 	{
-		db.programByte(address, writeBuffer.byte[count++], true);
+		db.programByte(address, dataBuffer.byte[count++], true);
 		address++;
 	}
 	
@@ -922,7 +920,7 @@ void dbTD_programWordBlockCMD()
     {
 		if( Serial.available() )
 		{
-			writeBuffer.byte[count++] = Serial.read();
+			dataBuffer.byte[count++] = Serial.read();
 		}
 	}
 	
@@ -932,7 +930,7 @@ void dbTD_programWordBlockCMD()
 	count = 0;
 	while( count < ( size >> 1) )
 	{
-		db.programWord(address, writeBuffer.word[count++], true);
+		db.programWord(address, dataBuffer.word[count++], true);
 		address += 2;
 	}
 	
