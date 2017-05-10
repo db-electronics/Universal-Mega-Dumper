@@ -447,6 +447,33 @@ uint16_t dbDumper::readWord(uint32_t address)
 }
 
 /*******************************************************************//**
+ * The writeByteTime function strobes a byte into #TIME region
+ * 
+ * \warning setMode() must be called prior to using this function.
+ * \warning upper 8 address bits (23..16) are not modified
+ **********************************************************************/
+void dbDumper::writeByteTime(uint16_t address, uint8_t data)
+{
+	_latchAddress(address);
+	//set data bus to outputs
+	DATAH_DDR = 0xFF;
+	DATAL_DDR = 0xFF;
+
+	//put word on bus
+	DATAOUTH = (uint8_t)(data);
+	DATAOUTL = 0;
+	
+	// write to the bus
+	digitalWrite(GEN_nTIME, LOW);
+	//delayMicroseconds(1);
+	digitalWrite(GEN_nTIME, HIGH);
+  
+	//set data bus to inputs
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
+}
+
+/*******************************************************************//**
  * The writeByte function strobes a byte into the cartridge at a 16bit
  * address. The upper 8 address bits (23..16) are not modified
  * by this function so this can be used to perform quicker successive
@@ -575,6 +602,33 @@ void dbDumper::writeByte(uint32_t address, uint8_t data)
 	Serial.print(F(" : ")); 
 	Serial.println(data,HEX);
 #endif
+}
+
+/*******************************************************************//**
+ * The writeGenesisTime function strobes a word into #TIME region
+ * 
+ * \warning setMode() must be called prior to using this function.
+ * \warning word is converted to big endian
+ **********************************************************************/
+void dbDumper::writeWordTime(uint16_t address, uint16_t data)
+{
+	_latchAddress(address);
+	//set data bus to outputs
+	DATAH_DDR = 0xFF;
+	DATAL_DDR = 0xFF;
+
+	//put word on bus
+	DATAOUTH = (uint8_t)(data);
+	DATAOUTL = (uint8_t)(data>>8);
+	
+	// write to the bus
+	digitalWrite(GEN_nTIME, LOW);
+	//delayMicroseconds(1);
+	digitalWrite(GEN_nTIME, HIGH);
+  
+	//set data bus to inputs
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
 }
 
 /*******************************************************************//**

@@ -77,6 +77,7 @@ void setup() {
 	}else
 	{
 		SerialFlash.readID(sflid);
+		sflSize = SerialFlash.capacity(sflid);
 	}
 
     //register callbacks for SerialCommand related to the cartridge
@@ -98,10 +99,12 @@ void setup() {
     
     //register callbacks for SerialCommand related to the onboard serial flash
     SCmd.addCommand("sflgetid",dbTD_sflIDCMD);
+    SCmd.addCommand("sflsize",dbTD_sflGetSize);
     SCmd.addCommand("sflerase",dbTD_sflErase);
     SCmd.addCommand("sflwrite",dbTD_sflWriteFile);
     SCmd.addCommand("sfllist",dbTD_sflListFiles);
     SCmd.addCommand("sflread",dbTD_sflReadFile);
+    SCmd.addCommand("sflburn",dbTD_sflBurnCart);
     
     SCmd.addDefaultHandler(unknownCMD);
     SCmd.clearBuffer();
@@ -164,6 +167,20 @@ void dbTD_sflIDCMD()
 }
 
 /*******************************************************************//**
+ *  \brief Get the size of the onboard serial flash
+ *  
+ *  Usage:
+ *  sflsize
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_sflGetSize()
+{
+	//W25Q128FVSIG
+    Serial.println(sflSize,DEC);
+}
+
+/*******************************************************************//**
  *  \brief Erase the serial flash
  *  
  *  Usage:
@@ -203,6 +220,74 @@ void dbTD_sflErase()
 }
 
 /*******************************************************************//**
+ *  \brief Burn a file from the serial flash to the cartridge
+ *  
+ *  Usage:
+ *  sflburn rom.bin
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_sflBurnCart()
+{
+	char *arg;
+	uint16_t blockSize, i;
+	uint32_t fileSize, address=0, pos=0;
+	char fileName[13]; 		//Max filename length (8.3 plus a null char terminator)
+	
+	//get the file name
+    arg = SCmd.next();
+    i = 0;
+    while( (*arg != 0) && ( i < 12) )
+    {
+		fileName[i++] = *(arg++);
+	}
+	fileName[i] = 0; //null char terminator
+	
+		//get the read block size
+	arg = SCmd.next();
+    blockSize = strtoul(arg, (char**)0, 0);
+    
+	flashFile = SerialFlash.open(fileName);
+	if (flashFile)
+	{
+		Serial.println(F("found"));
+		fileSize = flashFile.size();
+		Serial.println(fileSize,DEC);
+		
+		while( pos < fileSize )
+		{
+			flashFile.read(dataBuffer.byte, blockSize);
+			
+			switch( db.getMode() )
+			{
+				case db.MD:
+					for( i=0 ; i < ( blockSize >> 1) ; i++ )
+					{
+						db.programWord(address, dataBuffer.word[i], true);
+						address += 2;
+					}
+					break;
+				default:
+					for( i=0 ; i < blockSize ; i++ )
+					{
+						db.programByte(address, dataBuffer.byte[i], true);
+						address++;
+					}
+					break;
+			}
+			pos += blockSize;
+			Serial.println(pos, DEC);
+		}
+		Serial.println(F("done"));
+	}else
+	{
+		Serial.println(F("error"));
+	}
+	
+	flashFile.close();
+}
+
+/*******************************************************************//**
  *  \brief Read a file from the serial flash
  *  
  *  Usage:
@@ -213,7 +298,7 @@ void dbTD_sflErase()
 void dbTD_sflReadFile()
 {
 	char *arg;
-	uint8_t i;
+	uint16_t blockSize, i;
 	uint32_t fileSize, pos=0;
 	char fileName[13]; 		//Max filename length (8.3 plus a null char terminator)
 	
@@ -226,16 +311,32 @@ void dbTD_sflReadFile()
 	}
 	fileName[i] = 0; //null char terminator
 	
+	//get the read block size
+	arg = SCmd.next();
+    blockSize = strtoul(arg, (char**)0, 0);
+    
 	flashFile = SerialFlash.open(fileName);
 	if (flashFile)
 	{
 		Serial.println(F("found"));
-		Serial.println(flashFile.size(),DEC);
-		SCmd.clearBuffer();
-		//flashFile.read(dataBuffer.byte, FLASH_BUFFER_SIZE );
-		//wait for PC side to be ready to receive
-		//Serial.read();
+		fileSize = flashFile.size();
+		Serial.println(fileSize,DEC);
 		
+		while( pos < fileSize )
+		{
+			flashFile.read(dataBuffer.byte, blockSize);
+			//wait for PC side to be ready to receive
+			//Serial.read();
+			
+			delay(1);
+			for( i = 0; i < blockSize; i++ )
+			{
+				Serial.write((char)dataBuffer.byte[i]);
+			}
+			
+			pos += blockSize;
+		}
+
 	}else
 	{
 		Serial.println(F("error"));
@@ -247,15 +348,15 @@ void dbTD_sflReadFile()
  *  \brief Write a file to the serial flash
  *  
  *  Usage:
- *  sflwrite rom.bin 4096 xx[0] xx[1] xx[2] ... xx[4095] 
- *  Filename must be  
+ *  sflwrite rom.bin 4096 2048 xx[0] xx[1] ... xx[2047] /wait/ ... xx[4095] 
+ *  Filename must be 12 chars or less (8.3)
  * 
  *  \return Void
  **********************************************************************/
 void dbTD_sflWriteFile()
 {
 	char *arg;
-	uint16_t i, count;
+	uint16_t i, count, blockSize;
 	uint32_t fileSize, pos=0;
 	char fileName[13]; 		//Max filename length (8.3 plus a null char terminator)
 
@@ -268,20 +369,13 @@ void dbTD_sflWriteFile()
 	}
 	fileName[i] = 0; //null char terminator
 
-	//test filename capture
-	//i = 0;
-	//Serial.print(F("filename = '"));
-	//while( fileName[i] != 0 )
-	//{
-		//Serial.write(fileName[i++]);
-	//}
-    //Serial.println(F("'"));
-
 	//get the size in the next argument
     arg = SCmd.next();
     fileSize = strtoul(arg, (char**)0, 0);
-	//Serial.print(F("size = "));
-    //Serial.println(fileSize, DEC);
+    
+    //get the blockSize in the next argument
+    arg = SCmd.next();
+    blockSize = strtoul(arg, (char**)0, 0);
     
 	Serial.read(); //there's an extra byte here for some reason - discard
 
@@ -291,7 +385,7 @@ void dbTD_sflWriteFile()
 	{
 		// fill buffer from USB
 		count = 0;
-		while( count < FLASH_BUFFER_SIZE )
+		while( count < blockSize )
 		{
 			if( Serial.available() )
 			{
@@ -299,8 +393,8 @@ void dbTD_sflWriteFile()
 			}
 		}
 		// write buffer to serial flash file
-		flashFile.write(dataBuffer.byte, FLASH_BUFFER_SIZE);
-		pos += FLASH_BUFFER_SIZE;
+		flashFile.write(dataBuffer.byte, blockSize);
+		pos += blockSize;
 		Serial.println(F("rdy"));
 	}
 	flashFile.close();

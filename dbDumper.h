@@ -111,8 +111,14 @@ class dbDumper
 		
 		
 		void eraseSector(uint16_t sectorAddress);
+		
+		/*******************************************************************//**
+		 * \brief Perform toggle bit algorithm
+		 * \param uint8_t attempts
+		 * \param uint8_t chip
+		 * \return uint8_t success the number of times the bit did not toggle
+		 **********************************************************************/
 		uint8_t toggleBit(uint8_t attempts, uint8_t chip);
-
 
 		/*******************************************************************//**
 		 * \name Read Functions
@@ -142,6 +148,14 @@ class dbDumper
 		 **********************************************************************/
 		/**@{*/
 		/*******************************************************************//**
+		 * \brief Write a byte to the #TIME region on genesis
+		 * \param uint16_t address
+		 * \param uint8_t data
+		 * \return void
+		 **********************************************************************/
+		void writeByteTime(uint16_t address, uint8_t data);
+		
+		/*******************************************************************//**
 		 * \brief Write a byte to a 16bit address
 		 * \param address 16bit address
 		 * \param data byte
@@ -156,6 +170,14 @@ class dbDumper
 		 * \return void
 		 **********************************************************************/
 		void writeByte(uint32_t address, uint8_t data);
+		
+		/*******************************************************************//**
+		 * \brief Write a word to the #TIME region on genesis
+		 * \param uint16_t address
+		 * \param uint16_t data
+		 * \return void
+		 **********************************************************************/
+		void writeWordTime(uint16_t address, uint16_t data);
 		
 		/*******************************************************************//**
 		 * \brief Write a word to a 16bit address
