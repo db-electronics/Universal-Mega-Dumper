@@ -96,6 +96,7 @@ void setup() {
     SCmd.addCommand("progbblock",dbTD_programByteBlockCMD);
     SCmd.addCommand("progword",dbTD_programWordCMD);
     SCmd.addCommand("progwblock",dbTD_programWordBlockCMD);
+    SCmd.addCommand("writesbblock",dbTD_writeSRAMByteBlockCMD);
     
     //register callbacks for SerialCommand related to the onboard serial flash
     SCmd.addCommand("sflgetid",dbTD_sflIDCMD);
@@ -709,7 +710,7 @@ void dbTD_readWordBlockCMD()
 {
     char *arg;
     uint32_t address = 0;
-    uint32_t blockSize = 0, i;
+    uint16_t blockSize = 0, i;
     uint16_t data;
 
     //get the address in the next argument
@@ -892,6 +893,64 @@ void dbTD_programByteCMD()
     
 }
 
+/*******************************************************************//**
+ * \brief Program a byte block in the cartridge
+ * Program a byte block in the cartridge. Prior to progamming,
+ * the sector or entire chip must be erased. The function uses data
+ * polling between each byte program to validate the operation. If no 
+ * data is received for WRITE_TIMEOUT_MS the function will abort.
+ *  
+ * Usage:
+ * progbblock 0x0000 64 %64bytes%
+ *   - programs %64bytes% received starting at address 0x0000
+ *  
+ * \return Void
+ **********************************************************************/
+void dbTD_writeSRAMByteBlockCMD()
+{
+    char *arg;
+    uint32_t address=0;
+    uint16_t size, count=0;
+	        
+    //get the address in the next argument
+    arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the size in the next argument
+    arg = SCmd.next();
+    size = strtoul(arg, (char**)0, 0);
+    
+    //receive size bytes
+    Serial.read(); //there's an extra byte here for some reason - discard
+
+	while( count < size )
+    {
+		if( Serial.available() )
+		{
+			dataBuffer.byte[count++] = Serial.read();
+		}
+	}
+	
+	SCmd.clearBuffer();
+
+	switch( db.getMode() )
+	{
+		case db.MD:
+			// set the SRAM write enable latch on #TIME
+			db.writeByteTime(0,1);
+			// only odd bytes are valid for Genesis
+			for( count=0; count < size ; count += 2 )
+			{
+				db.writeByte( (address + count + 1), dataBuffer.byte[count]);
+			}
+			// clear the SRAM write enable latch on #TIME
+			db.writeByteTime(0,0);
+			break;
+		default:
+			break;
+	}
+	Serial.println(F("done"));
+}
 
 /*******************************************************************//**
  * \brief Program a byte block in the cartridge
@@ -910,8 +969,7 @@ void dbTD_programByteBlockCMD()
 {
     char *arg;
     uint32_t address=0;
-    uint16_t size;
-    uint8_t count=0;
+    uint16_t size, count=0;
 	        
     //get the address in the next argument
     arg = SCmd.next();
@@ -996,8 +1054,7 @@ void dbTD_programWordBlockCMD()
 {
     char *arg;
     uint32_t address=0;
-    uint16_t size;
-    uint8_t count=0;
+    uint16_t size, count=0;
 	        
     //get the address in the next argument
     arg = SCmd.next();

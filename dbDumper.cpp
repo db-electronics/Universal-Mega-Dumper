@@ -494,25 +494,13 @@ void dbDumper::writeByte(uint16_t address, uint8_t data)
 	switch(_mode)
 	{
 		case MD:
-			if( (uint8_t)(address) & 0x01 )
-			{
-				DATAOUTH = data;
-				// write to the bus
-				digitalWrite(nCE, LOW);
-				digitalWrite(GEN_nLWR, LOW);
-				delayMicroseconds(1);
-				digitalWrite(GEN_nLWR, HIGH);
-				digitalWrite(nCE, HIGH);
-			}else
-			{
-				DATAOUTL = data;
-				digitalWrite(nCE, LOW);
-				digitalWrite(GEN_nUWR, LOW);
-				delayMicroseconds(1);
-				digitalWrite(GEN_nUWR, HIGH);
-				digitalWrite(nCE, HIGH);
-			}
-			
+			DATAOUTH = data;
+			// write to the bus
+			digitalWrite(nCE, LOW);
+			digitalWrite(GEN_nLWR, LOW);
+			delayMicroseconds(1);
+			digitalWrite(GEN_nLWR, HIGH);
+			digitalWrite(nCE, HIGH);
 			break;
 		case PC:
 		case TG:
@@ -558,24 +546,14 @@ void dbDumper::writeByte(uint32_t address, uint8_t data)
 	switch(_mode)
 	{
 		case MD:
-			if( (uint8_t)(address) & 0x01 )
-			{
-				DATAOUTH = data;
-				// write to the bus
-				digitalWrite(nCE, LOW);
-				digitalWrite(GEN_nLWR, LOW);
-				delayMicroseconds(1);
-				digitalWrite(GEN_nLWR, HIGH);
-				digitalWrite(nCE, HIGH);
-			}else
-			{
-				DATAOUTL = data;
-				digitalWrite(nCE, LOW);
-				digitalWrite(GEN_nUWR, LOW);
-				delayMicroseconds(1);
-				digitalWrite(GEN_nUWR, HIGH);
-				digitalWrite(nCE, HIGH);
-			}
+			DATAOUTH = data;
+			// write to the bus
+			digitalWrite(nCE, LOW);
+			digitalWrite(GEN_nLWR, LOW);
+			delayMicroseconds(1);
+			digitalWrite(GEN_nLWR, HIGH);
+			digitalWrite(nCE, HIGH);
+
 			
 			break;
 		case PC:
