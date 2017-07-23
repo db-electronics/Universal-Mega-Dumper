@@ -61,7 +61,8 @@ class dbDumper
 			CV, 		/**< ColecoVision mode */
 			MD, 		/**< Genesis Megadrive mode */
 			TG,		 	/**< TG-16 mode */
-			PC		 	/**< PC Engine mode */
+			PC,		 	/**< PC Engine mode */
+			MS			/**< Master System mode */
 		};
 
 		/*******************************************************************//**
@@ -92,8 +93,33 @@ class dbDumper
 		/*******************************************************************//**
 		 * \brief Set the operation mode of the dbDumper
 		 * \return eMode of currently set mode
-		 */
+		 **********************************************************************/
 		eMode getMode() { return _mode; }
+
+		/*******************************************************************//**
+		 * \brief read the internal mirror of the mapper register 0xFFFD
+		 * \return uint8_t bank number
+		 **********************************************************************/
+		uint8_t getSlot0BankNumber() { return _SMSslot0; }
+		
+		/*******************************************************************//**
+		 * \brief read the internal mirror of the mapper register 0xFFFE
+		 * \return uint8_t bank number
+		 **********************************************************************/
+		uint8_t getSlot1BankNumber() { return _SMSslot1; }
+		
+		/*******************************************************************//**
+		 * \brief read the internal mirror of the mapper register 0xFFFF
+		 * \return uint8_t bank number
+		 **********************************************************************/
+		uint8_t getSlot2BankNumber() { return _SMSslot2; }
+
+		/*******************************************************************//**
+		 * \brief calculate the SMS ROM bank number
+		 * \param uint32_t address
+		 * \return uint8_t bank number
+		 **********************************************************************/
+		uint8_t getSMSBankNumber(uint32_t address);
 
 		/*******************************************************************//**
 		 * \brief Read the Manufacturer and Product ID in the Flash IC
@@ -232,6 +258,17 @@ class dbDumper
 		uint8_t _resetPin;
 		uint32_t _flashID;
 		eMode _mode;
+		
+		//Master System Slots and slot address
+		static const uint16_t SMS_slotSelect0 = 0xFFFD; // 0x0000 - 0x3FFF
+		static const uint16_t SMS_slotSelect1 = 0xFFFE; // 0x4000 - 0x7FFF
+		static const uint16_t SMS_slotSelect2 = 0xFFFF; // 0x8000 - 0xBFFF
+		static const uint16_t SMS_slot0Base = 0x0000;
+		static const uint16_t SMS_slot1Base = 0x4000;
+		static const uint16_t SMS_slot2Base = 0x8000;
+		uint8_t _SMSslot0;
+		uint8_t	_SMSslot1;
+		uint8_t _SMSslot2;
 	
 		inline void _latchAddress(uint16_t address);
 		inline void _latchAddress(uint32_t address);
@@ -275,6 +312,10 @@ class dbDumper
 		//static const uint8_t COL_A14 = 41;
 		//static const uint8_t COL_n8000 = 43;
 		//static const uint8_t COL_A13 = 43;	
+
+		//Master System pin functions
+		static const uint8_t SMS_nRST = 42;
+		
 
 		//Genesis pin functions
 		static const uint8_t GEN_SL1 = 38;

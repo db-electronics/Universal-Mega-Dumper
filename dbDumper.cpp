@@ -126,9 +126,6 @@ void dbDumper::setMode(eMode mode)
 
 			break;
 		case PC:
-			pinMode(TG_nRST, OUTPUT);
-			digitalWrite(TG_nRST, HIGH);
-			
 		  	pinMode(CTRL1, INPUT);
 		  	pinMode(CTRL2, INPUT);
 		  	pinMode(CTRL3, INPUT);
@@ -137,15 +134,14 @@ void dbDumper::setMode(eMode mode)
 			pinMode(CTRL6, INPUT);
 			pinMode(CTRL7, INPUT);
 			
+			pinMode(TG_nRST, OUTPUT);
+			digitalWrite(TG_nRST, HIGH);
 			_resetPin = TG_nRST;
 			resetCart();
-			
 			_mode = PC;
 			break;
-		case TG:
-			pinMode(TG_nRST, OUTPUT);
-			digitalWrite(TG_nRST, HIGH);
 			
+		case TG:			
 		  	pinMode(CTRL1, INPUT);
 		  	pinMode(CTRL2, INPUT);
 		  	pinMode(CTRL3, INPUT);
@@ -154,12 +150,13 @@ void dbDumper::setMode(eMode mode)
 			pinMode(CTRL6, INPUT);
 			pinMode(CTRL7, INPUT);
 			
+			pinMode(TG_nRST, OUTPUT);
+			digitalWrite(TG_nRST, HIGH);
 			_resetPin = TG_nRST;
 			resetCart();
-			
 			_mode = TG;
-			
 			break;
+			
 		case CV:
 			//pinMode(COL_nBPRES, OUTPUT);
 			//digitalWrite(COL_nBPRES, LOW);
@@ -171,9 +168,21 @@ void dbDumper::setMode(eMode mode)
 			//digitalWrite(COL_nA000, LOW);
 			//pinMode(COL_n8000, OUTPUT);
 			//digitalWrite(COL_n8000, LOW);
-
 			_resetPin = 45; //unused with coleco
 			_mode = CV;
+			break;
+		case MS:
+			_SMSslot0 = 0;
+			_SMSslot1 = 1;
+			_SMSslot2 = 2;
+			writeByte(SMS_slotSelect0, 0);
+			writeByte(SMS_slotSelect1, 0);
+			writeByte(SMS_slotSelect2, 0);
+			pinMode(SMS_nRST, OUTPUT);
+			digitalWrite(SMS_nRST, HIGH);
+			_resetPin = SMS_nRST;
+			resetCart();
+			_mode = MS;
 			break;
 		default:
 			//control signals default to all inputs
@@ -355,6 +364,67 @@ uint32_t dbDumper::eraseChip(bool wait, uint8_t chip)
 }
 
 /*******************************************************************//**
+ * The readByte(uint16_t) function returns a byte read from 
+ * a 16bit address.
+ * 
+ * \warning setMode() must be called prior to using this function.
+ **********************************************************************/
+uint8_t dbDumper::readByte(uint16_t address, bool external)
+{
+	uint8_t readData;
+
+	_latchAddress(address);
+	
+	//set data bus to inputs
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
+
+	// read the bus
+	digitalWrite(nCE, LOW);
+	digitalWrite(nRD, LOW);
+  
+	//read genesis odd bytes from the high byte of the bus
+	switch(_mode)
+	{
+		case MD:
+			if( (uint8_t)(address) & 0x01 )
+			{
+				readData = DATAINH;
+			}else
+			{
+				readData = DATAINL;
+			}
+			break;
+		case PC:
+			if( external )
+			{
+				readData = reverseByte(DATAINL);
+			}else
+			{
+				readData = DATAINL;
+			}
+			break;
+		case TG:
+			readData = DATAINL;
+			break;
+		case CV:
+			readData = DATAINL;
+			break;
+		case MS:
+			readDate = DATAINL;
+			break;
+		default:
+			readData = DATAINL;
+			break;
+	}
+  
+	digitalWrite(nCE, HIGH);
+	digitalWrite(nRD, HIGH);
+
+	return readData;
+}
+
+/*******************************************************************//**
  * The readByte(uint32_t) function returns a byte read from 
  * a 24bit address.
  * 
@@ -400,6 +470,9 @@ uint8_t dbDumper::readByte(uint32_t address, bool external)
 			break;
 		case CV:
 			readData = DATAINL;
+			break;
+		case MS:
+			readDate = DATAINL;
 			break;
 		default:
 			readData = DATAINL;
@@ -460,7 +533,7 @@ void dbDumper::writeByteTime(uint16_t address, uint8_t data)
 	DATAL_DDR = 0xFF;
 
 	//put word on bus
-	DATAOUTH = (uint8_t)(data);
+	DATAOUTH = data;
 	DATAOUTL = 0;
 	
 	// write to the bus
@@ -553,8 +626,6 @@ void dbDumper::writeByte(uint32_t address, uint8_t data)
 			delayMicroseconds(1);
 			digitalWrite(GEN_nLWR, HIGH);
 			digitalWrite(nCE, HIGH);
-
-			
 			break;
 		case PC:
 		case TG:
@@ -833,6 +904,9 @@ inline void dbDumper::_latchAddress(uint16_t address)
 	
 }
 
+/*******************************************************************//**
+ * The eraseSection function erases a sector in the flash memory
+ **********************************************************************/
 void dbDumper::eraseSector(uint16_t sectorAddress)
 {
   	switch(_mode)
@@ -871,6 +945,10 @@ void dbDumper::eraseSector(uint16_t sectorAddress)
   	}
 }
 
+/*******************************************************************//**
+ * The toggleBit uses the toggle bit flash algorithm to determine if
+ * the current program operation has completed
+ **********************************************************************/
 uint8_t dbDumper::toggleBit(uint8_t attempts, uint8_t chip)
 {
 	uint8_t retValue = 0;
@@ -953,6 +1031,9 @@ uint8_t dbDumper::toggleBit(uint8_t attempts, uint8_t chip)
   	return retValue;
 }
 
+/*******************************************************************//**
+ * The reverseByte function uses a table to reverse the bits in a byte
+ **********************************************************************/
 uint8_t dbDumper::reverseByte(uint8_t data)
 {
     static const uint8_t table[] = {
@@ -991,3 +1072,13 @@ uint8_t dbDumper::reverseByte(uint8_t data)
     };
     return table[data];
 }
+
+/*******************************************************************//**
+ * The getSMSBankNumber function return the bank number of the current
+ * SMS ROM address. Master System bank are 16KB each.
+ **********************************************************************/
+uint8_t getSMSBankNumber(uint32_t address)
+{
+	return (uint8_t)(address >> 14);
+}
+

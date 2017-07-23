@@ -486,6 +486,10 @@ void dbTD_setModeCMD()
             db.setMode(db.CV);
             Serial.println(F("mode = c")); 
             break;
+        case 'm':
+			db.setMode(db.MS);
+			Serial.println(F("mode = m"));
+			break;
         default:
             Serial.println(F("mode = undefined")); 
             db.setMode(db.undefined);
@@ -638,13 +642,33 @@ void dbTD_readByteCMD()
 {
     char *arg;
     uint32_t address = 0;
-    uint8_t data;
+	uint16_t smsAddress;
+    uint8_t data,smsBank;
     
     //get the address in the next argument
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
-	data = db.readByte(address, true);
+    switch(db.getMode())
+    {
+		case db.MS:
+			//calculate effective SMS address in slot 2
+			//also check if mapper register needs to be updated
+			smsBank = getSMSBankNumber(address);
+			if( smsBank == db.getSlot0BankNumber )
+			{
+				smsAddress = ( SMS_slot2Base + (uint16_t)(address & 0x3FFF));
+				data = db.readByte(address, true);
+			}else
+			{
+				//need to set new slot bank number
+			}
+			break;
+		default:
+			data = db.readByte(address, true);
+			break;
+	}
+	
 
 	//check if we should output a formatted string
     arg = SCmd.next();
@@ -937,11 +961,12 @@ void dbTD_writeSRAMByteBlockCMD()
 	{
 		case db.MD:
 			// set the SRAM write enable latch on #TIME
-			db.writeByteTime(0,1);
+			db.writeByteTime(0,3);
 			// only odd bytes are valid for Genesis
-			for( count=0; count < size ; count += 2 )
+			for( count=0; count < ( size >> 1) ; count++ )
 			{
-				db.writeByte( (address + count + 1), dataBuffer.byte[count]);
+				db.writeByte( address, (uint8_t)dataBuffer.word[count]);
+				address += 2;
 			}
 			// clear the SRAM write enable latch on #TIME
 			db.writeByteTime(0,0);
