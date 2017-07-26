@@ -654,15 +654,15 @@ void dbTD_readByteCMD()
 		case db.MS:
 			//calculate effective SMS address in slot 2
 			//also check if mapper register needs to be updated
-			smsBank = getSMSBankNumber(address);
-			if( smsBank == db.getSlot0BankNumber )
-			{
-				smsAddress = ( SMS_slot2Base + (uint16_t)(address & 0x3FFF));
-				data = db.readByte(address, true);
-			}else
+			smsBank = db.getSMSBankNumber(address);
+			if( smsBank != db.getSMSSlotShadow(2) )
 			{
 				//need to set new slot bank number
+				db.setSMSSlotRegister(2, smsBank );
 			}
+			
+			smsAddress = ( db.SMS_SLOT_2_ADDR + (uint16_t)(address & 0x3FFF) );
+			data = db.readByte(address, true);
 			break;
 		default:
 			data = db.readByte(address, true);

@@ -172,12 +172,9 @@ void dbDumper::setMode(eMode mode)
 			_mode = CV;
 			break;
 		case MS:
-			_SMSslot0 = 0;
-			_SMSslot1 = 1;
-			_SMSslot2 = 2;
-			writeByte(SMS_slotSelect0, 0);
-			writeByte(SMS_slotSelect1, 0);
-			writeByte(SMS_slotSelect2, 0);
+			setSMSSlotRegister(0,0);
+			setSMSSlotRegister(1,0);
+			setSMSSlotRegister(2,0);
 			pinMode(SMS_nRST, OUTPUT);
 			digitalWrite(SMS_nRST, HIGH);
 			_resetPin = SMS_nRST;
@@ -472,7 +469,7 @@ uint8_t dbDumper::readByte(uint32_t address, bool external)
 			readData = DATAINL;
 			break;
 		case MS:
-			readDate = DATAINL;
+			readData = DATAINL;
 			break;
 		default:
 			readData = DATAINL;
@@ -1077,8 +1074,60 @@ uint8_t dbDumper::reverseByte(uint8_t data)
  * The getSMSBankNumber function return the bank number of the current
  * SMS ROM address. Master System bank are 16KB each.
  **********************************************************************/
-uint8_t getSMSBankNumber(uint32_t address)
+uint8_t dbDumper::getSMSBankNumber(uint32_t address)
 {
 	return (uint8_t)(address >> 14);
 }
 
+/*******************************************************************//**
+ * The getSMSSlotShadow function returns the value of the SMS slot shadow
+ * which in theory should always match the value of the cartridge's
+ * registers
+ **********************************************************************/
+uint8_t dbDumper::getSMSSlotShadow(uint8_t slotNum)
+{
+	uint8_t retVal;
+	switch( slotNum )
+	{
+		case 0:
+			retVal = _SMS_slotShadow[0];
+			break;
+		case 1:
+			retVal = _SMS_slotShadow[1];
+			break;
+		case 2:
+			retVal = _SMS_slotShadow[2];
+			break;
+		default:
+			retVal = _SMS_slotShadow[2];
+			break;
+	}
+	return retVal;
+}
+
+/*******************************************************************//**
+ * The setSMSSlotRegister function updates the cartridge slot register
+ * and also updates the internal shadow slot registers
+ **********************************************************************/
+void dbDumper::setSMSSlotRegister(uint8_t slotNum, uint8_t value)
+{
+	switch( slotNum )
+	{
+		case 0:
+			writeByte( SMS_SLOT_0_REG_ADDR, value );
+			_SMS_slotShadow[0] = value;
+			break;
+		case 1:
+			writeByte( SMS_SLOT_1_REG_ADDR, value );
+			_SMS_slotShadow[1] = value;
+			break;
+		case 2:
+			writeByte( SMS_SLOT_2_REG_ADDR, value );
+			_SMS_slotShadow[2] = value;
+			break;
+		default:
+			writeByte( SMS_SLOT_2_REG_ADDR, value );
+			_SMS_slotShadow[2] = value;
+			break;
+	}
+}

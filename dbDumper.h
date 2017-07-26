@@ -100,19 +100,7 @@ class dbDumper
 		 * \brief read the internal mirror of the mapper register 0xFFFD
 		 * \return uint8_t bank number
 		 **********************************************************************/
-		uint8_t getSlot0BankNumber() { return _SMSslot0; }
-		
-		/*******************************************************************//**
-		 * \brief read the internal mirror of the mapper register 0xFFFE
-		 * \return uint8_t bank number
-		 **********************************************************************/
-		uint8_t getSlot1BankNumber() { return _SMSslot1; }
-		
-		/*******************************************************************//**
-		 * \brief read the internal mirror of the mapper register 0xFFFF
-		 * \return uint8_t bank number
-		 **********************************************************************/
-		uint8_t getSlot2BankNumber() { return _SMSslot2; }
+		uint8_t getSMSSlotShadow(uint8_t slotNum);
 
 		/*******************************************************************//**
 		 * \brief calculate the SMS ROM bank number
@@ -120,6 +108,13 @@ class dbDumper
 		 * \return uint8_t bank number
 		 **********************************************************************/
 		uint8_t getSMSBankNumber(uint32_t address);
+		
+		/*******************************************************************//**
+		 * \brief set the SMS slot register value
+		 * \param uint8_t slot number
+		 * \return uint8_t value
+		 **********************************************************************/
+		void setSMSSlotRegister(uint8_t slotNum, uint8_t value);
 
 		/*******************************************************************//**
 		 * \brief Read the Manufacturer and Product ID in the Flash IC
@@ -151,6 +146,14 @@ class dbDumper
 		 * This group of functions perform various read operations
 		 **********************************************************************/
 		/**@{*/
+		/*******************************************************************//**
+		 * \brief Read a byte from a 16bit address
+		 * \param address 16bit address
+		 * \param external read called from outside class
+		 * \return byte from cartridge
+		 **********************************************************************/
+		uint8_t readByte(uint16_t address, bool external);
+		
 		/*******************************************************************//**
 		 * \brief Read a byte from a 24bit address
 		 * \param address 24bit address
@@ -253,6 +256,11 @@ class dbDumper
 		//pin numbers UI
 		static const uint8_t nLED = 8;
 		static const uint8_t nPB = 9;
+		
+		//Master System Slot Base Addresses
+		static const uint16_t SMS_SLOT_0_ADDR = 0x0000;
+		static const uint16_t SMS_SLOT_1_ADDR = 0x4000;
+		static const uint16_t SMS_SLOT_2_ADDR = 0x8000;
 
 	private:
 		uint8_t _resetPin;
@@ -260,15 +268,10 @@ class dbDumper
 		eMode _mode;
 		
 		//Master System Slots and slot address
-		static const uint16_t SMS_slotSelect0 = 0xFFFD; // 0x0000 - 0x3FFF
-		static const uint16_t SMS_slotSelect1 = 0xFFFE; // 0x4000 - 0x7FFF
-		static const uint16_t SMS_slotSelect2 = 0xFFFF; // 0x8000 - 0xBFFF
-		static const uint16_t SMS_slot0Base = 0x0000;
-		static const uint16_t SMS_slot1Base = 0x4000;
-		static const uint16_t SMS_slot2Base = 0x8000;
-		uint8_t _SMSslot0;
-		uint8_t	_SMSslot1;
-		uint8_t _SMSslot2;
+		static const uint16_t SMS_SLOT_0_REG_ADDR = 0xFFFD; // 0x0000 - 0x3FFF
+		static const uint16_t SMS_SLOT_1_REG_ADDR = 0xFFFE; // 0x4000 - 0x7FFF
+		static const uint16_t SMS_SLOT_2_REG_ADDR = 0xFFFF; // 0x8000 - 0xBFFF
+		uint8_t _SMS_slotShadow[2];
 	
 		inline void _latchAddress(uint16_t address);
 		inline void _latchAddress(uint32_t address);
