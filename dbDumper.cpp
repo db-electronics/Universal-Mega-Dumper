@@ -246,7 +246,7 @@ uint32_t dbDumper::getFlashID()
 			writeByte((uint16_t)0x0AAA, 0xAA);
 			writeByte((uint16_t)0x0555, 0x55);
 			writeByte((uint16_t)0x0AAA, 0x90);
-			flashID = (uint32_t)readByte(0x0002, false);
+			flashID = (uint32_t)readByte((uint16_t)0x0002, false);
 			
 			//exit software ID
 			writeByte((uint16_t)0x0000, 0xF0);
@@ -260,9 +260,9 @@ uint32_t dbDumper::getFlashID()
 			writeByte((uint16_t)0x2AAA,0x55);
 			writeByte((uint16_t)0x5555,0x90);
 			
-			flashID = (uint32_t)readByte(0x0000, false);
+			flashID = (uint32_t)readByte((uint16_t)0x0000, false);
 			flashID <<= 8;
-			flashID |= (uint32_t)readByte(0x0001, false);
+			flashID |= (uint32_t)readByte((uint16_t)0x0001, false);
 			
 			//exit software ID
 			writeByte((uint16_t)0x0000,0xF0);
@@ -312,6 +312,7 @@ uint32_t dbDumper::eraseChip(bool wait, uint8_t chip)
 			}
 			break;
 		//mx29f800 chip erase byte mode
+		case MS:
 		case PC:
 		case TG:
 			writeByte((uint16_t)0x0AAA, 0xAA);
@@ -408,7 +409,7 @@ uint8_t dbDumper::readByte(uint16_t address, bool external)
 			readData = DATAINL;
 			break;
 		case MS:
-			readDate = DATAINL;
+			readData = DATAINL;
 			break;
 		default:
 			readData = DATAINL;
@@ -529,9 +530,9 @@ void dbDumper::writeByteTime(uint16_t address, uint8_t data)
 	DATAH_DDR = 0xFF;
 	DATAL_DDR = 0xFF;
 
-	//put word on bus
+	//put word on bus, both bytes just to be sure
 	DATAOUTH = data;
-	DATAOUTL = 0;
+	DATAOUTL = data;
 	
 	// write to the bus
 	digitalWrite(GEN_nTIME, LOW);
@@ -590,12 +591,6 @@ void dbDumper::writeByte(uint16_t address, uint8_t data)
 	DATAH_DDR = 0x00;
 	DATAL_DDR = 0x00;
 	
-#ifdef _DEBUG_DB
-	Serial.print(F("w ")); 
-	Serial.print(address,HEX);
-	Serial.print(F(" : ")); 
-	Serial.println(data,HEX);
-#endif
 }
 
 /*******************************************************************//**
@@ -641,13 +636,7 @@ void dbDumper::writeByte(uint32_t address, uint8_t data)
 	//set data bus to inputs
 	DATAH_DDR = 0x00;
 	DATAL_DDR = 0x00;
-
-#ifdef _DEBUG_DB
-	Serial.print(F("w ")); 
-	Serial.print(address,HEX);
-	Serial.print(F(" : ")); 
-	Serial.println(data,HEX);
-#endif
+	
 }
 
 /*******************************************************************//**
@@ -877,8 +866,6 @@ inline void dbDumper::_latchAddress(uint32_t address)
 
 /*******************************************************************//**
  * The _latchAddress function latches a 16bit address to the cartridge.
- * In Colecovision mode the 4 nCE lines are automatically handled wrt
- * the address range.
  * \warning upper 8 address bits (23..16) are not modified
  **********************************************************************/
 inline void dbDumper::_latchAddress(uint16_t address)
@@ -902,7 +889,7 @@ inline void dbDumper::_latchAddress(uint16_t address)
 }
 
 /*******************************************************************//**
- * The eraseSection function erases a sector in the flash memory
+ * The eraseSector function erases a sector in the flash memory
  **********************************************************************/
 void dbDumper::eraseSector(uint16_t sectorAddress)
 {
@@ -910,12 +897,12 @@ void dbDumper::eraseSector(uint16_t sectorAddress)
   	{
 		case MD:
 			//mx29f800 chip erase word mode
-			writeWord((uint16_t)0x0555, 0x00AA);
-			writeWord((uint16_t)0x02AA, 0x0055);
-			writeWord((uint16_t)0x0555, 0x0080);
-			writeWord((uint16_t)0x0555, 0x00AA);
-			writeWord((uint16_t)0x02AA, 0x0055);
-			writeWord((uint16_t)0x0555, 0x0010);
+			writeWord((uint16_t)(0x0555 << 1), 0xAA00);
+			writeWord((uint16_t)(0x02AA << 1), 0x5500);
+			writeWord((uint16_t)(0x0555 << 1), 0x8000);
+			writeWord((uint16_t)(0x0555 << 1), 0xAA00);
+			writeWord((uint16_t)(0x02AA << 1), 0x5500);
+			writeWord((uint16_t)(0x0555 << 1), 0x1000);
 			break;
 		case TG:
 			//mx29f800 chip erase byte mode
@@ -1030,6 +1017,7 @@ uint8_t dbDumper::toggleBit(uint8_t attempts, uint8_t chip)
 
 /*******************************************************************//**
  * The reverseByte function uses a table to reverse the bits in a byte
+ * Useful for reading reverse databus on PC Engine
  **********************************************************************/
 uint8_t dbDumper::reverseByte(uint8_t data)
 {
@@ -1071,8 +1059,9 @@ uint8_t dbDumper::reverseByte(uint8_t data)
 }
 
 /*******************************************************************//**
- * The getSMSBankNumber function return the bank number of the current
- * SMS ROM address. Master System bank are 16KB each.
+ * The getSMSBankNumber function returns the bank number the given
+ * SMS address - i.e. the value which needs to be written to the slow
+ * register. Master System banks are 16KB each.
  **********************************************************************/
 uint8_t dbDumper::getSMSBankNumber(uint32_t address)
 {
@@ -1082,7 +1071,8 @@ uint8_t dbDumper::getSMSBankNumber(uint32_t address)
 /*******************************************************************//**
  * The getSMSSlotShadow function returns the value of the SMS slot shadow
  * which in theory should always match the value of the cartridge's
- * registers
+ * registers.
+ * \warning assumes slot registers are always set using setSMSSlotRegister()
  **********************************************************************/
 uint8_t dbDumper::getSMSSlotShadow(uint8_t slotNum)
 {

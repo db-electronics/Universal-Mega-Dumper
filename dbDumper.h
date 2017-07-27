@@ -97,6 +97,11 @@ class dbDumper
 		eMode getMode() { return _mode; }
 
 		/*******************************************************************//**
+		 * \name SMS Functions
+		 * This group of functions is specific to the SMS
+		 **********************************************************************/
+		/**@{*/
+		/*******************************************************************//**
 		 * \brief read the internal mirror of the mapper register 0xFFFD
 		 * \return uint8_t bank number
 		 **********************************************************************/
@@ -112,10 +117,18 @@ class dbDumper
 		/*******************************************************************//**
 		 * \brief set the SMS slot register value
 		 * \param uint8_t slot number
-		 * \return uint8_t value
+		 * \param uint8_t value
+		 * \return void
 		 **********************************************************************/
 		void setSMSSlotRegister(uint8_t slotNum, uint8_t value);
 
+		/**@}*/
+		
+		/*******************************************************************//**
+		 * \name Cartridge Flash Functions
+		 * This group of functions is specific to the catridge flash
+		 **********************************************************************/
+		/**@{*/
 		/*******************************************************************//**
 		 * \brief Read the Manufacturer and Product ID in the Flash IC
 		 * \return uint32_t flashID
@@ -130,7 +143,11 @@ class dbDumper
 		 **********************************************************************/
 		uint32_t eraseChip(bool wait, uint8_t chip);
 		
-		
+		/*******************************************************************//**
+		 * \brief Erase a sector in the Flash IC
+		 * \param uint16_t address of the sector
+		 * \return void
+		 **********************************************************************/
 		void eraseSector(uint16_t sectorAddress);
 		
 		/*******************************************************************//**
@@ -140,6 +157,8 @@ class dbDumper
 		 * \return uint8_t success the number of times the bit did not toggle
 		 **********************************************************************/
 		uint8_t toggleBit(uint8_t attempts, uint8_t chip);
+
+		/**@}*/
 
 		/*******************************************************************//**
 		 * \name Read Functions
@@ -258,9 +277,9 @@ class dbDumper
 		static const uint8_t nPB = 9;
 		
 		//Master System Slot Base Addresses
-		static const uint16_t SMS_SLOT_0_ADDR = 0x0000;
-		static const uint16_t SMS_SLOT_1_ADDR = 0x4000;
-		static const uint16_t SMS_SLOT_2_ADDR = 0x8000;
+		static const uint16_t SMS_SLOT_0_ADDR = 0x0000; /**< SMS Sega Mapper slot 0 base address 0x0000 - 0x3FFF */
+		static const uint16_t SMS_SLOT_1_ADDR = 0x4000; /**< SMS Sega Mapper slot 1 base address 0x4000 - 0x7FFF */
+		static const uint16_t SMS_SLOT_2_ADDR = 0x8000; /**< SMS Sega Mapper slot 2 base address 0x8000 - 0xBFFF */
 
 	private:
 		uint8_t _resetPin;
@@ -268,9 +287,9 @@ class dbDumper
 		eMode _mode;
 		
 		//Master System Slots and slot address
-		static const uint16_t SMS_SLOT_0_REG_ADDR = 0xFFFD; // 0x0000 - 0x3FFF
-		static const uint16_t SMS_SLOT_1_REG_ADDR = 0xFFFE; // 0x4000 - 0x7FFF
-		static const uint16_t SMS_SLOT_2_REG_ADDR = 0xFFFF; // 0x8000 - 0xBFFF
+		static const uint16_t SMS_SLOT_0_REG_ADDR = 0xFFFD; /**< SMS Sega Mapper slot 0 register address 0x0000 - 0x3FFF */
+		static const uint16_t SMS_SLOT_1_REG_ADDR = 0xFFFE; /**< SMS Sega Mapper slot 0 register address 0x4000 - 0x7FFF */
+		static const uint16_t SMS_SLOT_2_REG_ADDR = 0xFFFF; /**< SMS Sega Mapper slot 0 register address 0x8000 - 0xBFFF */
 		uint8_t _SMS_slotShadow[2];
 	
 		inline void _latchAddress(uint16_t address);

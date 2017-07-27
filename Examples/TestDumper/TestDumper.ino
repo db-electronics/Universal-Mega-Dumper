@@ -658,11 +658,11 @@ void dbTD_readByteCMD()
 			if( smsBank != db.getSMSSlotShadow(2) )
 			{
 				//need to set new slot bank number
-				db.setSMSSlotRegister(2, smsBank );
+				db.setSMSSlotRegister( 2, smsBank );
 			}
 			
 			smsAddress = ( db.SMS_SLOT_2_ADDR + (uint16_t)(address & 0x3FFF) );
-			data = db.readByte(address, true);
+			data = db.readByte(smsAddress, true);
 			break;
 		default:
 			data = db.readByte(address, true);
