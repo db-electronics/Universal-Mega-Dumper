@@ -715,12 +715,6 @@ void dbTD_readByteBlockCMD()
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
 	
-    for( i = 0; i < blockSize; i++ )
-    {
-		data = db.readByte(address++, true);
-		Serial.write((char)(data));
-	}
-	
 	switch(db.getMode())
     {
 		case db.MS:
@@ -735,8 +729,10 @@ void dbTD_readByteBlockCMD()
 					db.setSMSSlotRegister( 2, smsBank );
 				}
 				
-				smsAddress = ( db.SMS_SLOT_2_ADDR + (uint16_t)(address & 0x3FFF) );
+				smsAddress = ( db.SMS_SLOT_2_ADDR | ((uint16_t)(address & 0x3FFF)) );
 				data = db.readByte(smsAddress, true);
+				Serial.write((char)(data));
+				address++;
 			}
 			break;
 			

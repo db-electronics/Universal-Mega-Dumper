@@ -50,9 +50,9 @@ dbDumper::dbDumper()
 void dbDumper::resetCart()
 {
 	digitalWrite(_resetPin, LOW);
-	delay(250);
+	delay(200);
 	digitalWrite(_resetPin, HIGH);
-	delay(100);
+	delay(200);
 }
 
 /*******************************************************************//**
