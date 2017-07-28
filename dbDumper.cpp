@@ -52,6 +52,7 @@ void dbDumper::resetCart()
 	digitalWrite(_resetPin, LOW);
 	delay(250);
 	digitalWrite(_resetPin, HIGH);
+	delay(100);
 }
 
 /*******************************************************************//**
@@ -172,14 +173,14 @@ void dbDumper::setMode(eMode mode)
 			_mode = CV;
 			break;
 		case MS:
-			setSMSSlotRegister(0,0);
-			setSMSSlotRegister(1,0);
-			setSMSSlotRegister(2,0);
 			pinMode(SMS_nRST, OUTPUT);
 			digitalWrite(SMS_nRST, HIGH);
 			_resetPin = SMS_nRST;
 			resetCart();
 			_mode = MS;
+			setSMSSlotRegister(0,0);
+			setSMSSlotRegister(1,1);
+			setSMSSlotRegister(2,2);
 			break;
 		default:
 			//control signals default to all inputs
@@ -576,6 +577,7 @@ void dbDumper::writeByte(uint16_t address, uint8_t data)
 		case PC:
 		case TG:
 		case CV:
+		case MS:
 		default:
 			DATAOUTL = data;
 			// write to the bus
@@ -622,6 +624,7 @@ void dbDumper::writeByte(uint32_t address, uint8_t data)
 		case PC:
 		case TG:
 		case CV:
+		case MS:
 		default:
 			DATAOUTL = data;
 			// write to the bus

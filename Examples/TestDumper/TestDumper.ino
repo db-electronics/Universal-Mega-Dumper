@@ -704,7 +704,8 @@ void dbTD_readByteBlockCMD()
     char *arg;
     uint32_t address = 0;
     uint16_t blockSize = 0, i;
-    uint8_t data;
+	uint16_t smsAddress;
+    uint8_t data,smsBank;
 
     //get the address in the next argument
 	arg = SCmd.next();
@@ -718,6 +719,34 @@ void dbTD_readByteBlockCMD()
     {
 		data = db.readByte(address++, true);
 		Serial.write((char)(data));
+	}
+	
+	switch(db.getMode())
+    {
+		case db.MS:
+			for( i = 0; i < blockSize; i++ )
+			{
+				//calculate effective SMS address in slot 2
+				//also check if mapper register needs to be updated
+				smsBank = db.getSMSBankNumber(address);
+				if( smsBank != db.getSMSSlotShadow(2) )
+				{
+					//need to set new slot bank number
+					db.setSMSSlotRegister( 2, smsBank );
+				}
+				
+				smsAddress = ( db.SMS_SLOT_2_ADDR + (uint16_t)(address & 0x3FFF) );
+				data = db.readByte(smsAddress, true);
+			}
+			break;
+			
+		default:
+			for( i = 0; i < blockSize; i++ )
+			{
+				data = db.readByte(address++, true);
+				Serial.write((char)(data));
+			}
+			break;
 	}
 }
 
