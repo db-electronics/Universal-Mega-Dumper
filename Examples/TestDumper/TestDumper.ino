@@ -643,7 +643,7 @@ void dbTD_readByteCMD()
     char *arg;
     uint32_t address = 0;
 	uint16_t smsAddress;
-    uint8_t data,smsBank;
+    uint8_t data;
     
     //get the address in the next argument
     arg = SCmd.next();
@@ -653,14 +653,7 @@ void dbTD_readByteCMD()
     {
 		case db.MS:
 			//calculate effective SMS address in slot 2
-			//also check if mapper register needs to be updated
-			smsBank = db.getSMSBankNumber(address);
-			if( smsBank != db.getSMSSlotShadow(2) )
-			{
-				//need to set new slot bank number
-				db.setSMSSlotRegister( 2, smsBank );
-			}
-			
+			db.setSMSSlotRegister( 2, address );
 			smsAddress = ( db.SMS_SLOT_2_ADDR + (uint16_t)(address & 0x3FFF) );
 			data = db.readByte(smsAddress, true);
 			break;
@@ -705,7 +698,7 @@ void dbTD_readByteBlockCMD()
     uint32_t address = 0;
     uint16_t blockSize = 0, i;
 	uint16_t smsAddress;
-    uint8_t data,smsBank;
+    uint8_t data;
 
     //get the address in the next argument
 	arg = SCmd.next();
@@ -721,18 +714,11 @@ void dbTD_readByteBlockCMD()
 			for( i = 0; i < blockSize; i++ )
 			{
 				//calculate effective SMS address in slot 2
-				//also check if mapper register needs to be updated
-				smsBank = db.getSMSBankNumber(address);
-				if( smsBank != db.getSMSSlotShadow(2) )
-				{
-					//need to set new slot bank number
-					db.setSMSSlotRegister( 2, smsBank );
-				}
-				
-				smsAddress = ( db.SMS_SLOT_2_ADDR | ((uint16_t)(address & 0x3FFF)) );
+				db.setSMSSlotRegister( 2, address );
+				smsAddress = ( db.SMS_SLOT_2_ADDR + (uint16_t)(address & 0x3FFF) );
 				data = db.readByte(smsAddress, true);
 				Serial.write((char)(data));
-				address++;
+				address++;		
 			}
 			break;
 			

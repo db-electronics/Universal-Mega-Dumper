@@ -101,26 +101,14 @@ class dbDumper
 		 * This group of functions is specific to the SMS
 		 **********************************************************************/
 		/**@{*/
-		/*******************************************************************//**
-		 * \brief read the internal mirror of the mapper register 0xFFFD
-		 * \return uint8_t bank number
-		 **********************************************************************/
-		uint8_t getSMSSlotShadow(uint8_t slotNum);
-
-		/*******************************************************************//**
-		 * \brief calculate the SMS ROM bank number
-		 * \param uint32_t address
-		 * \return uint8_t bank number
-		 **********************************************************************/
-		uint8_t getSMSBankNumber(uint32_t address);
 		
 		/*******************************************************************//**
 		 * \brief set the SMS slot register value
-		 * \param uint8_t slot number
-		 * \param uint8_t value
+		 * \param uint8_t  slot number
+		 * \param uint16_t address
 		 * \return void
 		 **********************************************************************/
-		void setSMSSlotRegister(uint8_t slotNum, uint8_t value);
+		void setSMSSlotRegister(uint8_t slotNum, uint16_t address);
 
 		/**@}*/
 		
