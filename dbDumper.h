@@ -327,7 +327,6 @@ class dbDumper
 		//Master System pin functions
 		static const uint8_t SMS_nRST = 42;
 		
-
 		//Genesis pin functions
 		static const uint8_t GEN_SL1 = 38;
 		static const uint8_t GEN_SR1 = 39;

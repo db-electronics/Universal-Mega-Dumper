@@ -103,6 +103,15 @@ void dbDumper::setMode(eMode mode)
 	digitalWrite(nLED, HIGH);
 	pinMode(nPB, INPUT);
 
+	pinMode(CTRL0, INPUT);
+	pinMode(CTRL1, INPUT);
+	pinMode(CTRL2, INPUT);
+	pinMode(CTRL3, INPUT);
+	pinMode(CTRL4, INPUT);
+	pinMode(CTRL5, INPUT);
+	pinMode(CTRL6, INPUT);
+	pinMode(CTRL7, INPUT);
+
 	switch(mode)
 	{
 		case MD:
@@ -127,14 +136,7 @@ void dbDumper::setMode(eMode mode)
 
 			break;
 		case PC:
-		  	pinMode(CTRL1, INPUT);
-		  	pinMode(CTRL2, INPUT);
-		  	pinMode(CTRL3, INPUT);
-			pinMode(CTRL4, INPUT);
-			pinMode(CTRL5, INPUT);
-			pinMode(CTRL6, INPUT);
-			pinMode(CTRL7, INPUT);
-			
+
 			pinMode(TG_nRST, OUTPUT);
 			digitalWrite(TG_nRST, HIGH);
 			_resetPin = TG_nRST;
@@ -142,14 +144,7 @@ void dbDumper::setMode(eMode mode)
 			_mode = PC;
 			break;
 			
-		case TG:			
-		  	pinMode(CTRL1, INPUT);
-		  	pinMode(CTRL2, INPUT);
-		  	pinMode(CTRL3, INPUT);
-			pinMode(CTRL4, INPUT);
-			pinMode(CTRL5, INPUT);
-			pinMode(CTRL6, INPUT);
-			pinMode(CTRL7, INPUT);
+		case TG:
 			
 			pinMode(TG_nRST, OUTPUT);
 			digitalWrite(TG_nRST, HIGH);
@@ -159,39 +154,21 @@ void dbDumper::setMode(eMode mode)
 			break;
 			
 		case CV:
-			//pinMode(COL_nBPRES, OUTPUT);
-			//digitalWrite(COL_nBPRES, LOW);
-			//pinMode(COL_nE000, OUTPUT);
-			//digitalWrite(COL_nE000, LOW);
-			//pinMode(COL_nC000, OUTPUT);
-			//digitalWrite(COL_nC000, LOW);
-			//pinMode(COL_nA000, OUTPUT);
-			//digitalWrite(COL_nA000, LOW);
-			//pinMode(COL_n8000, OUTPUT);
-			//digitalWrite(COL_n8000, LOW);
+
 			_resetPin = 45; //unused with coleco
 			_mode = CV;
 			break;
 		case MS:
+
 			pinMode(SMS_nRST, OUTPUT);
 			digitalWrite(SMS_nRST, HIGH);
 			_resetPin = SMS_nRST;
 			resetCart();
 			_mode = MS;
-			setSMSSlotRegister(0,0x0000);
-			setSMSSlotRegister(1,0x4000);
-			setSMSSlotRegister(2,0x8000);
 			break;
 		default:
 			//control signals default to all inputs
-		  	pinMode(CTRL0, INPUT);
-		  	pinMode(CTRL1, INPUT);
-		  	pinMode(CTRL2, INPUT);
-		  	pinMode(CTRL3, INPUT);
-			pinMode(CTRL4, INPUT);
-			pinMode(CTRL5, INPUT);
-			pinMode(CTRL6, INPUT);
-			pinMode(CTRL7, INPUT);
+
 			_mode = undefined;
 			break;
 	}
@@ -260,7 +237,9 @@ uint32_t dbDumper::getFlashID()
 			writeByte((uint16_t)SMS_CONF_REG_ADDR,0x80);
 			
 			//set proper slot registers, slot 0 for flash ID
-			setSMSSlotRegister(0,0x000);
+			setSMSSlotRegister(0,0x0000);
+			setSMSSlotRegister(1,0x4000);
+			setSMSSlotRegister(2,0x8000);
 			
 			writeByte((uint16_t)0x0AAA, 0xAA);
 			writeByte((uint16_t)0x0555, 0x55);
@@ -340,6 +319,8 @@ uint32_t dbDumper::eraseChip(bool wait, uint8_t chip)
 			
 			//set proper slot registers, slot 0 and 1 needed for flash ID
 			setSMSSlotRegister(0,0x0000);
+			setSMSSlotRegister(1,0x4000);
+			setSMSSlotRegister(2,0x8000);
 			
 			writeByte((uint16_t)0x0AAA, 0xAA);
 			writeByte((uint16_t)0x0555, 0x55);
@@ -431,12 +412,13 @@ uint8_t dbDumper::readByte(uint16_t address, bool external)
 				readData = DATAINL;
 			}
 			break;
+		case MS:
+			delayMicroseconds(2);
+			readData = DATAINL;
+			break;
 		case MD:
 		case TG:
 		case CV:
-		case MS:
-			readData = DATAINL;
-			break;
 		default:
 			readData = DATAINL;
 			break;
@@ -479,12 +461,13 @@ uint8_t dbDumper::readByte(uint32_t address, bool external)
 				readData = DATAINL;
 			}
 			break;
+		case MS:
+			delayMicroseconds(2);
+			readData = DATAINL;
+			break;
 		case MD:
 		case TG:
 		case CV:
-		case MS:
-			readData = DATAINL;
-			break;
 		default:
 			readData = DATAINL;
 			break;
@@ -586,10 +569,18 @@ void dbDumper::writeByte(uint16_t address, uint8_t data)
 			digitalWrite(GEN_nLWR, HIGH);
 			digitalWrite(nCE, HIGH);
 			break;
+		case MS:
+			DATAOUTL = data;
+			// write to the bus
+			digitalWrite(nCE, LOW);
+			digitalWrite(nWR, LOW);
+			delayMicroseconds(2);
+			digitalWrite(nWR, HIGH);
+			digitalWrite(nCE, HIGH);
+			break;
 		case PC:
 		case TG:
 		case CV:
-		case MS:
 		default:
 			DATAOUTL = data;
 			// write to the bus
@@ -633,10 +624,18 @@ void dbDumper::writeByte(uint32_t address, uint8_t data)
 			digitalWrite(GEN_nLWR, HIGH);
 			digitalWrite(nCE, HIGH);
 			break;
+		case MS:
+			DATAOUTL = data;
+			// write to the bus
+			digitalWrite(nCE, LOW);
+			digitalWrite(nWR, LOW);
+			delayMicroseconds(2);
+			digitalWrite(nWR, HIGH);
+			digitalWrite(nCE, HIGH);
+			break;
 		case PC:
 		case TG:
 		case CV:
-		case MS:
 		default:
 			DATAOUTL = data;
 			// write to the bus
@@ -1107,19 +1106,19 @@ uint16_t dbDumper::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
 	{
 		case 0:
 			writeByte( SMS_SLOT_0_REG_ADDR, (uint8_t)(address >> 14) );
-			virtualAddress = ( SMS_SLOT_0_ADDR + (uint16_t)(address & 0x3FFF) );
+			virtualAddress = ( SMS_SLOT_0_ADDR + ( (uint16_t)address & 0x3FFF) );
 			break;
 		case 1:
 			writeByte( SMS_SLOT_1_REG_ADDR, (uint8_t)(address >> 14) );
-			virtualAddress = ( SMS_SLOT_1_ADDR + (uint16_t)(address & 0x3FFF) );
+			virtualAddress = ( SMS_SLOT_1_ADDR + ( (uint16_t)address & 0x3FFF) );
 			break;
 		case 2:
 			writeByte( SMS_SLOT_2_REG_ADDR, (uint8_t)(address >> 14) );
-			virtualAddress = ( SMS_SLOT_2_ADDR + (uint16_t)(address & 0x3FFF) );
+			virtualAddress = ( SMS_SLOT_2_ADDR + ( (uint16_t)address & 0x3FFF) );
 			break;
 		default:
 			writeByte( SMS_SLOT_2_REG_ADDR, (uint8_t)(address >> 14) );
-			virtualAddress = ( SMS_SLOT_2_ADDR + (uint16_t)(address & 0x3FFF) );
+			virtualAddress = ( SMS_SLOT_2_ADDR + ( (uint16_t)address & 0x3FFF) );
 			break;
 	}
 	return virtualAddress;
