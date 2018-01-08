@@ -653,8 +653,7 @@ void dbTD_readByteCMD()
     {
 		case db.MS:
 			//calculate effective SMS address in slot 2
-			db.setSMSSlotRegister( 2, address );
-			smsAddress = ( db.SMS_SLOT_2_ADDR + (uint16_t)(address & 0x3FFF) );
+			smsAddress = db.setSMSSlotRegister( 2, address );
 			data = db.readByte(smsAddress, true);
 			break;
 		default:
@@ -711,11 +710,13 @@ void dbTD_readByteBlockCMD()
 	switch(db.getMode())
     {
 		case db.MS:
+			db.setSMSSlotRegister(0,0x0000);
+			db.setSMSSlotRegister(1,0x4000);
+			db.setSMSSlotRegister(2,0x8000);
 			for( i = 0; i < blockSize; i++ )
 			{
 				//calculate effective SMS address in slot 2
-				db.setSMSSlotRegister( 2, address );
-				smsAddress = ( db.SMS_SLOT_2_ADDR + (uint16_t)(address & 0x3FFF) );
+				smsAddress = db.setSMSSlotRegister( 2, address );
 				data = db.readByte(smsAddress, true);
 				Serial.write((char)(data));
 				address++;		

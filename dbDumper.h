@@ -105,10 +105,10 @@ class dbDumper
 		/*******************************************************************//**
 		 * \brief set the SMS slot register value
 		 * \param uint8_t  slot number
-		 * \param uint16_t address
-		 * \return void
+		 * \param uint32_t address
+		 * \return uint16_t address the virtual address to write to the slot
 		 **********************************************************************/
-		void setSMSSlotRegister(uint8_t slotNum, uint16_t address);
+		uint16_t setSMSSlotRegister(uint8_t slotNum, uint32_t address);
 
 		/**@}*/
 		
@@ -133,10 +133,10 @@ class dbDumper
 		
 		/*******************************************************************//**
 		 * \brief Erase a sector in the Flash IC
-		 * \param uint16_t address of the sector
+		 * \param uint32_t address of the sector
 		 * \return void
 		 **********************************************************************/
-		void eraseSector(uint16_t sectorAddress);
+		void eraseSector(uint32_t sectorAddress);
 		
 		/*******************************************************************//**
 		 * \brief Perform toggle bit algorithm
@@ -275,10 +275,11 @@ class dbDumper
 		eMode _mode;
 		
 		//Master System Slots and slot address
+		static const uint16_t SMS_CONF_REG_ADDR   = 0xFFFC; /**< SMS Sega Mapper RAM mapping and miscellaneous functions register */
 		static const uint16_t SMS_SLOT_0_REG_ADDR = 0xFFFD; /**< SMS Sega Mapper slot 0 register address 0x0000 - 0x3FFF */
 		static const uint16_t SMS_SLOT_1_REG_ADDR = 0xFFFE; /**< SMS Sega Mapper slot 1 register address 0x4000 - 0x7FFF */
 		static const uint16_t SMS_SLOT_2_REG_ADDR = 0xFFFF; /**< SMS Sega Mapper slot 2 register address 0x8000 - 0xBFFF */
-		uint8_t _SMS_slotShadow[2];
+
 	
 		inline void _latchAddress(uint16_t address);
 		inline void _latchAddress(uint32_t address);

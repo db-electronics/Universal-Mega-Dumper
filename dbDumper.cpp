@@ -178,9 +178,9 @@ void dbDumper::setMode(eMode mode)
 			_resetPin = SMS_nRST;
 			resetCart();
 			_mode = MS;
-			setSMSSlotRegister(0,0);
-			setSMSSlotRegister(1,1);
-			setSMSSlotRegister(2,2);
+			setSMSSlotRegister(0,0x0000);
+			setSMSSlotRegister(1,0x4000);
+			setSMSSlotRegister(2,0x8000);
 			break;
 		default:
 			//control signals default to all inputs
@@ -254,7 +254,28 @@ uint32_t dbDumper::getFlashID()
 			
 			_flashID = flashID;
 			break;
+		//mx29f800 software ID detect byte mode through SMS mapper
+      	case MS:
+			//enable rom write enable bit
+			writeByte((uint16_t)SMS_CONF_REG_ADDR,0x80);
 			
+			//set proper slot registers, slot 0 for flash ID
+			setSMSSlotRegister(0,0x000);
+			
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0x90);
+			
+			flashID = (uint32_t)readByte((uint16_t)0x0002, false);
+			
+			//exit software ID
+			writeByte((uint16_t)0x0000,0xF0);
+			
+			_flashID = flashID;
+			
+			//disable rom write enable bit
+			writeByte((uint16_t)SMS_CONF_REG_ADDR,0x00);
+			break;	
 		//SST39SF0x0 software ID detect
     	case CV:
 			writeByte((uint16_t)0x5555,0xAA);
@@ -312,8 +333,25 @@ uint32_t dbDumper::eraseChip(bool wait, uint8_t chip)
 				writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x1000);				
 			}
 			break;
-		//mx29f800 chip erase byte mode
+		//mx29f800 chip erase byte mode through SMS mapper
 		case MS:
+			//enable rom write enable bit
+			writeByte((uint16_t)SMS_CONF_REG_ADDR,0x80);
+			
+			//set proper slot registers, slot 0 and 1 needed for flash ID
+			setSMSSlotRegister(0,0x0000);
+			
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0x80);
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0x10);
+			
+			//disable rom write enable bit
+			writeByte((uint16_t)SMS_CONF_REG_ADDR,0x00);
+			
+			break;
 		case PC:
 		case TG:
 			writeByte((uint16_t)0x0AAA, 0xAA);
@@ -382,18 +420,8 @@ uint8_t dbDumper::readByte(uint16_t address, bool external)
 	digitalWrite(nCE, LOW);
 	digitalWrite(nRD, LOW);
   
-	//read genesis odd bytes from the high byte of the bus
 	switch(_mode)
 	{
-		case MD:
-			if( (uint8_t)(address) & 0x01 )
-			{
-				readData = DATAINH;
-			}else
-			{
-				readData = DATAINL;
-			}
-			break;
 		case PC:
 			if( external )
 			{
@@ -403,12 +431,9 @@ uint8_t dbDumper::readByte(uint16_t address, bool external)
 				readData = DATAINL;
 			}
 			break;
+		case MD:
 		case TG:
-			readData = DATAINL;
-			break;
 		case CV:
-			readData = DATAINL;
-			break;
 		case MS:
 			readData = DATAINL;
 			break;
@@ -443,18 +468,8 @@ uint8_t dbDumper::readByte(uint32_t address, bool external)
 	digitalWrite(nCE, LOW);
 	digitalWrite(nRD, LOW);
   
-	//read genesis odd bytes from the high byte of the bus
 	switch(_mode)
 	{
-		case MD:
-			if( (uint8_t)(address) & 0x01 )
-			{
-				readData = DATAINH;
-			}else
-			{
-				readData = DATAINL;
-			}
-			break;
 		case PC:
 			if( external )
 			{
@@ -464,12 +479,9 @@ uint8_t dbDumper::readByte(uint32_t address, bool external)
 				readData = DATAINL;
 			}
 			break;
+		case MD:
 		case TG:
-			readData = DATAINL;
-			break;
 		case CV:
-			readData = DATAINL;
-			break;
 		case MS:
 			readData = DATAINL;
 			break;
@@ -566,7 +578,7 @@ void dbDumper::writeByte(uint16_t address, uint8_t data)
 	switch(_mode)
 	{
 		case MD:
-			DATAOUTH = data;
+			DATAOUTL = data;
 			// write to the bus
 			digitalWrite(nCE, LOW);
 			digitalWrite(GEN_nLWR, LOW);
@@ -613,7 +625,7 @@ void dbDumper::writeByte(uint32_t address, uint8_t data)
 	switch(_mode)
 	{
 		case MD:
-			DATAOUTH = data;
+			DATAOUTL = data;
 			// write to the bus
 			digitalWrite(nCE, LOW);
 			digitalWrite(GEN_nLWR, LOW);
@@ -744,7 +756,7 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 {
   	switch(_mode)
   	{
-		//MX29F800 program byte
+		//MX29F800 program byte with reversed data
 		case PC:
 			writeByte((uint16_t)0x0AAA, 0xAA);
 			writeByte((uint16_t)0x0555, 0x55);
@@ -769,6 +781,27 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
 			{
 				while( toggleBit(2, 0) != 2 );
 			}
+			break;
+		//MX29F800 program byte through SMS mapper
+		case MS:
+			//enable rom write enable bit
+			writeByte((uint16_t)SMS_CONF_REG_ADDR,0x80);
+		
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0xA0);
+			
+			//program byte in through slot 2
+			writeByte(setSMSSlotRegister(2,address), data);
+			
+			//use data polling to validate end of program cycle
+			if(wait)
+			{
+				while( toggleBit(2, 0) != 2 );
+			}
+			
+			//disable rom write enable bit
+			writeByte((uint16_t)SMS_CONF_REG_ADDR,0x00);
 			break;
 		//SST39SF0x0 program byte
 		case CV:
@@ -894,7 +927,7 @@ inline void dbDumper::_latchAddress(uint16_t address)
 /*******************************************************************//**
  * The eraseSector function erases a sector in the flash memory
  **********************************************************************/
-void dbDumper::eraseSector(uint16_t sectorAddress)
+void dbDumper::eraseSector(uint32_t sectorAddress)
 {
   	switch(_mode)
   	{
@@ -971,11 +1004,12 @@ uint8_t dbDumper::toggleBit(uint8_t attempts, uint8_t chip)
 				old16Value = read16Value;
 			}
 			break;
+			
 		//mx29f800 toggle bit on bit 6
+		case MS:
 		case PC:
 		case TG:
-		
-			//first read of bit 6 - big endian
+			//first read of bit 6
 			oldValue = readByte((uint16_t)0x0000, false) & 0x40;
 			
 			for( i=0; i<attempts; i++ )
@@ -1065,21 +1099,28 @@ uint8_t dbDumper::reverseByte(uint8_t data)
  * The setSMSSlotRegister function updates the cartridge slot register
  * with the correct bank number of the corresponding address
  **********************************************************************/
-void dbDumper::setSMSSlotRegister(uint8_t slotNum, uint16_t address)
+uint16_t dbDumper::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
 {
+	uint16_t virtualAddress;
+	
 	switch( slotNum )
 	{
 		case 0:
 			writeByte( SMS_SLOT_0_REG_ADDR, (uint8_t)(address >> 14) );
+			virtualAddress = ( SMS_SLOT_0_ADDR + (uint16_t)(address & 0x3FFF) );
 			break;
 		case 1:
 			writeByte( SMS_SLOT_1_REG_ADDR, (uint8_t)(address >> 14) );
+			virtualAddress = ( SMS_SLOT_1_ADDR + (uint16_t)(address & 0x3FFF) );
 			break;
 		case 2:
 			writeByte( SMS_SLOT_2_REG_ADDR, (uint8_t)(address >> 14) );
+			virtualAddress = ( SMS_SLOT_2_ADDR + (uint16_t)(address & 0x3FFF) );
 			break;
 		default:
 			writeByte( SMS_SLOT_2_REG_ADDR, (uint8_t)(address >> 14) );
+			virtualAddress = ( SMS_SLOT_2_ADDR + (uint16_t)(address & 0x3FFF) );
 			break;
 	}
+	return virtualAddress;
 }
