@@ -642,7 +642,6 @@ void dbTD_readByteCMD()
 {
     char *arg;
     uint32_t address = 0;
-	uint16_t smsAddress;
     uint8_t data;
     
     //get the address in the next argument
@@ -653,8 +652,7 @@ void dbTD_readByteCMD()
     {
 		case db.MS:
 			//calculate effective SMS address in slot 2
-			smsAddress = db.setSMSSlotRegister( 2, address );
-			data = db.readByte(smsAddress, true);
+			data = db.readByte(db.setSMSSlotRegister(2, address), true);
 			break;
 		default:
 			data = db.readByte(address, true);
@@ -696,7 +694,6 @@ void dbTD_readByteBlockCMD()
     char *arg;
     uint32_t address = 0;
     uint16_t blockSize = 0, i;
-	uint16_t smsAddress;
     uint8_t data;
 
     //get the address in the next argument
@@ -714,10 +711,8 @@ void dbTD_readByteBlockCMD()
 			for( i = 0; i < blockSize; i++ )
 			{
 				//calculate effective SMS address in slot 2
-				smsAddress = db.setSMSSlotRegister( 2, address );
-				data = db.readByte((uint16_t)smsAddress, true);
-				Serial.write((char)(data));
-				address++;		
+				data = db.readByte(db.setSMSSlotRegister(2, address++), true);
+				Serial.write((char)(data));	
 			}
 			break;
 			

@@ -283,6 +283,8 @@ class dbDumper
 	
 		inline void _latchAddress(uint16_t address);
 		inline void _latchAddress(uint32_t address);
+		inline void _setDatabusInput();
+		inline void _setDatabusOutput();
 
 		uint8_t reverseByte(uint8_t data);
 

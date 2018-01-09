@@ -42,6 +42,29 @@ dbDumper::dbDumper()
 }
 
 /*******************************************************************//**
+ * The _setDatabusInput function sets the databus to inputs and 
+ * deactivates the built-in pullup resistors
+ **********************************************************************/
+inline void dbDumper::_setDatabusInput()
+{
+	//set data to inputs
+	DATAH_DDR = 0x00;
+	DATAL_DDR = 0x00;
+	DATAOUTH = 0x00;
+	DATAOUTL = 0x00;
+}
+
+/*******************************************************************//**
+ * The _setDatabusOutput function sets the databus to outputs
+ **********************************************************************/
+inline void dbDumper::_setDatabusOutput()
+{
+	//set data to outputs
+	DATAH_DDR = 0xFF;
+	DATAL_DDR = 0xFF;
+}
+
+/*******************************************************************//**
  * The resetCart() function issues a 250ms active-low reset pulse to
  * the pin specified by the variable _resetPin.
  * 
@@ -77,9 +100,7 @@ bool dbDumper::detectCart()
  **********************************************************************/
 void dbDumper::setMode(eMode mode)
 {
-	//Dataport as inputs, use port access for performance on these
-	DATAH_DDR = 0x00;
-	DATAL_DDR = 0x00;
+	_setDatabusInput();
 
 	//74HC373 latch enable input is active high, default to low
   	pinMode(ALE_low, OUTPUT);
@@ -172,6 +193,60 @@ void dbDumper::setMode(eMode mode)
 			_mode = undefined;
 			break;
 	}
+}
+
+/*******************************************************************//**
+ * The _latchAddress function latches a 24bit address to the cartridge
+ * \warning incompatible with Colecovision mode
+ **********************************************************************/
+inline void dbDumper::_latchAddress(uint32_t address)
+{
+	uint8_t addrh,addrm,addrl;
+	
+	//separate address into 3 bytes for address latches
+	addrl = (uint8_t)(address & 0xFF);
+	addrm = (uint8_t)(address>>8 & 0xFF);
+	addrh = (uint8_t)(address>>16 & 0xFF);
+
+	_setDatabusOutput();
+
+	//put low and mid address on bus and latch it
+	DATAOUTH = addrm;
+	DATAOUTL = addrl;
+	digitalWrite(ALE_low, HIGH);
+	digitalWrite(ALE_low, LOW);
+
+	//put high address on bus and latch it
+	DATAOUTH = 0x00;
+	DATAOUTL = addrh;
+	digitalWrite(ALE_high, HIGH);
+	digitalWrite(ALE_high, LOW);
+	
+	_setDatabusInput();	
+
+}
+
+/*******************************************************************//**
+ * The _latchAddress function latches a 16bit address to the cartridge.
+ * \warning upper 8 address bits (23..16) are not modified
+ **********************************************************************/
+inline void dbDumper::_latchAddress(uint16_t address)
+{
+	uint8_t addrm,addrl;
+	
+	//separate address into 2 bytes for address latches
+	addrl = (uint8_t)(address & 0xFF);
+	addrm = (uint8_t)(address>>8 & 0xFF);
+
+	_setDatabusOutput();
+
+	//put low and mid address on bus and latch it
+	DATAOUTH = addrm;
+	DATAOUTL = addrl;
+	digitalWrite(ALE_low, HIGH);
+	digitalWrite(ALE_low, LOW);
+	
+	_setDatabusInput();
 }
 
 /*******************************************************************//**
@@ -382,6 +457,47 @@ uint32_t dbDumper::eraseChip(bool wait, uint8_t chip)
 }
 
 /*******************************************************************//**
+ * The eraseSector function erases a sector in the flash memory
+ **********************************************************************/
+void dbDumper::eraseSector(uint32_t sectorAddress)
+{
+  	switch(_mode)
+  	{
+		case MD:
+			//mx29f800 chip erase word mode
+			writeWord((uint16_t)(0x0555 << 1), 0xAA00);
+			writeWord((uint16_t)(0x02AA << 1), 0x5500);
+			writeWord((uint16_t)(0x0555 << 1), 0x8000);
+			writeWord((uint16_t)(0x0555 << 1), 0xAA00);
+			writeWord((uint16_t)(0x02AA << 1), 0x5500);
+			writeWord((uint16_t)(0x0555 << 1), 0x1000);
+			break;
+		case TG:
+			//mx29f800 chip erase byte mode
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0x80);
+			writeByte((uint16_t)0x0AAA, 0xAA);
+			writeByte((uint16_t)0x0555, 0x55);
+			writeByte((uint16_t)0x0AAA, 0x10);
+			break;
+    	case CV:
+			//SST39SF0x0 chip erase
+			writeByte((uint16_t)0x5555, 0xAA);
+			writeByte((uint16_t)0x2AAA, 0x55);
+			writeByte((uint16_t)0x5555, 0x80);
+			writeByte((uint16_t)0x5555, 0xAA);
+			writeByte((uint16_t)0x2AAA, 0x55);
+
+			//sector address comes here
+			writeByte((uint16_t)0x5555, 0x10);
+      		break;
+		default:
+			break;
+  	}
+}
+
+/*******************************************************************//**
  * The readByte(uint16_t) function returns a byte read from 
  * a 16bit address.
  * 
@@ -392,10 +508,7 @@ uint8_t dbDumper::readByte(uint16_t address, bool external)
 	uint8_t readData;
 
 	_latchAddress(address);
-	
-	//set data bus to inputs
-	DATAH_DDR = 0x00;
-	DATAL_DDR = 0x00;
+	_setDatabusInput();
 
 	// read the bus
 	digitalWrite(nCE, LOW);
@@ -441,10 +554,7 @@ uint8_t dbDumper::readByte(uint32_t address, bool external)
 	uint8_t readData;
 
 	_latchAddress(address);
-	
-	//set data bus to inputs
-	DATAH_DDR = 0x00;
-	DATAL_DDR = 0x00;
+	_setDatabusInput();
 
 	// read the bus
 	digitalWrite(nCE, LOW);
@@ -493,10 +603,7 @@ uint16_t dbDumper::readWord(uint32_t address)
 	uint16_t readData;
 
   	_latchAddress(address);
-
-  	//set data bus to inputs
-  	DATAH_DDR = 0x00;
-  	DATAL_DDR = 0x00;
+  	_setDatabusInput();
 
   	// read the bus
   	digitalWrite(nCE, LOW);
@@ -522,9 +629,7 @@ uint16_t dbDumper::readWord(uint32_t address)
 void dbDumper::writeByteTime(uint16_t address, uint8_t data)
 {
 	_latchAddress(address);
-	//set data bus to outputs
-	DATAH_DDR = 0xFF;
-	DATAL_DDR = 0xFF;
+	_setDatabusOutput();
 
 	//put word on bus, both bytes just to be sure
 	DATAOUTH = data;
@@ -534,10 +639,8 @@ void dbDumper::writeByteTime(uint16_t address, uint8_t data)
 	digitalWrite(GEN_nTIME, LOW);
 	//delayMicroseconds(1);
 	digitalWrite(GEN_nTIME, HIGH);
-  
-	//set data bus to inputs
-	DATAH_DDR = 0x00;
-	DATAL_DDR = 0x00;
+ 
+	_setDatabusInput();
 }
 
 /*******************************************************************//**
@@ -552,10 +655,7 @@ void dbDumper::writeByteTime(uint16_t address, uint8_t data)
 void dbDumper::writeByte(uint16_t address, uint8_t data)
 {
 	_latchAddress(address);
-
-	//set data bus to outputs
-	DATAH_DDR = 0xFF;
-	DATAL_DDR = 0xFF;
+	_setDatabusOutput();
 
 	//write genesis odd bytes to the high byte of the bus
 	switch(_mode)
@@ -592,9 +692,7 @@ void dbDumper::writeByte(uint16_t address, uint8_t data)
 			break;
 	}
   
-	//set data bus to inputs
-	DATAH_DDR = 0x00;
-	DATAL_DDR = 0x00;
+	_setDatabusInput();
 	
 }
 
@@ -607,12 +705,8 @@ void dbDumper::writeByte(uint16_t address, uint8_t data)
 void dbDumper::writeByte(uint32_t address, uint8_t data)
 {
 	_latchAddress(address);
-
-	//set data bus to outputs
-	DATAH_DDR = 0xFF;
-	DATAL_DDR = 0xFF;
-
-	//write genesis odd bytes to the high byte of the bus
+	_setDatabusInput();
+	
 	switch(_mode)
 	{
 		case MD:
@@ -647,9 +741,7 @@ void dbDumper::writeByte(uint32_t address, uint8_t data)
 			break;
 	}
 	
-	//set data bus to inputs
-	DATAH_DDR = 0x00;
-	DATAL_DDR = 0x00;
+	_setDatabusInput();
 	
 }
 
@@ -662,9 +754,7 @@ void dbDumper::writeByte(uint32_t address, uint8_t data)
 void dbDumper::writeWordTime(uint16_t address, uint16_t data)
 {
 	_latchAddress(address);
-	//set data bus to outputs
-	DATAH_DDR = 0xFF;
-	DATAL_DDR = 0xFF;
+	_setDatabusOutput();
 
 	//put word on bus
 	DATAOUTH = (uint8_t)(data);
@@ -675,9 +765,7 @@ void dbDumper::writeWordTime(uint16_t address, uint16_t data)
 	//delayMicroseconds(1);
 	digitalWrite(GEN_nTIME, HIGH);
   
-	//set data bus to inputs
-	DATAH_DDR = 0x00;
-	DATAL_DDR = 0x00;
+	_setDatabusInput();
 }
 
 /*******************************************************************//**
@@ -690,10 +778,7 @@ void dbDumper::writeWordTime(uint16_t address, uint16_t data)
 void dbDumper::writeWord(uint32_t address, uint16_t data)
 {
 	_latchAddress(address);
-
-	//set data bus to outputs
-	DATAH_DDR = 0xFF;
-	DATAL_DDR = 0xFF;
+	_setDatabusOutput();
 
 	//put word on bus
 	DATAOUTH = (uint8_t)(data);
@@ -706,9 +791,7 @@ void dbDumper::writeWord(uint32_t address, uint16_t data)
 	digitalWrite(nWR, HIGH);
 	digitalWrite(nCE, HIGH);
   
-	//set data bus to inputs
-	DATAH_DDR = 0x00;
-	DATAL_DDR = 0x00;
+	_setDatabusInput();
 }
 
 /*******************************************************************//**
@@ -721,10 +804,7 @@ void dbDumper::writeWord(uint32_t address, uint16_t data)
 void dbDumper::writeWord(uint16_t address, uint16_t data)
 {
 	_latchAddress(address);
-
-	//set data bus to outputs
-	DATAH_DDR = 0xFF;
-	DATAL_DDR = 0xFF;
+	_setDatabusOutput();
 
 	//put word on bus
 	DATAOUTH = (uint8_t)(data);
@@ -737,9 +817,7 @@ void dbDumper::writeWord(uint16_t address, uint16_t data)
 	digitalWrite(nWR, HIGH);
 	digitalWrite(nCE, HIGH);
   
-	//set data bus to inputs
-	DATAH_DDR = 0x00;
-	DATAL_DDR = 0x00;
+	_setDatabusInput();
 }
 
 /*******************************************************************//**
@@ -861,104 +939,6 @@ void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
 			}
 			
 			break;
-		default:
-			break;
-  	}
-}
-
-/*******************************************************************//**
- * The _latchAddress function latches a 24bit address to the cartridge
- * \warning incompatible with Colecovision mode
- **********************************************************************/
-inline void dbDumper::_latchAddress(uint32_t address)
-{
-	uint8_t addrh,addrm,addrl;
-	
-	//separate address into 3 bytes for address latches
-	addrl = (uint8_t)(address & 0xFF);
-	addrm = (uint8_t)(address>>8 & 0xFF);
-	addrh = (uint8_t)(address>>16 & 0xFF);
-
-	//set data to outputs
-	DATAH_DDR = 0xFF;
-	DATAL_DDR = 0xFF;
-
-	//put low and mid address on bus and latch it
-	DATAOUTH = addrm;
-	DATAOUTL = addrl;
-	digitalWrite(ALE_low, HIGH);
-	digitalWrite(ALE_low, LOW);
-
-	//put high address on bus and latch it
-	DATAOUTH = 0x00;
-	DATAOUTL = addrh;
-	digitalWrite(ALE_high, HIGH);
-	digitalWrite(ALE_high, LOW);
-	
-		
-
-}
-
-/*******************************************************************//**
- * The _latchAddress function latches a 16bit address to the cartridge.
- * \warning upper 8 address bits (23..16) are not modified
- **********************************************************************/
-inline void dbDumper::_latchAddress(uint16_t address)
-{
-	uint8_t addrm,addrl;
-	
-	//separate address into 2 bytes for address latches
-	addrl = (uint8_t)(address & 0xFF);
-	addrm = (uint8_t)(address>>8 & 0xFF);
-
-	//set data to outputs
-	DATAH_DDR = 0xFF;
-	DATAL_DDR = 0xFF;
-
-	//put low and mid address on bus and latch it
-	DATAOUTH = addrm;
-	DATAOUTL = addrl;
-	digitalWrite(ALE_low, HIGH);
-	digitalWrite(ALE_low, LOW);
-	
-}
-
-/*******************************************************************//**
- * The eraseSector function erases a sector in the flash memory
- **********************************************************************/
-void dbDumper::eraseSector(uint32_t sectorAddress)
-{
-  	switch(_mode)
-  	{
-		case MD:
-			//mx29f800 chip erase word mode
-			writeWord((uint16_t)(0x0555 << 1), 0xAA00);
-			writeWord((uint16_t)(0x02AA << 1), 0x5500);
-			writeWord((uint16_t)(0x0555 << 1), 0x8000);
-			writeWord((uint16_t)(0x0555 << 1), 0xAA00);
-			writeWord((uint16_t)(0x02AA << 1), 0x5500);
-			writeWord((uint16_t)(0x0555 << 1), 0x1000);
-			break;
-		case TG:
-			//mx29f800 chip erase byte mode
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0x80);
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0x10);
-			break;
-    	case CV:
-			//SST39SF0x0 chip erase
-			writeByte((uint16_t)0x5555, 0xAA);
-			writeByte((uint16_t)0x2AAA, 0x55);
-			writeByte((uint16_t)0x5555, 0x80);
-			writeByte((uint16_t)0x5555, 0xAA);
-			writeByte((uint16_t)0x2AAA, 0x55);
-
-			//sector address comes here
-			writeByte((uint16_t)0x5555, 0x10);
-      		break;
 		default:
 			break;
   	}
@@ -1106,19 +1086,19 @@ uint16_t dbDumper::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
 	{
 		case 0:
 			writeByte( SMS_SLOT_0_REG_ADDR, (uint8_t)(address >> 14) );
-			virtualAddress = ( SMS_SLOT_0_ADDR + ( (uint16_t)address & 0x3FFF) );
+			virtualAddress = ( SMS_SLOT_0_ADDR | ( (uint16_t)address & 0x3FFF) );
 			break;
 		case 1:
 			writeByte( SMS_SLOT_1_REG_ADDR, (uint8_t)(address >> 14) );
-			virtualAddress = ( SMS_SLOT_1_ADDR + ( (uint16_t)address & 0x3FFF) );
+			virtualAddress = ( SMS_SLOT_1_ADDR | ( (uint16_t)address & 0x3FFF) );
 			break;
 		case 2:
 			writeByte( SMS_SLOT_2_REG_ADDR, (uint8_t)(address >> 14) );
-			virtualAddress = ( SMS_SLOT_2_ADDR + ( (uint16_t)address & 0x3FFF) );
+			virtualAddress = ( SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF) );
 			break;
 		default:
 			writeByte( SMS_SLOT_2_REG_ADDR, (uint8_t)(address >> 14) );
-			virtualAddress = ( SMS_SLOT_2_ADDR + ( (uint16_t)address & 0x3FFF) );
+			virtualAddress = ( SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF) );
 			break;
 	}
 	return virtualAddress;
