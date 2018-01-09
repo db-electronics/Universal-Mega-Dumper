@@ -631,13 +631,12 @@ void dbDumper::writeByteTime(uint16_t address, uint8_t data)
 	_latchAddress(address);
 	_setDatabusOutput();
 
-	//put word on bus, both bytes just to be sure
-	DATAOUTH = data;
+	//put byte on bus
 	DATAOUTL = data;
 	
 	// write to the bus
 	digitalWrite(GEN_nTIME, LOW);
-	//delayMicroseconds(1);
+	delayMicroseconds(1);
 	digitalWrite(GEN_nTIME, HIGH);
  
 	_setDatabusInput();
@@ -705,7 +704,7 @@ void dbDumper::writeByte(uint16_t address, uint8_t data)
 void dbDumper::writeByte(uint32_t address, uint8_t data)
 {
 	_latchAddress(address);
-	_setDatabusInput();
+	_setDatabusOutput();
 	
 	switch(_mode)
 	{

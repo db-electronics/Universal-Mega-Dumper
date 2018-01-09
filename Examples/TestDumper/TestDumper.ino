@@ -86,17 +86,18 @@ void setup() {
     SCmd.addCommand("setmode",dbTD_setModeCMD);
     SCmd.addCommand("erase",dbTD_eraseChipCMD);
     SCmd.addCommand("getid",dbTD_flashIDCMD);
-    SCmd.addCommand("readword",dbTD_readWordCMD);
-    SCmd.addCommand("readbyte",dbTD_readByteCMD);
-    SCmd.addCommand("readbblock",dbTD_readByteBlockCMD);
-    SCmd.addCommand("readwblock",dbTD_readWordBlockCMD);
-    SCmd.addCommand("writebyte",dbTD_writeByteCMD);
-    SCmd.addCommand("writeword",dbTD_writeWordCMD);
-    SCmd.addCommand("progbyte",dbTD_programByteCMD);
-    SCmd.addCommand("progbblock",dbTD_programByteBlockCMD);
-    SCmd.addCommand("progword",dbTD_programWordCMD);
-    SCmd.addCommand("progwblock",dbTD_programWordBlockCMD);
-    SCmd.addCommand("writesbblock",dbTD_writeSRAMByteBlockCMD);
+    SCmd.addCommand("rdword",dbTD_readWordCMD);
+    SCmd.addCommand("rdbyte",dbTD_readByteCMD);
+    SCmd.addCommand("rdbblk",dbTD_readByteBlockCMD);
+    SCmd.addCommand("rdwblk",dbTD_readWordBlockCMD);
+    SCmd.addCommand("wrbyte",dbTD_writeByteCMD);
+    SCmd.addCommand("wrword",dbTD_writeWordCMD);
+    SCmd.addCommand("prgbyte",dbTD_programByteCMD);
+    SCmd.addCommand("prgbblk",dbTD_programByteBlockCMD);
+    SCmd.addCommand("prgword",dbTD_programWordCMD);
+    SCmd.addCommand("prgwblk",dbTD_programWordBlockCMD);
+    SCmd.addCommand("rdswblk",dbTD_readSRAMWordBlockCMD);
+    SCmd.addCommand("wrsblk",dbTD_writeSRAMByteBlockCMD);
     
     //register callbacks for SerialCommand related to the onboard serial flash
     SCmd.addCommand("sflgetid",dbTD_sflIDCMD);
@@ -923,16 +924,44 @@ void dbTD_programByteCMD()
 }
 
 /*******************************************************************//**
- * \brief Program a byte block in the cartridge
- * Program a byte block in the cartridge. Prior to progamming,
- * the sector or entire chip must be erased. The function uses data
- * polling between each byte program to validate the operation. If no 
- * data is received for WRITE_TIMEOUT_MS the function will abort.
- *  
+ * \brief
  * Usage:
- * progbblock 0x0000 64 %64bytes%
- *   - programs %64bytes% received starting at address 0x0000
- *  
+ 
+ * \return Void
+ **********************************************************************/
+void dbTD_readSRAMWordBlockCMD()
+{
+    char *arg;
+    uint32_t address = 0;
+    uint16_t blockSize = 0, i;
+    uint16_t data;
+
+    //get the address in the next argument
+	arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the size in the next argument
+    arg = SCmd.next(); 
+    blockSize = strtoul(arg, (char**)0, 0);
+	
+	db.writeByteTime(0,3);
+	
+	//read words from block, output converts to little endian
+    for( i = 0; i < blockSize; i += 2 )
+    {
+		data = db.readWord(address);
+		address += 2;
+		Serial.write((char)(data));
+        Serial.write((char)(data>>8));
+	}
+	
+	db.writeByteTime(0,0);
+}
+
+/*******************************************************************//**
+ * \brief
+ * Usage:
+ 
  * \return Void
  **********************************************************************/
 void dbTD_writeSRAMByteBlockCMD()
@@ -951,8 +980,8 @@ void dbTD_writeSRAMByteBlockCMD()
     
     //receive size bytes
     Serial.read(); //there's an extra byte here for some reason - discard
-
-	while( count < size )
+    
+    while( count < size )
     {
 		if( Serial.available() )
 		{
@@ -961,24 +990,25 @@ void dbTD_writeSRAMByteBlockCMD()
 	}
 	
 	SCmd.clearBuffer();
-
-	switch( db.getMode() )
-	{
+	count = 0;
+	switch(db.getMode())
+    {
 		case db.MD:
-			// set the SRAM write enable latch on #TIME
 			db.writeByteTime(0,3);
+			
 			// only odd bytes are valid for Genesis
-			for( count=0; count < ( size >> 1) ; count++ )
+			for( count=1; count < size ; count += 2 )
 			{
-				db.writeByte( address, (uint8_t)dataBuffer.word[count]);
+				db.writeByte( address, dataBuffer.byte[count]);
 				address += 2;
 			}
-			// clear the SRAM write enable latch on #TIME
 			db.writeByteTime(0,0);
 			break;
 		default:
 			break;
 	}
+	
+	//Serial.println(address,HEX);
 	Serial.println(F("done"));
 }
 
