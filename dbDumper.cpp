@@ -222,6 +222,9 @@ inline void dbDumper::_latchAddress(uint32_t address)
 	digitalWrite(ALE_high, HIGH);
 	digitalWrite(ALE_high, LOW);
 	
+	//without this additional 0x00 write reads to undefined regions would
+	//return the last value written to DATAOUTL
+	DATAOUTL = 0x00; 
 	_setDatabusInput();	
 
 }

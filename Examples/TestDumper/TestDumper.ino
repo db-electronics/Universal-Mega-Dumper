@@ -97,16 +97,18 @@ void setup() {
     SCmd.addCommand("prgword",dbTD_programWordCMD);
     SCmd.addCommand("prgwblk",dbTD_programWordBlockCMD);
     SCmd.addCommand("rdswblk",dbTD_readSRAMWordBlockCMD);
+    SCmd.addCommand("rdsbblk",dbTD_readSRAMByteBlockCMD);
     SCmd.addCommand("wrsblk",dbTD_writeSRAMByteBlockCMD);
+    SCmd.addCommand("wrbrblk",dbTD_writeBRAMByteBlockCMD);
     
     //register callbacks for SerialCommand related to the onboard serial flash
-    SCmd.addCommand("sflgetid",dbTD_sflIDCMD);
-    SCmd.addCommand("sflsize",dbTD_sflGetSize);
-    SCmd.addCommand("sflerase",dbTD_sflErase);
-    SCmd.addCommand("sflwrite",dbTD_sflWriteFile);
-    SCmd.addCommand("sfllist",dbTD_sflListFiles);
-    SCmd.addCommand("sflread",dbTD_sflReadFile);
-    SCmd.addCommand("sflburn",dbTD_sflBurnCart);
+    SCmd.addCommand("sfgetid",dbTD_sflIDCMD);
+    SCmd.addCommand("sfsize",dbTD_sflGetSize);
+    SCmd.addCommand("sferase",dbTD_sflErase);
+    SCmd.addCommand("sfwrite",dbTD_sflWriteFile);
+    SCmd.addCommand("sflist",dbTD_sflListFiles);
+    SCmd.addCommand("sfread",dbTD_sflReadFile);
+    SCmd.addCommand("sfburn",dbTD_sflBurnCart);
     
     SCmd.addDefaultHandler(unknownCMD);
     SCmd.clearBuffer();
@@ -728,6 +730,54 @@ void dbTD_readByteBlockCMD()
 }
 
 /*******************************************************************//**
+ *  \brief Read a block of bytes from the cartridge
+ *  Read an 8bit byte from the cartridge. In Coleco mode
+ *  the address is forced to uint16_t.
+ *  
+ *  Usage:
+ *  readbbyte 0x0000 128
+ *    - returns 128 unformated bytes
+ *  
+ *  \return Void
+ **********************************************************************/
+void dbTD_readSRAMByteBlockCMD()
+{
+    char *arg;
+    uint32_t address = 0;
+    uint16_t smsAddress,blockSize = 0, i;
+    uint8_t data;
+
+    //get the address in the next argument
+	arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the size in the next argument
+    arg = SCmd.next(); 
+    blockSize = strtoul(arg, (char**)0, 0);
+	
+	switch(db.getMode())
+    {
+		case db.MS:
+			
+			//enable the corresponding RAM bank in slot 2
+			smsAddress = ((uint16_t)address & 0x3FFF) | db.SMS_SLOT_2_ADDR;
+			db.writeByte((uint16_t)db.SMS_CONF_REG_ADDR,0x88);
+			for( i = 0; i < blockSize; i++ )
+			{
+				//calculate effective SMS address in slot 2
+				data = db.readByte(smsAddress++ , true);
+				Serial.write((char)(data));	
+			}
+			//disable RAM Bank
+			db.writeByte((uint16_t)db.SMS_CONF_REG_ADDR,0x00);
+			break;
+			
+		default:
+			break;
+	}
+}
+
+/*******************************************************************//**
  *  \brief Read a block of words from the cartridge
  *  
  *  Usage:
@@ -968,7 +1018,7 @@ void dbTD_writeSRAMByteBlockCMD()
 {
     char *arg;
     uint32_t address=0;
-    uint16_t size, count=0;
+    uint16_t blockSize, smsAddress, count=0;
 	        
     //get the address in the next argument
     arg = SCmd.next();
@@ -976,12 +1026,12 @@ void dbTD_writeSRAMByteBlockCMD()
     
     //get the size in the next argument
     arg = SCmd.next();
-    size = strtoul(arg, (char**)0, 0);
+    blockSize = strtoul(arg, (char**)0, 0);
     
     //receive size bytes
     Serial.read(); //there's an extra byte here for some reason - discard
     
-    while( count < size )
+    while( count < blockSize )
     {
 		if( Serial.available() )
 		{
@@ -994,20 +1044,84 @@ void dbTD_writeSRAMByteBlockCMD()
 	switch(db.getMode())
     {
 		case db.MD:
+			//enable the ram latch
 			db.writeByteTime(0,3);
 			
-			// only odd bytes are valid for Genesis
-			for( count=1; count < size ; count += 2 )
+			// only odd bytes are valid for Genesis, start at 1 and inc by 2
+			for( count=1; count < blockSize ; count += 2 )
 			{
 				db.writeByte( address, dataBuffer.byte[count]);
 				address += 2;
 			}
+			//disable the ram latch
 			db.writeByteTime(0,0);
+			break;
+		case db.MS:
+			//enable the corresponding RAM bank in slot 2
+			smsAddress = ((uint16_t)address & 0x3FFF) | db.SMS_SLOT_2_ADDR;
+			db.writeByte((uint16_t)db.SMS_CONF_REG_ADDR,0x88);
+			for( count=0; count < blockSize ; count++ )
+			{
+				db.writeByte(smsAddress++, dataBuffer.byte[count]);
+			}
+			//disable RAM Bank
+			db.writeByte((uint16_t)db.SMS_CONF_REG_ADDR,0x00);
 			break;
 		default:
 			break;
 	}
 	
+	//Serial.println(address,HEX);
+	Serial.println(F("done"));
+}
+
+/*******************************************************************//**
+ * \brief
+ * Usage:
+ 
+ * \return Void
+ **********************************************************************/
+void dbTD_writeBRAMByteBlockCMD()
+{
+    char *arg;
+    uint32_t address=0;
+    uint16_t blockSize, count=0;
+	        
+    //get the address in the next argument
+    arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the size in the next argument
+    arg = SCmd.next();
+    blockSize = strtoul(arg, (char**)0, 0);
+    
+    //receive size bytes
+    Serial.read(); //there's an extra byte here for some reason - discard
+    
+    while( count < blockSize )
+    {
+		if( Serial.available() )
+		{
+			dataBuffer.byte[count++] = Serial.read();
+		}
+	}
+	
+	SCmd.clearBuffer();
+	count = 0;
+	
+	//enable write latch for CD BRAM
+	db.writeByte( (uint32_t)0x700000, 0xFF );
+	
+	// only odd bytes are valid for Genesis, start at 1 and inc by 2
+	for( count=1; count < blockSize ; count += 2 )
+	{
+		db.writeByte( address, dataBuffer.byte[count]);
+		address += 2;
+	}
+
+	//disable write latch for CD BRAM
+	db.writeByte( (uint32_t)0x700000, 0x00 );
+
 	//Serial.println(address,HEX);
 	Serial.println(F("done"));
 }
@@ -1029,7 +1143,7 @@ void dbTD_programByteBlockCMD()
 {
     char *arg;
     uint32_t address=0;
-    uint16_t size, count=0;
+    uint16_t blockSize, count=0;
 	        
     //get the address in the next argument
     arg = SCmd.next();
@@ -1037,12 +1151,12 @@ void dbTD_programByteBlockCMD()
     
     //get the size in the next argument
     arg = SCmd.next();
-    size = strtoul(arg, (char**)0, 0);
+    blockSize = strtoul(arg, (char**)0, 0);
     
     //receive size bytes
     Serial.read(); //there's an extra byte here for some reason - discard
     
-    while( count < size )
+    while( count < blockSize )
     {
 		if( Serial.available() )
 		{
@@ -1054,7 +1168,7 @@ void dbTD_programByteBlockCMD()
 	
 	//program size bytes
 	count = 0;
-	while( count < size )
+	while( count < blockSize )
 	{
 		db.programByte(address, dataBuffer.byte[count++], true);
 		address++;
@@ -1114,7 +1228,7 @@ void dbTD_programWordBlockCMD()
 {
     char *arg;
     uint32_t address=0;
-    uint16_t size, count=0;
+    uint16_t blockSize, count=0;
 	        
     //get the address in the next argument
     arg = SCmd.next();
@@ -1122,12 +1236,12 @@ void dbTD_programWordBlockCMD()
     
     //get the size in the next argument
     arg = SCmd.next();
-    size = strtoul(arg, (char**)0, 0);
+    blockSize = strtoul(arg, (char**)0, 0);
     
     //receive size bytes
     Serial.read(); //there's an extra byte here for some reason - discard
     
-    while( count < size )
+    while( count < blockSize )
     {
 		if( Serial.available() )
 		{
@@ -1139,7 +1253,7 @@ void dbTD_programWordBlockCMD()
 	
 	//program size/2 words
 	count = 0;
-	while( count < ( size >> 1) )
+	while( count < ( blockSize >> 1) )
 	{
 		db.programWord(address, dataBuffer.word[count++], true);
 		address += 2;

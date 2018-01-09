@@ -268,19 +268,16 @@ class dbDumper
 		static const uint16_t SMS_SLOT_0_ADDR = 0x0000; /**< SMS Sega Mapper slot 0 base address 0x0000 - 0x3FFF */
 		static const uint16_t SMS_SLOT_1_ADDR = 0x4000; /**< SMS Sega Mapper slot 1 base address 0x4000 - 0x7FFF */
 		static const uint16_t SMS_SLOT_2_ADDR = 0x8000; /**< SMS Sega Mapper slot 2 base address 0x8000 - 0xBFFF */
+		static const uint16_t SMS_CONF_REG_ADDR   = 0xFFFC; /**< SMS Sega Mapper RAM mapping and miscellaneous functions register */
+		static const uint16_t SMS_SLOT_0_REG_ADDR = 0xFFFD; /**< SMS Sega Mapper slot 0 register address 0x0000 - 0x3FFF */
+		static const uint16_t SMS_SLOT_1_REG_ADDR = 0xFFFE; /**< SMS Sega Mapper slot 1 register address 0x4000 - 0x7FFF */
+		static const uint16_t SMS_SLOT_2_REG_ADDR = 0xFFFF; /**< SMS Sega Mapper slot 2 register address 0x8000 - 0xBFFF */
 
 	private:
 		uint8_t _resetPin;
 		uint32_t _flashID;
 		eMode _mode;
 		
-		//Master System Slots and slot address
-		static const uint16_t SMS_CONF_REG_ADDR   = 0xFFFC; /**< SMS Sega Mapper RAM mapping and miscellaneous functions register */
-		static const uint16_t SMS_SLOT_0_REG_ADDR = 0xFFFD; /**< SMS Sega Mapper slot 0 register address 0x0000 - 0x3FFF */
-		static const uint16_t SMS_SLOT_1_REG_ADDR = 0xFFFE; /**< SMS Sega Mapper slot 1 register address 0x4000 - 0x7FFF */
-		static const uint16_t SMS_SLOT_2_REG_ADDR = 0xFFFF; /**< SMS Sega Mapper slot 2 register address 0x8000 - 0xBFFF */
-
-	
 		inline void _latchAddress(uint16_t address);
 		inline void _latchAddress(uint32_t address);
 		inline void _setDatabusInput();
