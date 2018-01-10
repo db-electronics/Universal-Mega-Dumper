@@ -22,26 +22,26 @@
  *   along with Universal Mega Dumper.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <SoftwareSerial.h>			
-#include <SerialCommand.h>					// https://github.com/db-electronics/ArduinoSerialCommand
-#include <SerialFlash.h>					// https://github.com/PaulStoffregen/SerialFlash
+#include <SoftwareSerial.h>         
+#include <SerialCommand.h>                  // https://github.com/db-electronics/ArduinoSerialCommand
+#include <SerialFlash.h>                    // https://github.com/PaulStoffregen/SerialFlash
 #include <SPI.h>
 #include <umd.h>
 
-#define DATA_BUFFER_SIZE			2048	///< Size of serial receive data buffer
+#define DATA_BUFFER_SIZE            2048    ///< Size of serial receive data buffer
 
-SerialCommand SCmd;							///< Receive and parse serial commands
-umd umd;									///< Universal Mega Dumper declaration
+SerialCommand SCmd;                         ///< Receive and parse serial commands
+umd umd;                                    ///< Universal Mega Dumper declaration
 
-const int FlashChipSelect = 20; 			///< Digital pin for flash chip CS pin
-SerialFlashFile flashFile;					///< Serial flash file object
-uint8_t sfID[5];							///< Serial flash file id
-uint32_t sfSize;							///< Serial flash file size
+const int FlashChipSelect = 20;             ///< Digital pin for flash chip CS pin
+SerialFlashFile flashFile;                  ///< Serial flash file object
+uint8_t sfID[5];                            ///< Serial flash file id
+uint32_t sfSize;                            ///< Serial flash file size
 
 union dataBuffer{
-	char 		byte[DATA_BUFFER_SIZE];		///< byte access within dataBuffer
-	uint16_t 	word[DATA_BUFFER_SIZE/2];	///< word access within dataBuffer
-} dataBuffer;								///< union of byte/words to permit the Rx of bytes and Tx of words without hassle
+    char        byte[DATA_BUFFER_SIZE];     ///< byte access within dataBuffer
+    uint16_t    word[DATA_BUFFER_SIZE/2];   ///< word access within dataBuffer
+} dataBuffer;                               ///< union of byte/words to permit the Rx of bytes and Tx of words without hassle
 
 /*******************************************************************//**
  *  \brief Flash the LED, initialize the serial flash memory
@@ -65,13 +65,13 @@ void setup() {
         delay(250);
     }
 
-	if (!SerialFlash.begin(FlashChipSelect)) {
-		//error("Unable to access SPI Flash chip");
-	}else
-	{
-		SerialFlash.readID(sfID);
-		sfSize = SerialFlash.capacity(sfID);
-	}
+    if (!SerialFlash.begin(FlashChipSelect)) {
+        //error("Unable to access SPI Flash chip");
+    }else
+    {
+        SerialFlash.readID(sfID);
+        sfSize = SerialFlash.capacity(sfID);
+    }
 
     //register callbacks for SerialCommand related to the cartridge
     SCmd.addCommand("flash",  _flashThunder);
@@ -142,8 +142,8 @@ void _flashThunder()
 {
     Serial.println(F("thunder"));
     digitalWrite(umd.nLED, LOW);
-	delay(100);
-	digitalWrite(umd.nLED, HIGH);
+    delay(100);
+    digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -152,7 +152,7 @@ void _flashThunder()
  **********************************************************************/
 void sfGetID()
 {
-	//W25Q128FVSIG
+    //W25Q128FVSIG
     Serial.write(sfID[0]);
     Serial.write(sfID[1]);
     Serial.write(sfID[2]);
@@ -166,7 +166,7 @@ void sfGetID()
  **********************************************************************/
 void sfGetSize()
 {
-	//W25Q128FVSIG
+    //W25Q128FVSIG
     Serial.println(sfSize,DEC);
 }
 
@@ -176,25 +176,25 @@ void sfGetSize()
  **********************************************************************/
 void sfEraseAll()
 {
-	char *arg;
+    char *arg;
 
     arg = SCmd.next();
     if( arg != NULL )
     {
         switch(*arg)
         {
-			//wait for operation to complete, measure time
+            //wait for operation to complete, measure time
             case 'w':
                 SerialFlash.eraseAll();
-				while (SerialFlash.ready() == false) {
-					// wait, 30 seconds to 2 minutes for most chips
-					digitalWrite(umd.nLED, LOW);
-					delay(250);
-					digitalWrite(umd.nLED, HIGH);
-					delay(250);
-					Serial.print(".");
-				}
-				Serial.print("!");
+                while (SerialFlash.ready() == false) {
+                    // wait, 30 seconds to 2 minutes for most chips
+                    digitalWrite(umd.nLED, LOW);
+                    delay(250);
+                    digitalWrite(umd.nLED, HIGH);
+                    delay(250);
+                    Serial.print(".");
+                }
+                Serial.print("!");
                 break;
             default:
                 break;
@@ -215,62 +215,62 @@ void sfEraseAll()
  **********************************************************************/
 void sfBurnCart()
 {
-	char *arg;
-	uint16_t blockSize, i;
-	uint32_t fileSize, address=0, pos=0;
-	char fileName[13]; 		//Max filename length (8.3 plus a null char terminator)
-	
-	//get the file name
+    char *arg;
+    uint16_t blockSize, i;
+    uint32_t fileSize, address=0, pos=0;
+    char fileName[13];      //Max filename length (8.3 plus a null char terminator)
+    
+    //get the file name
     arg = SCmd.next();
     i = 0;
     while( (*arg != 0) && ( i < 12) )
     {
-		fileName[i++] = *(arg++);
-	}
-	fileName[i] = 0; //null char terminator
-	
-		//get the read block size
-	arg = SCmd.next();
+        fileName[i++] = *(arg++);
+    }
+    fileName[i] = 0; //null char terminator
+    
+        //get the read block size
+    arg = SCmd.next();
     blockSize = strtoul(arg, (char**)0, 0);
     
-	flashFile = SerialFlash.open(fileName);
-	if (flashFile)
-	{
-		Serial.println(F("found"));
-		fileSize = flashFile.size();
-		Serial.println(fileSize,DEC);
-		
-		while( pos < fileSize )
-		{
-			flashFile.read(dataBuffer.byte, blockSize);
-			
-			switch( umd.getMode() )
-			{
-				case umd.MD:
-					for( i=0 ; i < ( blockSize >> 1) ; i++ )
-					{
-						umd.programWord(address, dataBuffer.word[i], true);
-						address += 2;
-					}
-					break;
-				default:
-					for( i=0 ; i < blockSize ; i++ )
-					{
-						umd.programByte(address, dataBuffer.byte[i], true);
-						address++;
-					}
-					break;
-			}
-			pos += blockSize;
-			Serial.println(pos, DEC);
-		}
-		Serial.println(F("done"));
-	}else
-	{
-		Serial.println(F("error"));
-	}
-	
-	flashFile.close();
+    flashFile = SerialFlash.open(fileName);
+    if (flashFile)
+    {
+        Serial.println(F("found"));
+        fileSize = flashFile.size();
+        Serial.println(fileSize,DEC);
+        
+        while( pos < fileSize )
+        {
+            flashFile.read(dataBuffer.byte, blockSize);
+            
+            switch( umd.getMode() )
+            {
+                case umd.MD:
+                    for( i=0 ; i < ( blockSize >> 1) ; i++ )
+                    {
+                        umd.programWord(address, dataBuffer.word[i], true);
+                        address += 2;
+                    }
+                    break;
+                default:
+                    for( i=0 ; i < blockSize ; i++ )
+                    {
+                        umd.programByte(address, dataBuffer.byte[i], true);
+                        address++;
+                    }
+                    break;
+            }
+            pos += blockSize;
+            Serial.println(pos, DEC);
+        }
+        Serial.println(F("done"));
+    }else
+    {
+        Serial.println(F("error"));
+    }
+    
+    flashFile.close();
 }
 
 /*******************************************************************//**
@@ -283,51 +283,51 @@ void sfBurnCart()
  **********************************************************************/
 void sfReadFile()
 {
-	char *arg;
-	uint16_t blockSize, i;
-	uint32_t fileSize, pos=0;
-	char fileName[13]; 		//Max filename length (8.3 plus a null char terminator)
-	
-	//get the file name
+    char *arg;
+    uint16_t blockSize, i;
+    uint32_t fileSize, pos=0;
+    char fileName[13];      //Max filename length (8.3 plus a null char terminator)
+    
+    //get the file name
     arg = SCmd.next();
     i = 0;
     while( (*arg != 0) && ( i < 12) )
     {
-		fileName[i++] = *(arg++);
-	}
-	fileName[i] = 0; //null char terminator
-	
-	//get the read block size
-	arg = SCmd.next();
+        fileName[i++] = *(arg++);
+    }
+    fileName[i] = 0; //null char terminator
+    
+    //get the read block size
+    arg = SCmd.next();
     blockSize = strtoul(arg, (char**)0, 0);
     
-	flashFile = SerialFlash.open(fileName);
-	if (flashFile)
-	{
-		Serial.println(F("found"));
-		fileSize = flashFile.size();
-		Serial.println(fileSize,DEC);
-		
-		while( pos < fileSize )
-		{
-			flashFile.read(dataBuffer.byte, blockSize);
-			//wait for PC side to be ready to receive
-			//Serial.read();
-			
-			delay(1);
-			for( i = 0; i < blockSize; i++ )
-			{
-				Serial.write((char)dataBuffer.byte[i]);
-			}
-			
-			pos += blockSize;
-		}
+    flashFile = SerialFlash.open(fileName);
+    if (flashFile)
+    {
+        Serial.println(F("found"));
+        fileSize = flashFile.size();
+        Serial.println(fileSize,DEC);
+        
+        while( pos < fileSize )
+        {
+            flashFile.read(dataBuffer.byte, blockSize);
+            //wait for PC side to be ready to receive
+            //Serial.read();
+            
+            delay(1);
+            for( i = 0; i < blockSize; i++ )
+            {
+                Serial.write((char)dataBuffer.byte[i]);
+            }
+            
+            pos += blockSize;
+        }
 
-	}else
-	{
-		Serial.println(F("error"));
-	}
-	flashFile.close();
+    }else
+    {
+        Serial.println(F("error"));
+    }
+    flashFile.close();
 }
 
 /*******************************************************************//**
@@ -341,21 +341,21 @@ void sfReadFile()
  **********************************************************************/
 void sfWriteFile()
 {
-	char *arg;
-	uint16_t i, count, blockSize;
-	uint32_t fileSize, pos=0;
-	char fileName[13]; 		//Max filename length (8.3 plus a null char terminator)
+    char *arg;
+    uint16_t i, count, blockSize;
+    uint32_t fileSize, pos=0;
+    char fileName[13];      //Max filename length (8.3 plus a null char terminator)
 
-	//get the file name
+    //get the file name
     arg = SCmd.next();
     i = 0;
     while( (*arg != 0) && ( i < 12) )
     {
-		fileName[i++] = *(arg++);
-	}
-	fileName[i] = 0; //null char terminator
+        fileName[i++] = *(arg++);
+    }
+    fileName[i] = 0; //null char terminator
 
-	//get the size in the next argument
+    //get the size in the next argument
     arg = SCmd.next();
     fileSize = strtoul(arg, (char**)0, 0);
     
@@ -363,27 +363,27 @@ void sfWriteFile()
     arg = SCmd.next();
     blockSize = strtoul(arg, (char**)0, 0);
     
-	Serial.read(); //there's an extra byte here for some reason - discard
+    Serial.read(); //there's an extra byte here for some reason - discard
 
-	SerialFlash.create(fileName, fileSize);
-	flashFile = SerialFlash.open(fileName);
-	while( pos < fileSize )
-	{
-		// fill buffer from USB
-		count = 0;
-		while( count < blockSize )
-		{
-			if( Serial.available() )
-			{
-				dataBuffer.byte[count++] = Serial.read();
-			}
-		}
-		// write buffer to serial flash file
-		flashFile.write(dataBuffer.byte, blockSize);
-		pos += blockSize;
-		Serial.println(F("rdy"));
-	}
-	flashFile.close();
+    SerialFlash.create(fileName, fileSize);
+    flashFile = SerialFlash.open(fileName);
+    while( pos < fileSize )
+    {
+        // fill buffer from USB
+        count = 0;
+        while( count < blockSize )
+        {
+            if( Serial.available() )
+            {
+                dataBuffer.byte[count++] = Serial.read();
+            }
+        }
+        // write buffer to serial flash file
+        flashFile.write(dataBuffer.byte, blockSize);
+        pos += blockSize;
+        Serial.println(F("rdy"));
+    }
+    flashFile.close();
 }
 
 /*******************************************************************//**
@@ -396,24 +396,24 @@ void sfWriteFile()
  **********************************************************************/
 void sfListFiles()
 {
-	//W25Q128FVSIG
-	char fileName[64];
+    //W25Q128FVSIG
+    char fileName[64];
     uint32_t fileSize;
     
     SerialFlash.opendir();
     while (1) {
-		if (SerialFlash.readdir(fileName, sizeof(fileName), fileSize))
-		{
-		  Serial.print(fileName);
-		  Serial.print(";");
-		  Serial.print(fileSize, DEC);
-		  Serial.print(",");
-		}else 
-		{
-			Serial.println();
-			break; // no more files
-		}
-	}
+        if (SerialFlash.readdir(fileName, sizeof(fileName), fileSize))
+        {
+          Serial.print(fileName);
+          Serial.print(";");
+          Serial.print(fileSize, DEC);
+          Serial.print(",");
+        }else 
+        {
+            Serial.println();
+            break; // no more files
+        }
+    }
 }
 
 /*******************************************************************//**
@@ -472,9 +472,9 @@ void _setMode()
             Serial.println(F("mode = c")); 
             break;
         case 'm':
-			umd.setMode(umd.MS);
-			Serial.println(F("mode = m"));
-			break;
+            umd.setMode(umd.MS);
+            Serial.println(F("mode = m"));
+            break;
         default:
             Serial.println(F("mode = undefined")); 
             umd.setMode(umd.undefined);
@@ -497,9 +497,9 @@ void _setMode()
 void eraseChip()
 {
     char *arg;
-	uint8_t chip;
+    uint8_t chip;
 
-	//get the chip number in the next argument
+    //get the chip number in the next argument
     arg = SCmd.next();
     chip = (uint8_t)strtoul(arg, (char**)0, 0);
 
@@ -508,7 +508,7 @@ void eraseChip()
     {
         switch(*arg)
         {
-			//wait for operation to complete, measure time
+            //wait for operation to complete, measure time
             case 'w':
                 umd.eraseChip(true, chip);
                 break;
@@ -542,7 +542,7 @@ void getFlashID()
     //read the flash ID
     data = umd.getFlashID();
 
-	//check if we should output a formatted string
+    //check if we should output a formatted string
     arg = SCmd.next();
     if( arg != NULL )
     {
@@ -588,7 +588,7 @@ void readWord()
     //read the word
     data = umd.readWord(address);
 
-	//check if we should output a formatted string
+    //check if we should output a formatted string
     arg = SCmd.next();
     if( arg != NULL )
     {
@@ -631,27 +631,27 @@ void readByte()
     
     switch(umd.getMode())
     {
-		case umd.MS:
-			//calculate effective SMS address in slot 2
-			data = umd.readByte(umd.setSMSSlotRegister(2, address), true);
-			break;
-		default:
-			data = umd.readByte(address, true);
-			break;
-	}
-	
+        case umd.MS:
+            //calculate effective SMS address in slot 2
+            data = umd.readByte(umd.setSMSSlotRegister(2, address), true);
+            break;
+        default:
+            data = umd.readByte(address, true);
+            break;
+    }
+    
 
-	//check if we should output a formatted string
+    //check if we should output a formatted string
     arg = SCmd.next();
     if( arg != NULL )
     {
         switch(*arg)
         {
-			case 'h':
-				Serial.println(data,HEX);
-				break;
-			default:
-				break;
+            case 'h':
+                Serial.println(data,HEX);
+                break;
+            default:
+                break;
         }
     }else
     {
@@ -678,33 +678,33 @@ void readByteBlock()
     uint8_t data;
 
     //get the address in the next argument
-	arg = SCmd.next();
+    arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
     //get the size in the next argument
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
-	
-	switch(umd.getMode())
+    
+    switch(umd.getMode())
     {
-		case umd.MS:
+        case umd.MS:
 
-			for( i = 0; i < blockSize; i++ )
-			{
-				//calculate effective SMS address in slot 2
-				data = umd.readByte(umd.setSMSSlotRegister(2, address++), true);
-				Serial.write((char)(data));	
-			}
-			break;
-			
-		default:
-			for( i = 0; i < blockSize; i++ )
-			{
-				data = umd.readByte(address++, true);
-				Serial.write((char)(data));
-			}
-			break;
-	}
+            for( i = 0; i < blockSize; i++ )
+            {
+                //calculate effective SMS address in slot 2
+                data = umd.readByte(umd.setSMSSlotRegister(2, address++), true);
+                Serial.write((char)(data)); 
+            }
+            break;
+            
+        default:
+            for( i = 0; i < blockSize; i++ )
+            {
+                data = umd.readByte(address++, true);
+                Serial.write((char)(data));
+            }
+            break;
+    }
 }
 
 /*******************************************************************//**
@@ -726,33 +726,33 @@ void readSRAMByteBlock()
     uint8_t data;
 
     //get the address in the next argument
-	arg = SCmd.next();
+    arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
     //get the size in the next argument
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
-	
-	switch(umd.getMode())
+    
+    switch(umd.getMode())
     {
-		case umd.MS:
-			
-			//enable the corresponding RAM bank in slot 2
-			smsAddress = ((uint16_t)address & 0x3FFF) | umd.SMS_SLOT_2_ADDR;
-			umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x88);
-			for( i = 0; i < blockSize; i++ )
-			{
-				//calculate effective SMS address in slot 2
-				data = umd.readByte(smsAddress++ , true);
-				Serial.write((char)(data));	
-			}
-			//disable RAM Bank
-			umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x00);
-			break;
-			
-		default:
-			break;
-	}
+        case umd.MS:
+            
+            //enable the corresponding RAM bank in slot 2
+            smsAddress = ((uint16_t)address & 0x3FFF) | umd.SMS_SLOT_2_ADDR;
+            umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x88);
+            for( i = 0; i < blockSize; i++ )
+            {
+                //calculate effective SMS address in slot 2
+                data = umd.readByte(smsAddress++ , true);
+                Serial.write((char)(data)); 
+            }
+            //disable RAM Bank
+            umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x00);
+            break;
+            
+        default:
+            break;
+    }
 }
 
 /*******************************************************************//**
@@ -772,21 +772,21 @@ void readWordBlock()
     uint16_t data;
 
     //get the address in the next argument
-	arg = SCmd.next();
+    arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
     //get the size in the next argument
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
-	
-	//read words from block, output converts to little endian
+    
+    //read words from block, output converts to little endian
     for( i = 0; i < blockSize; i += 2 )
     {
-		data = umd.readWord(address);
-		address += 2;
-		Serial.write((char)(data));
+        data = umd.readWord(address);
+        address += 2;
+        Serial.write((char)(data));
         Serial.write((char)(data>>8));
-	}
+    }
 }
 
 /*******************************************************************//**
@@ -807,15 +807,15 @@ void writeByte()
     uint8_t data;
 
     //get the address in the next argument
-	arg = SCmd.next();
+    arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
     //get the word in the next argument
     arg = SCmd.next(); 
     data = strtoul(arg, (char**)0, 0);
-	
-	//write word
-	umd.writeByte(address, data);
+    
+    //write word
+    umd.writeByte(address, data);
 }
 
 /*******************************************************************//**
@@ -836,16 +836,16 @@ void writeWord()
     uint16_t data;
 
     //get the address in the next argument
-	arg = SCmd.next();
+    arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     address &= 0xFFFFFFFE;
     
     //get the word in the next argument
     arg = SCmd.next(); 
     data = strtoul(arg, (char**)0, 0);
-	
-	//write word
-	umd.writeWord(address, data);
+    
+    //write word
+    umd.writeWord(address, data);
 }
 
 /*******************************************************************//**
@@ -875,76 +875,76 @@ void programByte()
     //get the data in the next argument
     arg = SCmd.next(); 
     data = (uint8_t)strtoul(arg, (char**)0, 0);
-	readBack = ~data;
+    readBack = ~data;
 
     //if coleco, force 16 bit address program
     if( umd.getMode() == umd.CV )
     {
-		address = (uint16_t)(address);      
+        address = (uint16_t)(address);      
     }
     
     umd.programByte(address, data, false);
     
     //check if we should verify the write
     arg = SCmd.next();
-	if( arg != NULL )
+    if( arg != NULL )
     {
         switch(*arg)
         {
-			case 'v':
-				delayMicroseconds(50);
-				readBack = umd.readByte(address, true);
-				break;
-			default:
-				break;
+            case 'v':
+                delayMicroseconds(50);
+                readBack = umd.readByte(address, true);
+                break;
+            default:
+                break;
         }
         
         //compare values
         if( readBack == data )
         {
-			//check if we should output a formatted string
-			arg = SCmd.next();
-			if( arg != NULL )
-			{
-				switch(*arg)
-				{
-					case 'h':
-						Serial.print(F("ok 0x")); 
-						Serial.print(readBack,HEX);
-						Serial.print(F(" at address 0x")); 
-						Serial.println(address,HEX);
-						break;
-					default:
-						break;
-				}
-			}else
-			{
-				Serial.write((char)(data));
-			}
-		}else
-		{
-			//check if we should output a formatted string
-			arg = SCmd.next();
-			if( arg != NULL )
-			{
-				switch(*arg)
-				{
-					case 'h':
-						Serial.print(F("read 0x")); 
-						Serial.print(readBack,HEX);
-						Serial.print(F(" expected 0x")); 
-						Serial.print(data,HEX);
-						Serial.print(F(" at address 0x")); 
-						Serial.println(address,HEX);
-						break;
-					default:
-						break;
-				}
-			}else
-			{
-				Serial.write((char)(data));
-			}
-		}
+            //check if we should output a formatted string
+            arg = SCmd.next();
+            if( arg != NULL )
+            {
+                switch(*arg)
+                {
+                    case 'h':
+                        Serial.print(F("ok 0x")); 
+                        Serial.print(readBack,HEX);
+                        Serial.print(F(" at address 0x")); 
+                        Serial.println(address,HEX);
+                        break;
+                    default:
+                        break;
+                }
+            }else
+            {
+                Serial.write((char)(data));
+            }
+        }else
+        {
+            //check if we should output a formatted string
+            arg = SCmd.next();
+            if( arg != NULL )
+            {
+                switch(*arg)
+                {
+                    case 'h':
+                        Serial.print(F("read 0x")); 
+                        Serial.print(readBack,HEX);
+                        Serial.print(F(" expected 0x")); 
+                        Serial.print(data,HEX);
+                        Serial.print(F(" at address 0x")); 
+                        Serial.println(address,HEX);
+                        break;
+                    default:
+                        break;
+                }
+            }else
+            {
+                Serial.write((char)(data));
+            }
+        }
     }
     
     
@@ -964,25 +964,25 @@ void readSRAMWordBlock()
     uint16_t data;
 
     //get the address in the next argument
-	arg = SCmd.next();
+    arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
     //get the size in the next argument
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
-	
-	umd.writeByteTime(0,3);
-	
-	//read words from block, output converts to little endian
+    
+    umd.writeByteTime(0,3);
+    
+    //read words from block, output converts to little endian
     for( i = 0; i < blockSize; i += 2 )
     {
-		data = umd.readWord(address);
-		address += 2;
-		Serial.write((char)(data));
+        data = umd.readWord(address);
+        address += 2;
+        Serial.write((char)(data));
         Serial.write((char)(data>>8));
-	}
-	
-	umd.writeByteTime(0,0);
+    }
+    
+    umd.writeByteTime(0,0);
 }
 
 /*******************************************************************//**
@@ -996,7 +996,7 @@ void writeSRAMByteBlock()
     char *arg;
     uint32_t address=0;
     uint16_t blockSize, smsAddress, count=0;
-	        
+            
     //get the address in the next argument
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
@@ -1010,46 +1010,46 @@ void writeSRAMByteBlock()
     
     while( count < blockSize )
     {
-		if( Serial.available() )
-		{
-			dataBuffer.byte[count++] = Serial.read();
-		}
-	}
-	
-	SCmd.clearBuffer();
-	count = 0;
-	switch(umd.getMode())
+        if( Serial.available() )
+        {
+            dataBuffer.byte[count++] = Serial.read();
+        }
+    }
+    
+    SCmd.clearBuffer();
+    count = 0;
+    switch(umd.getMode())
     {
-		case umd.MD:
-			//enable the ram latch
-			umd.writeByteTime(0,3);
-			
-			// only odd bytes are valid for Genesis, start at 1 and inc by 2
-			for( count=1; count < blockSize ; count += 2 )
-			{
-				umd.writeByte( address, dataBuffer.byte[count]);
-				address += 2;
-			}
-			//disable the ram latch
-			umd.writeByteTime(0,0);
-			break;
-		case umd.MS:
-			//enable the corresponding RAM bank in slot 2
-			smsAddress = ((uint16_t)address & 0x3FFF) | umd.SMS_SLOT_2_ADDR;
-			umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x88);
-			for( count=0; count < blockSize ; count++ )
-			{
-				umd.writeByte(smsAddress++, dataBuffer.byte[count]);
-			}
-			//disable RAM Bank
-			umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x00);
-			break;
-		default:
-			break;
-	}
-	
-	//Serial.println(address,HEX);
-	Serial.println(F("done"));
+        case umd.MD:
+            //enable the ram latch
+            umd.writeByteTime(0,3);
+            
+            // only odd bytes are valid for Genesis, start at 1 and inc by 2
+            for( count=1; count < blockSize ; count += 2 )
+            {
+                umd.writeByte( address, dataBuffer.byte[count]);
+                address += 2;
+            }
+            //disable the ram latch
+            umd.writeByteTime(0,0);
+            break;
+        case umd.MS:
+            //enable the corresponding RAM bank in slot 2
+            smsAddress = ((uint16_t)address & 0x3FFF) | umd.SMS_SLOT_2_ADDR;
+            umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x88);
+            for( count=0; count < blockSize ; count++ )
+            {
+                umd.writeByte(smsAddress++, dataBuffer.byte[count]);
+            }
+            //disable RAM Bank
+            umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x00);
+            break;
+        default:
+            break;
+    }
+    
+    //Serial.println(address,HEX);
+    Serial.println(F("done"));
 }
 
 /*******************************************************************//**
@@ -1063,7 +1063,7 @@ void writeBRAMByteBlock()
     char *arg;
     uint32_t address=0;
     uint16_t blockSize, count=0;
-	        
+            
     //get the address in the next argument
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
@@ -1077,30 +1077,30 @@ void writeBRAMByteBlock()
     
     while( count < blockSize )
     {
-		if( Serial.available() )
-		{
-			dataBuffer.byte[count++] = Serial.read();
-		}
-	}
-	
-	SCmd.clearBuffer();
-	count = 0;
-	
-	//enable write latch for CD BRAM
-	umd.writeByte( (uint32_t)0x700000, 0xFF );
-	
-	// only odd bytes are valid for Genesis, start at 1 and inc by 2
-	for( count=1; count < blockSize ; count += 2 )
-	{
-		umd.writeByte( address, dataBuffer.byte[count]);
-		address += 2;
-	}
+        if( Serial.available() )
+        {
+            dataBuffer.byte[count++] = Serial.read();
+        }
+    }
+    
+    SCmd.clearBuffer();
+    count = 0;
+    
+    //enable write latch for CD BRAM
+    umd.writeByte( (uint32_t)0x700000, 0xFF );
+    
+    // only odd bytes are valid for Genesis, start at 1 and inc by 2
+    for( count=1; count < blockSize ; count += 2 )
+    {
+        umd.writeByte( address, dataBuffer.byte[count]);
+        address += 2;
+    }
 
-	//disable write latch for CD BRAM
-	umd.writeByte( (uint32_t)0x700000, 0x00 );
+    //disable write latch for CD BRAM
+    umd.writeByte( (uint32_t)0x700000, 0x00 );
 
-	//Serial.println(address,HEX);
-	Serial.println(F("done"));
+    //Serial.println(address,HEX);
+    Serial.println(F("done"));
 }
 
 /*******************************************************************//**
@@ -1121,7 +1121,7 @@ void programByteBlock()
     char *arg;
     uint32_t address=0;
     uint16_t blockSize, count=0;
-	        
+            
     //get the address in the next argument
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
@@ -1135,23 +1135,23 @@ void programByteBlock()
     
     while( count < blockSize )
     {
-		if( Serial.available() )
-		{
-			dataBuffer.byte[count++] = Serial.read();
-		}
-	}
-	
-	SCmd.clearBuffer();
-	
-	//program size bytes
-	count = 0;
-	while( count < blockSize )
-	{
-		umd.programByte(address, dataBuffer.byte[count++], true);
-		address++;
-	}
-	
-	Serial.println(F("done"));
+        if( Serial.available() )
+        {
+            dataBuffer.byte[count++] = Serial.read();
+        }
+    }
+    
+    SCmd.clearBuffer();
+    
+    //program size bytes
+    count = 0;
+    while( count < blockSize )
+    {
+        umd.programByte(address, dataBuffer.byte[count++], true);
+        address++;
+    }
+    
+    Serial.println(F("done"));
 }
 
 /*******************************************************************//**
@@ -1206,7 +1206,7 @@ void programWordBlock()
     char *arg;
     uint32_t address=0;
     uint16_t blockSize, count=0;
-	        
+            
     //get the address in the next argument
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
@@ -1220,22 +1220,22 @@ void programWordBlock()
     
     while( count < blockSize )
     {
-		if( Serial.available() )
-		{
-			dataBuffer.byte[count++] = Serial.read();
-		}
-	}
-	
-	SCmd.clearBuffer();
-	
-	//program size/2 words
-	count = 0;
-	while( count < ( blockSize >> 1) )
-	{
-		umd.programWord(address, dataBuffer.word[count++], true);
-		address += 2;
-	}
-	
-	Serial.println(F("done"));
+        if( Serial.available() )
+        {
+            dataBuffer.byte[count++] = Serial.read();
+        }
+    }
+    
+    SCmd.clearBuffer();
+    
+    //program size/2 words
+    count = 0;
+    while( count < ( blockSize >> 1) )
+    {
+        umd.programWord(address, dataBuffer.word[count++], true);
+        address += 2;
+    }
+    
+    Serial.println(F("done"));
 }
 

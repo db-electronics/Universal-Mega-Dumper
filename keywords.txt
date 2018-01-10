@@ -1,32 +1,45 @@
 #######################################
-# Syntax Coloring Map dbDumper
+# Syntax Coloring Map Universal Mega Dumper
 #######################################
 
 #######################################
 # Datatypes (KEYWORD1)
 #######################################
 
-UMD				KEYWORD1
+UMD                 KEYWORD1
+umd                 KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
 
-setMode			KEYWORD2
-getMode			KEYWORD2
-detectCart		KEYWORD2
-getFlashID		KEYWORD2
-readWord		KEYWORD2
-readByte		KEYWORD2
-writeWord		KEYWORD2
-writeByte		KEYWORD2
-programByte		KEYWORD2
-eraseChip		KEYWORD2
-convColecoAddr 	KEYWORD2
+detectCart          KEYWORD2
+eraseChip           KEYWORD2
+eraseSector         KEYWORD2
+getFlashID          KEYWORD2
+programByte         KEYWORD2
+programWord         KEYWORD2
+readByte            KEYWORD2
+readWord            KEYWORD2
+resetCart           KEYWORD2
+reverseByte         KEYWORD2
+setMode             KEYWORD2
+setSMSSlotRegister  KEYWORD2
+toggleBit           KEYWORD2
+writeByte           KEYWORD2
+writeByteTime       KEYWORD2
+WriteWord           KEYWORD2
+WriteWordTime       KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
 #######################################
-genesis			KEYWORD3
-coleco			KEYWORD3
-pcengine		KEYWORD3
+SMS_SLOT_0_ADDR     KEYWORD3
+SMS_SLOT_1_ADDR     KEYWORD3
+SMS_SLOT_2_ADDR     KEYWORD3
+SMS_CONF_REG_ADDR   KEYWORD3
+SMS_SLOT_0_REG_ADDR KEYWORD3
+SMS_SLOT_1_REG_ADDR KEYWORD3
+SMS_SLOT_2_REG_ADDR KEYWORD3
+nLED                KEYWORD3
+nPB                 KEYWORD3

@@ -31,7 +31,7 @@
  **********************************************************************/
 umd::umd() 
 {
-  	setMode(undefined);
+    setMode(undefined);
 }
 
 /*******************************************************************//**
@@ -40,11 +40,11 @@ umd::umd()
  **********************************************************************/
 inline void umd::_setDatabusInput()
 {
-	//set data to inputs
-	DATAH_DDR = 0x00;
-	DATAL_DDR = 0x00;
-	DATAOUTH = 0x00;
-	DATAOUTL = 0x00;
+    //set data to inputs
+    DATAH_DDR = 0x00;
+    DATAL_DDR = 0x00;
+    DATAOUTH = 0x00;
+    DATAOUTL = 0x00;
 }
 
 /*******************************************************************//**
@@ -52,9 +52,9 @@ inline void umd::_setDatabusInput()
  **********************************************************************/
 inline void umd::_setDatabusOutput()
 {
-	//set data to outputs
-	DATAH_DDR = 0xFF;
-	DATAL_DDR = 0xFF;
+    //set data to outputs
+    DATAH_DDR = 0xFF;
+    DATAL_DDR = 0xFF;
 }
 
 /*******************************************************************//**
@@ -65,10 +65,10 @@ inline void umd::_setDatabusOutput()
   **********************************************************************/
 void umd::resetCart()
 {
-	digitalWrite(_resetPin, LOW);
-	delay(200);
-	digitalWrite(_resetPin, HIGH);
-	delay(200);
+    digitalWrite(_resetPin, LOW);
+    delay(200);
+    digitalWrite(_resetPin, HIGH);
+    delay(200);
 }
 
 /*******************************************************************//**
@@ -77,13 +77,13 @@ void umd::resetCart()
  **********************************************************************/
 bool umd::detectCart()
 {
-  	bool detect = false;
+    bool detect = false;
 
-  	if (digitalRead(nCART) == LOW)
-	{
-		detect = true;
-	}
-	return detect;
+    if (digitalRead(nCART) == LOW)
+    {
+        detect = true;
+    }
+    return detect;
 }
 
 /*******************************************************************//**
@@ -93,99 +93,99 @@ bool umd::detectCart()
  **********************************************************************/
 void umd::setMode(eMode mode)
 {
-	_setDatabusInput();
+    _setDatabusInput();
 
-	//74HC373 latch enable input is active high, default to low
-  	pinMode(ALE_low, OUTPUT);
-  	digitalWrite(ALE_low, LOW);
-  	pinMode(ALE_high, OUTPUT);
-  	digitalWrite(ALE_high, LOW);
+    //74HC373 latch enable input is active high, default to low
+    pinMode(ALE_low, OUTPUT);
+    digitalWrite(ALE_low, LOW);
+    pinMode(ALE_high, OUTPUT);
+    digitalWrite(ALE_high, LOW);
 
-	//global outputs signal default to high
-	pinMode(nWR, OUTPUT);
-  	digitalWrite(nWR, HIGH);
-  	pinMode(nRD, OUTPUT);
-  	digitalWrite(nRD, HIGH);
-	pinMode(nCE, OUTPUT);
-  	digitalWrite(nRD, HIGH);
+    //global outputs signal default to high
+    pinMode(nWR, OUTPUT);
+    digitalWrite(nWR, HIGH);
+    pinMode(nRD, OUTPUT);
+    digitalWrite(nRD, HIGH);
+    pinMode(nCE, OUTPUT);
+    digitalWrite(nRD, HIGH);
 
-  	//cartridge detect
-  	pinMode(nCART, INPUT_PULLUP);
+    //cartridge detect
+    pinMode(nCART, INPUT_PULLUP);
 
-	//LED and pushbutton
-	pinMode(nLED, OUTPUT);
-	digitalWrite(nLED, HIGH);
-	pinMode(nPB, INPUT);
+    //LED and pushbutton
+    pinMode(nLED, OUTPUT);
+    digitalWrite(nLED, HIGH);
+    pinMode(nPB, INPUT);
 
-	pinMode(CTRL0, INPUT);
-	pinMode(CTRL1, INPUT);
-	pinMode(CTRL2, INPUT);
-	pinMode(CTRL3, INPUT);
-	pinMode(CTRL4, INPUT);
-	pinMode(CTRL5, INPUT);
-	pinMode(CTRL6, INPUT);
-	pinMode(CTRL7, INPUT);
+    pinMode(CTRL0, INPUT);
+    pinMode(CTRL1, INPUT);
+    pinMode(CTRL2, INPUT);
+    pinMode(CTRL3, INPUT);
+    pinMode(CTRL4, INPUT);
+    pinMode(CTRL5, INPUT);
+    pinMode(CTRL6, INPUT);
+    pinMode(CTRL7, INPUT);
 
-	switch(mode)
-	{
-		case MD:
-			pinMode(GEN_SL1, INPUT);
-		  	pinMode(GEN_SR1, INPUT);
-		  	pinMode(GEN_nDTACK, OUTPUT);
-			digitalWrite(GEN_nDTACK, HIGH);
-		  	pinMode(GEN_nCAS2, OUTPUT);
-			digitalWrite(GEN_nCAS2, HIGH);
-			pinMode(GEN_nVRES, OUTPUT);
-			digitalWrite(GEN_nVRES, HIGH);
-			pinMode(GEN_nLWR, OUTPUT);
-			digitalWrite(GEN_nLWR, HIGH);
-			pinMode(GEN_nUWR, OUTPUT);
-			digitalWrite(GEN_nUWR, HIGH);
-			pinMode(GEN_nTIME, OUTPUT);
-			digitalWrite(GEN_nTIME, HIGH);
+    switch(mode)
+    {
+        case MD:
+            pinMode(GEN_SL1, INPUT);
+            pinMode(GEN_SR1, INPUT);
+            pinMode(GEN_nDTACK, OUTPUT);
+            digitalWrite(GEN_nDTACK, HIGH);
+            pinMode(GEN_nCAS2, OUTPUT);
+            digitalWrite(GEN_nCAS2, HIGH);
+            pinMode(GEN_nVRES, OUTPUT);
+            digitalWrite(GEN_nVRES, HIGH);
+            pinMode(GEN_nLWR, OUTPUT);
+            digitalWrite(GEN_nLWR, HIGH);
+            pinMode(GEN_nUWR, OUTPUT);
+            digitalWrite(GEN_nUWR, HIGH);
+            pinMode(GEN_nTIME, OUTPUT);
+            digitalWrite(GEN_nTIME, HIGH);
 
-			_resetPin = GEN_nVRES;
-			resetCart();
-			_mode = MD;
+            _resetPin = GEN_nVRES;
+            resetCart();
+            _mode = MD;
 
-			break;
-		case PC:
+            break;
+        case PC:
 
-			pinMode(TG_nRST, OUTPUT);
-			digitalWrite(TG_nRST, HIGH);
-			_resetPin = TG_nRST;
-			resetCart();
-			_mode = PC;
-			break;
-			
-		case TG:
-			
-			pinMode(TG_nRST, OUTPUT);
-			digitalWrite(TG_nRST, HIGH);
-			_resetPin = TG_nRST;
-			resetCart();
-			_mode = TG;
-			break;
-			
-		case CV:
+            pinMode(TG_nRST, OUTPUT);
+            digitalWrite(TG_nRST, HIGH);
+            _resetPin = TG_nRST;
+            resetCart();
+            _mode = PC;
+            break;
+            
+        case TG:
+            
+            pinMode(TG_nRST, OUTPUT);
+            digitalWrite(TG_nRST, HIGH);
+            _resetPin = TG_nRST;
+            resetCart();
+            _mode = TG;
+            break;
+            
+        case CV:
 
-			_resetPin = 45; //unused with coleco
-			_mode = CV;
-			break;
-		case MS:
+            _resetPin = 45; //unused with coleco
+            _mode = CV;
+            break;
+        case MS:
 
-			pinMode(SMS_nRST, OUTPUT);
-			digitalWrite(SMS_nRST, HIGH);
-			_resetPin = SMS_nRST;
-			resetCart();
-			_mode = MS;
-			break;
-		default:
-			//control signals default to all inputs
+            pinMode(SMS_nRST, OUTPUT);
+            digitalWrite(SMS_nRST, HIGH);
+            _resetPin = SMS_nRST;
+            resetCart();
+            _mode = MS;
+            break;
+        default:
+            //control signals default to all inputs
 
-			_mode = undefined;
-			break;
-	}
+            _mode = undefined;
+            break;
+    }
 }
 
 /*******************************************************************//**
@@ -194,31 +194,31 @@ void umd::setMode(eMode mode)
  **********************************************************************/
 inline void umd::_latchAddress(uint32_t address)
 {
-	uint8_t addrh,addrm,addrl;
-	
-	//separate address into 3 bytes for address latches
-	addrl = (uint8_t)(address & 0xFF);
-	addrm = (uint8_t)(address>>8 & 0xFF);
-	addrh = (uint8_t)(address>>16 & 0xFF);
+    uint8_t addrh,addrm,addrl;
+    
+    //separate address into 3 bytes for address latches
+    addrl = (uint8_t)(address & 0xFF);
+    addrm = (uint8_t)(address>>8 & 0xFF);
+    addrh = (uint8_t)(address>>16 & 0xFF);
 
-	_setDatabusOutput();
+    _setDatabusOutput();
 
-	//put low and mid address on bus and latch it
-	DATAOUTH = addrm;
-	DATAOUTL = addrl;
-	digitalWrite(ALE_low, HIGH);
-	digitalWrite(ALE_low, LOW);
+    //put low and mid address on bus and latch it
+    DATAOUTH = addrm;
+    DATAOUTL = addrl;
+    digitalWrite(ALE_low, HIGH);
+    digitalWrite(ALE_low, LOW);
 
-	//put high address on bus and latch it
-	DATAOUTH = 0x00;
-	DATAOUTL = addrh;
-	digitalWrite(ALE_high, HIGH);
-	digitalWrite(ALE_high, LOW);
-	
-	//without this additional 0x00 write reads to undefined regions would
-	//return the last value written to DATAOUTL
-	DATAOUTL = 0x00; 
-	_setDatabusInput();	
+    //put high address on bus and latch it
+    DATAOUTH = 0x00;
+    DATAOUTL = addrh;
+    digitalWrite(ALE_high, HIGH);
+    digitalWrite(ALE_high, LOW);
+    
+    //without this additional 0x00 write reads to undefined regions would
+    //return the last value written to DATAOUTL
+    DATAOUTL = 0x00; 
+    _setDatabusInput(); 
 
 }
 
@@ -228,21 +228,21 @@ inline void umd::_latchAddress(uint32_t address)
  **********************************************************************/
 inline void umd::_latchAddress(uint16_t address)
 {
-	uint8_t addrm,addrl;
-	
-	//separate address into 2 bytes for address latches
-	addrl = (uint8_t)(address & 0xFF);
-	addrm = (uint8_t)(address>>8 & 0xFF);
+    uint8_t addrm,addrl;
+    
+    //separate address into 2 bytes for address latches
+    addrl = (uint8_t)(address & 0xFF);
+    addrm = (uint8_t)(address>>8 & 0xFF);
 
-	_setDatabusOutput();
+    _setDatabusOutput();
 
-	//put low and mid address on bus and latch it
-	DATAOUTH = addrm;
-	DATAOUTL = addrl;
-	digitalWrite(ALE_low, HIGH);
-	digitalWrite(ALE_low, LOW);
-	
-	_setDatabusInput();
+    //put low and mid address on bus and latch it
+    DATAOUTH = addrm;
+    DATAOUTL = addrl;
+    digitalWrite(ALE_low, HIGH);
+    digitalWrite(ALE_low, LOW);
+    
+    _setDatabusInput();
 }
 
 /*******************************************************************//**
@@ -254,99 +254,99 @@ inline void umd::_latchAddress(uint16_t address)
  **********************************************************************/
 uint32_t umd::getFlashID()
 {
-  	uint32_t flashID = 0;
+    uint32_t flashID = 0;
 
-  	switch(_mode)
-  	{
-		//mx29f800 software ID detect word mode
-		//A1 of Dumper connected to A0 of MX29F800
-		//Automatic big endian on word mode
-		case MD:
-			//writeWord(0x00000555, 0xAA00);
-			//writeWord(0x000002AA, 0x5500);
-			//writeWord(0x00000555, 0x9000);
-			//flashID = readWord(0x00000001);
-			//writeWord(0x00000000, 0xF000);
-			writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
-			writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
-			writeWord( (uint32_t)(0x000555 << 1), 0x9000);
-			flashID = (uint32_t)readWord( (uint16_t)(0x000001 << 1) );
-			
-			//exit software ID
-			writeWord( (uint32_t)0x000000, 0xF000);
-			
-			flashID <<= 16;
-			
-			//try for second chip
-			writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
-			writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
-			writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x9000);
-			flashID |= (uint32_t)readWord( (0x000001 << 1) + GEN_CHIP_1_BASE );
-			
-			//exit software ID
-			writeWord( (uint32_t)0x000000  + GEN_CHIP_1_BASE, 0xF000);
-			
-			_flashID = flashID;
-			
-			break;
-		//mx29f800 software ID detect byte mode
-		case PC:
-		case TG:
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0x90);
-			flashID = (uint32_t)readByte((uint16_t)0x0002, false);
-			
-			//exit software ID
-			writeByte((uint16_t)0x0000, 0xF0);
-			
-			_flashID = flashID;
-			break;
-		//mx29f800 software ID detect byte mode through SMS mapper
-      	case MS:
-			//enable rom write enable bit
-			writeByte((uint16_t)SMS_CONF_REG_ADDR,0x80);
-			
-			//set proper slot registers, slot 0 for flash ID
-			setSMSSlotRegister(0,0x0000);
-			setSMSSlotRegister(1,0x4000);
-			setSMSSlotRegister(2,0x8000);
-			
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0x90);
-			
-			flashID = (uint32_t)readByte((uint16_t)0x0002, false);
-			
-			//exit software ID
-			writeByte((uint16_t)0x0000,0xF0);
-			
-			_flashID = flashID;
-			
-			//disable rom write enable bit
-			writeByte((uint16_t)SMS_CONF_REG_ADDR,0x00);
-			break;	
-		//SST39SF0x0 software ID detect
-    	case CV:
-			writeByte((uint16_t)0x5555,0xAA);
-			writeByte((uint16_t)0x2AAA,0x55);
-			writeByte((uint16_t)0x5555,0x90);
-			
-			flashID = (uint32_t)readByte((uint16_t)0x0000, false);
-			flashID <<= 8;
-			flashID |= (uint32_t)readByte((uint16_t)0x0001, false);
-			
-			//exit software ID
-			writeByte((uint16_t)0x0000,0xF0);
-			
-			_flashID = flashID;
-      		break;
-		default:
-      		flashID = 0xFFFFFFFF;
-      	break;
-  	}
+    switch(_mode)
+    {
+        //mx29f800 software ID detect word mode
+        //A1 of Dumper connected to A0 of MX29F800
+        //Automatic big endian on word mode
+        case MD:
+            //writeWord(0x00000555, 0xAA00);
+            //writeWord(0x000002AA, 0x5500);
+            //writeWord(0x00000555, 0x9000);
+            //flashID = readWord(0x00000001);
+            //writeWord(0x00000000, 0xF000);
+            writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+            writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+            writeWord( (uint32_t)(0x000555 << 1), 0x9000);
+            flashID = (uint32_t)readWord( (uint16_t)(0x000001 << 1) );
+            
+            //exit software ID
+            writeWord( (uint32_t)0x000000, 0xF000);
+            
+            flashID <<= 16;
+            
+            //try for second chip
+            writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
+            writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
+            writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x9000);
+            flashID |= (uint32_t)readWord( (0x000001 << 1) + GEN_CHIP_1_BASE );
+            
+            //exit software ID
+            writeWord( (uint32_t)0x000000  + GEN_CHIP_1_BASE, 0xF000);
+            
+            _flashID = flashID;
+            
+            break;
+        //mx29f800 software ID detect byte mode
+        case PC:
+        case TG:
+            writeByte((uint16_t)0x0AAA, 0xAA);
+            writeByte((uint16_t)0x0555, 0x55);
+            writeByte((uint16_t)0x0AAA, 0x90);
+            flashID = (uint32_t)readByte((uint16_t)0x0002, false);
+            
+            //exit software ID
+            writeByte((uint16_t)0x0000, 0xF0);
+            
+            _flashID = flashID;
+            break;
+        //mx29f800 software ID detect byte mode through SMS mapper
+        case MS:
+            //enable rom write enable bit
+            writeByte((uint16_t)SMS_CONF_REG_ADDR,0x80);
+            
+            //set proper slot registers, slot 0 for flash ID
+            setSMSSlotRegister(0,0x0000);
+            setSMSSlotRegister(1,0x4000);
+            setSMSSlotRegister(2,0x8000);
+            
+            writeByte((uint16_t)0x0AAA, 0xAA);
+            writeByte((uint16_t)0x0555, 0x55);
+            writeByte((uint16_t)0x0AAA, 0x90);
+            
+            flashID = (uint32_t)readByte((uint16_t)0x0002, false);
+            
+            //exit software ID
+            writeByte((uint16_t)0x0000,0xF0);
+            
+            _flashID = flashID;
+            
+            //disable rom write enable bit
+            writeByte((uint16_t)SMS_CONF_REG_ADDR,0x00);
+            break;  
+        //SST39SF0x0 software ID detect
+        case CV:
+            writeByte((uint16_t)0x5555,0xAA);
+            writeByte((uint16_t)0x2AAA,0x55);
+            writeByte((uint16_t)0x5555,0x90);
+            
+            flashID = (uint32_t)readByte((uint16_t)0x0000, false);
+            flashID <<= 8;
+            flashID |= (uint32_t)readByte((uint16_t)0x0001, false);
+            
+            //exit software ID
+            writeByte((uint16_t)0x0000,0xF0);
+            
+            _flashID = flashID;
+            break;
+        default:
+            flashID = 0xFFFFFFFF;
+        break;
+    }
 
-  	return flashID;
+    return flashID;
 }
 
 /*******************************************************************//**
@@ -357,97 +357,97 @@ uint32_t umd::getFlashID()
  **********************************************************************/
 uint32_t umd::eraseChip(bool wait, uint8_t chip)
 {
-	uint32_t startMillis, intervalMillis;
-	
-  	switch(_mode)
-  	{
-		//mx29f800 chip erase word mode
-		case MD:
-			if (chip == 0)
-			{
-				writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
-				writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
-				writeWord( (uint32_t)(0x000555 << 1), 0x8000);
-				writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
-				writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
-				writeWord( (uint32_t)(0x000555 << 1), 0x1000);
-			}else if (chip == 1)
-			{
-				writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
-				writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
-				writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x8000);
-				writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
-				writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
-				writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x1000);				
-			}
-			break;
-		//mx29f800 chip erase byte mode through SMS mapper
-		case MS:
-			//enable rom write enable bit
-			writeByte((uint16_t)SMS_CONF_REG_ADDR,0x80);
-			
-			//set proper slot registers, slot 0 and 1 needed for flash ID
-			setSMSSlotRegister(0,0x0000);
-			setSMSSlotRegister(1,0x4000);
-			setSMSSlotRegister(2,0x8000);
-			
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0x80);
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0x10);
-			
-			//disable rom write enable bit
-			writeByte((uint16_t)SMS_CONF_REG_ADDR,0x00);
-			
-			break;
-		case PC:
-		case TG:
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0x80);
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0x10);
-			break;
-		//SST39SF0x0 chip erase
-    	case CV:
-			writeByte((uint16_t)0x5555, 0xAA);
-			writeByte((uint16_t)0x2AAA, 0x55);
-			writeByte((uint16_t)0x5555, 0x80);
-			writeByte((uint16_t)0x5555, 0xAA);
-			writeByte((uint16_t)0x2AAA, 0x55);
-			writeByte((uint16_t)0x5555, 0x10);
-      		break;
-		default:
-			break;
-  	}
-  	
-  	// if wait parameter was specified, do toggle until operation is complete
-  	if(wait)
-  	{
-		startMillis = millis();
-		intervalMillis = startMillis;
-		
-		// wait for 4 consecutive toggle bit success reads before exiting
-		while( toggleBit(4, chip) != 4 )
-		{
-			if( (millis() - intervalMillis) > 250 )
-			{
-				//PC side app expects a "." before timeout
-				intervalMillis = millis();
-				Serial.print(".");
-			}
-		}
-		//Send something other than a "." to indicate we are done
-		Serial.print("!");
-		return ( millis() - startMillis );
-		
-	}else
-	{
-		return 0;
-	}
+    uint32_t startMillis, intervalMillis;
+    
+    switch(_mode)
+    {
+        //mx29f800 chip erase word mode
+        case MD:
+            if (chip == 0)
+            {
+                writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+                writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+                writeWord( (uint32_t)(0x000555 << 1), 0x8000);
+                writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+                writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+                writeWord( (uint32_t)(0x000555 << 1), 0x1000);
+            }else if (chip == 1)
+            {
+                writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
+                writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
+                writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x8000);
+                writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
+                writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
+                writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x1000);                
+            }
+            break;
+        //mx29f800 chip erase byte mode through SMS mapper
+        case MS:
+            //enable rom write enable bit
+            writeByte((uint16_t)SMS_CONF_REG_ADDR,0x80);
+            
+            //set proper slot registers, slot 0 and 1 needed for flash ID
+            setSMSSlotRegister(0,0x0000);
+            setSMSSlotRegister(1,0x4000);
+            setSMSSlotRegister(2,0x8000);
+            
+            writeByte((uint16_t)0x0AAA, 0xAA);
+            writeByte((uint16_t)0x0555, 0x55);
+            writeByte((uint16_t)0x0AAA, 0x80);
+            writeByte((uint16_t)0x0AAA, 0xAA);
+            writeByte((uint16_t)0x0555, 0x55);
+            writeByte((uint16_t)0x0AAA, 0x10);
+            
+            //disable rom write enable bit
+            writeByte((uint16_t)SMS_CONF_REG_ADDR,0x00);
+            
+            break;
+        case PC:
+        case TG:
+            writeByte((uint16_t)0x0AAA, 0xAA);
+            writeByte((uint16_t)0x0555, 0x55);
+            writeByte((uint16_t)0x0AAA, 0x80);
+            writeByte((uint16_t)0x0AAA, 0xAA);
+            writeByte((uint16_t)0x0555, 0x55);
+            writeByte((uint16_t)0x0AAA, 0x10);
+            break;
+        //SST39SF0x0 chip erase
+        case CV:
+            writeByte((uint16_t)0x5555, 0xAA);
+            writeByte((uint16_t)0x2AAA, 0x55);
+            writeByte((uint16_t)0x5555, 0x80);
+            writeByte((uint16_t)0x5555, 0xAA);
+            writeByte((uint16_t)0x2AAA, 0x55);
+            writeByte((uint16_t)0x5555, 0x10);
+            break;
+        default:
+            break;
+    }
+    
+    // if wait parameter was specified, do toggle until operation is complete
+    if(wait)
+    {
+        startMillis = millis();
+        intervalMillis = startMillis;
+        
+        // wait for 4 consecutive toggle bit success reads before exiting
+        while( toggleBit(4, chip) != 4 )
+        {
+            if( (millis() - intervalMillis) > 250 )
+            {
+                //PC side app expects a "." before timeout
+                intervalMillis = millis();
+                Serial.print(".");
+            }
+        }
+        //Send something other than a "." to indicate we are done
+        Serial.print("!");
+        return ( millis() - startMillis );
+        
+    }else
+    {
+        return 0;
+    }
 }
 
 /*******************************************************************//**
@@ -455,40 +455,40 @@ uint32_t umd::eraseChip(bool wait, uint8_t chip)
  **********************************************************************/
 void umd::eraseSector(uint32_t sectorAddress)
 {
-  	switch(_mode)
-  	{
-		case MD:
-			//mx29f800 chip erase word mode
-			writeWord((uint16_t)(0x0555 << 1), 0xAA00);
-			writeWord((uint16_t)(0x02AA << 1), 0x5500);
-			writeWord((uint16_t)(0x0555 << 1), 0x8000);
-			writeWord((uint16_t)(0x0555 << 1), 0xAA00);
-			writeWord((uint16_t)(0x02AA << 1), 0x5500);
-			writeWord((uint16_t)(0x0555 << 1), 0x1000);
-			break;
-		case TG:
-			//mx29f800 chip erase byte mode
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0x80);
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0x10);
-			break;
-    	case CV:
-			//SST39SF0x0 chip erase
-			writeByte((uint16_t)0x5555, 0xAA);
-			writeByte((uint16_t)0x2AAA, 0x55);
-			writeByte((uint16_t)0x5555, 0x80);
-			writeByte((uint16_t)0x5555, 0xAA);
-			writeByte((uint16_t)0x2AAA, 0x55);
+    switch(_mode)
+    {
+        case MD:
+            //mx29f800 chip erase word mode
+            writeWord((uint16_t)(0x0555 << 1), 0xAA00);
+            writeWord((uint16_t)(0x02AA << 1), 0x5500);
+            writeWord((uint16_t)(0x0555 << 1), 0x8000);
+            writeWord((uint16_t)(0x0555 << 1), 0xAA00);
+            writeWord((uint16_t)(0x02AA << 1), 0x5500);
+            writeWord((uint16_t)(0x0555 << 1), 0x1000);
+            break;
+        case TG:
+            //mx29f800 chip erase byte mode
+            writeByte((uint16_t)0x0AAA, 0xAA);
+            writeByte((uint16_t)0x0555, 0x55);
+            writeByte((uint16_t)0x0AAA, 0x80);
+            writeByte((uint16_t)0x0AAA, 0xAA);
+            writeByte((uint16_t)0x0555, 0x55);
+            writeByte((uint16_t)0x0AAA, 0x10);
+            break;
+        case CV:
+            //SST39SF0x0 chip erase
+            writeByte((uint16_t)0x5555, 0xAA);
+            writeByte((uint16_t)0x2AAA, 0x55);
+            writeByte((uint16_t)0x5555, 0x80);
+            writeByte((uint16_t)0x5555, 0xAA);
+            writeByte((uint16_t)0x2AAA, 0x55);
 
-			//sector address comes here
-			writeByte((uint16_t)0x5555, 0x10);
-      		break;
-		default:
-			break;
-  	}
+            //sector address comes here
+            writeByte((uint16_t)0x5555, 0x10);
+            break;
+        default:
+            break;
+    }
 }
 
 /*******************************************************************//**
@@ -499,42 +499,42 @@ void umd::eraseSector(uint32_t sectorAddress)
  **********************************************************************/
 uint8_t umd::readByte(uint16_t address, bool external)
 {
-	uint8_t readData;
+    uint8_t readData;
 
-	_latchAddress(address);
-	_setDatabusInput();
+    _latchAddress(address);
+    _setDatabusInput();
 
-	// read the bus
-	digitalWrite(nCE, LOW);
-	digitalWrite(nRD, LOW);
+    // read the bus
+    digitalWrite(nCE, LOW);
+    digitalWrite(nRD, LOW);
   
-	switch(_mode)
-	{
-		case PC:
-			if( external )
-			{
-				readData = reverseByte(DATAINL);
-			}else
-			{
-				readData = DATAINL;
-			}
-			break;
-		case MS:
-			delayMicroseconds(2);
-			readData = DATAINL;
-			break;
-		case MD:
-		case TG:
-		case CV:
-		default:
-			readData = DATAINL;
-			break;
-	}
+    switch(_mode)
+    {
+        case PC:
+            if( external )
+            {
+                readData = reverseByte(DATAINL);
+            }else
+            {
+                readData = DATAINL;
+            }
+            break;
+        case MS:
+            delayMicroseconds(2);
+            readData = DATAINL;
+            break;
+        case MD:
+        case TG:
+        case CV:
+        default:
+            readData = DATAINL;
+            break;
+    }
   
-	digitalWrite(nCE, HIGH);
-	digitalWrite(nRD, HIGH);
+    digitalWrite(nCE, HIGH);
+    digitalWrite(nRD, HIGH);
 
-	return readData;
+    return readData;
 }
 
 /*******************************************************************//**
@@ -545,42 +545,42 @@ uint8_t umd::readByte(uint16_t address, bool external)
  **********************************************************************/
 uint8_t umd::readByte(uint32_t address, bool external)
 {
-	uint8_t readData;
+    uint8_t readData;
 
-	_latchAddress(address);
-	_setDatabusInput();
+    _latchAddress(address);
+    _setDatabusInput();
 
-	// read the bus
-	digitalWrite(nCE, LOW);
-	digitalWrite(nRD, LOW);
+    // read the bus
+    digitalWrite(nCE, LOW);
+    digitalWrite(nRD, LOW);
   
-	switch(_mode)
-	{
-		case PC:
-			if( external )
-			{
-				readData = reverseByte(DATAINL);
-			}else
-			{
-				readData = DATAINL;
-			}
-			break;
-		case MS:
-			delayMicroseconds(2);
-			readData = DATAINL;
-			break;
-		case MD:
-		case TG:
-		case CV:
-		default:
-			readData = DATAINL;
-			break;
-	}
+    switch(_mode)
+    {
+        case PC:
+            if( external )
+            {
+                readData = reverseByte(DATAINL);
+            }else
+            {
+                readData = DATAINL;
+            }
+            break;
+        case MS:
+            delayMicroseconds(2);
+            readData = DATAINL;
+            break;
+        case MD:
+        case TG:
+        case CV:
+        default:
+            readData = DATAINL;
+            break;
+    }
   
-	digitalWrite(nCE, HIGH);
-	digitalWrite(nRD, HIGH);
+    digitalWrite(nCE, HIGH);
+    digitalWrite(nRD, HIGH);
 
-	return readData;
+    return readData;
 }
 
 /*******************************************************************//**
@@ -592,26 +592,26 @@ uint8_t umd::readByte(uint32_t address, bool external)
  **********************************************************************/
 uint16_t umd::readWord(uint32_t address)
 {
-	//only genesis mode reads words
+    //only genesis mode reads words
 
-	uint16_t readData;
+    uint16_t readData;
 
-  	_latchAddress(address);
-  	_setDatabusInput();
+    _latchAddress(address);
+    _setDatabusInput();
 
-  	// read the bus
-  	digitalWrite(nCE, LOW);
-  	digitalWrite(nRD, LOW);
+    // read the bus
+    digitalWrite(nCE, LOW);
+    digitalWrite(nRD, LOW);
   
-	//convert to little endian while reading
-  	readData = (uint16_t)DATAINL;
-  	readData <<= 8;
-  	readData |= (uint16_t)(DATAINH & 0x00FF);
+    //convert to little endian while reading
+    readData = (uint16_t)DATAINL;
+    readData <<= 8;
+    readData |= (uint16_t)(DATAINH & 0x00FF);
   
-  	digitalWrite(nCE, HIGH);
-  	digitalWrite(nRD, HIGH);
+    digitalWrite(nCE, HIGH);
+    digitalWrite(nRD, HIGH);
 
-  	return readData;
+    return readData;
 }
 
 /*******************************************************************//**
@@ -622,18 +622,18 @@ uint16_t umd::readWord(uint32_t address)
  **********************************************************************/
 void umd::writeByteTime(uint16_t address, uint8_t data)
 {
-	_latchAddress(address);
-	_setDatabusOutput();
+    _latchAddress(address);
+    _setDatabusOutput();
 
-	//put byte on bus
-	DATAOUTL = data;
-	
-	// write to the bus
-	digitalWrite(GEN_nTIME, LOW);
-	delayMicroseconds(1);
-	digitalWrite(GEN_nTIME, HIGH);
+    //put byte on bus
+    DATAOUTL = data;
+    
+    // write to the bus
+    digitalWrite(GEN_nTIME, LOW);
+    delayMicroseconds(1);
+    digitalWrite(GEN_nTIME, HIGH);
  
-	_setDatabusInput();
+    _setDatabusInput();
 }
 
 /*******************************************************************//**
@@ -647,46 +647,46 @@ void umd::writeByteTime(uint16_t address, uint8_t data)
  **********************************************************************/
 void umd::writeByte(uint16_t address, uint8_t data)
 {
-	_latchAddress(address);
-	_setDatabusOutput();
+    _latchAddress(address);
+    _setDatabusOutput();
 
-	//write genesis odd bytes to the high byte of the bus
-	switch(_mode)
-	{
-		case MD:
-			DATAOUTL = data;
-			// write to the bus
-			digitalWrite(nCE, LOW);
-			digitalWrite(GEN_nLWR, LOW);
-			delayMicroseconds(1);
-			digitalWrite(GEN_nLWR, HIGH);
-			digitalWrite(nCE, HIGH);
-			break;
-		case MS:
-			DATAOUTL = data;
-			// write to the bus
-			digitalWrite(nCE, LOW);
-			digitalWrite(nWR, LOW);
-			delayMicroseconds(2);
-			digitalWrite(nWR, HIGH);
-			digitalWrite(nCE, HIGH);
-			break;
-		case PC:
-		case TG:
-		case CV:
-		default:
-			DATAOUTL = data;
-			// write to the bus
-			digitalWrite(nCE, LOW);
-			digitalWrite(nWR, LOW);
-			delayMicroseconds(1);
-			digitalWrite(nWR, HIGH);
-			digitalWrite(nCE, HIGH);
-			break;
-	}
+    //write genesis odd bytes to the high byte of the bus
+    switch(_mode)
+    {
+        case MD:
+            DATAOUTL = data;
+            // write to the bus
+            digitalWrite(nCE, LOW);
+            digitalWrite(GEN_nLWR, LOW);
+            delayMicroseconds(1);
+            digitalWrite(GEN_nLWR, HIGH);
+            digitalWrite(nCE, HIGH);
+            break;
+        case MS:
+            DATAOUTL = data;
+            // write to the bus
+            digitalWrite(nCE, LOW);
+            digitalWrite(nWR, LOW);
+            delayMicroseconds(2);
+            digitalWrite(nWR, HIGH);
+            digitalWrite(nCE, HIGH);
+            break;
+        case PC:
+        case TG:
+        case CV:
+        default:
+            DATAOUTL = data;
+            // write to the bus
+            digitalWrite(nCE, LOW);
+            digitalWrite(nWR, LOW);
+            delayMicroseconds(1);
+            digitalWrite(nWR, HIGH);
+            digitalWrite(nCE, HIGH);
+            break;
+    }
   
-	_setDatabusInput();
-	
+    _setDatabusInput();
+    
 }
 
 /*******************************************************************//**
@@ -697,45 +697,45 @@ void umd::writeByte(uint16_t address, uint8_t data)
  **********************************************************************/
 void umd::writeByte(uint32_t address, uint8_t data)
 {
-	_latchAddress(address);
-	_setDatabusOutput();
-	
-	switch(_mode)
-	{
-		case MD:
-			DATAOUTL = data;
-			// write to the bus
-			digitalWrite(nCE, LOW);
-			digitalWrite(GEN_nLWR, LOW);
-			delayMicroseconds(1);
-			digitalWrite(GEN_nLWR, HIGH);
-			digitalWrite(nCE, HIGH);
-			break;
-		case MS:
-			DATAOUTL = data;
-			// write to the bus
-			digitalWrite(nCE, LOW);
-			digitalWrite(nWR, LOW);
-			delayMicroseconds(2);
-			digitalWrite(nWR, HIGH);
-			digitalWrite(nCE, HIGH);
-			break;
-		case PC:
-		case TG:
-		case CV:
-		default:
-			DATAOUTL = data;
-			// write to the bus
-			digitalWrite(nCE, LOW);
-			digitalWrite(nWR, LOW);
-			delayMicroseconds(1);
-			digitalWrite(nWR, HIGH);
-			digitalWrite(nCE, HIGH);
-			break;
-	}
-	
-	_setDatabusInput();
-	
+    _latchAddress(address);
+    _setDatabusOutput();
+    
+    switch(_mode)
+    {
+        case MD:
+            DATAOUTL = data;
+            // write to the bus
+            digitalWrite(nCE, LOW);
+            digitalWrite(GEN_nLWR, LOW);
+            delayMicroseconds(1);
+            digitalWrite(GEN_nLWR, HIGH);
+            digitalWrite(nCE, HIGH);
+            break;
+        case MS:
+            DATAOUTL = data;
+            // write to the bus
+            digitalWrite(nCE, LOW);
+            digitalWrite(nWR, LOW);
+            delayMicroseconds(2);
+            digitalWrite(nWR, HIGH);
+            digitalWrite(nCE, HIGH);
+            break;
+        case PC:
+        case TG:
+        case CV:
+        default:
+            DATAOUTL = data;
+            // write to the bus
+            digitalWrite(nCE, LOW);
+            digitalWrite(nWR, LOW);
+            delayMicroseconds(1);
+            digitalWrite(nWR, HIGH);
+            digitalWrite(nCE, HIGH);
+            break;
+    }
+    
+    _setDatabusInput();
+    
 }
 
 /*******************************************************************//**
@@ -746,19 +746,19 @@ void umd::writeByte(uint32_t address, uint8_t data)
  **********************************************************************/
 void umd::writeWordTime(uint16_t address, uint16_t data)
 {
-	_latchAddress(address);
-	_setDatabusOutput();
+    _latchAddress(address);
+    _setDatabusOutput();
 
-	//put word on bus
-	DATAOUTH = (uint8_t)(data);
-	DATAOUTL = (uint8_t)(data>>8);
-	
-	// write to the bus
-	digitalWrite(GEN_nTIME, LOW);
-	//delayMicroseconds(1);
-	digitalWrite(GEN_nTIME, HIGH);
+    //put word on bus
+    DATAOUTH = (uint8_t)(data);
+    DATAOUTL = (uint8_t)(data>>8);
+    
+    // write to the bus
+    digitalWrite(GEN_nTIME, LOW);
+    //delayMicroseconds(1);
+    digitalWrite(GEN_nTIME, HIGH);
   
-	_setDatabusInput();
+    _setDatabusInput();
 }
 
 /*******************************************************************//**
@@ -770,21 +770,21 @@ void umd::writeWordTime(uint16_t address, uint16_t data)
  **********************************************************************/
 void umd::writeWord(uint32_t address, uint16_t data)
 {
-	_latchAddress(address);
-	_setDatabusOutput();
+    _latchAddress(address);
+    _setDatabusOutput();
 
-	//put word on bus
-	DATAOUTH = (uint8_t)(data);
-	DATAOUTL = (uint8_t)(data>>8);
+    //put word on bus
+    DATAOUTH = (uint8_t)(data);
+    DATAOUTL = (uint8_t)(data>>8);
 
-	// write to the bus
-	digitalWrite(nCE, LOW);
-	digitalWrite(nWR, LOW);
-	//delayMicroseconds(1);
-	digitalWrite(nWR, HIGH);
-	digitalWrite(nCE, HIGH);
+    // write to the bus
+    digitalWrite(nCE, LOW);
+    digitalWrite(nWR, LOW);
+    //delayMicroseconds(1);
+    digitalWrite(nWR, HIGH);
+    digitalWrite(nCE, HIGH);
   
-	_setDatabusInput();
+    _setDatabusInput();
 }
 
 /*******************************************************************//**
@@ -796,21 +796,21 @@ void umd::writeWord(uint32_t address, uint16_t data)
  **********************************************************************/
 void umd::writeWord(uint16_t address, uint16_t data)
 {
-	_latchAddress(address);
-	_setDatabusOutput();
+    _latchAddress(address);
+    _setDatabusOutput();
 
-	//put word on bus
-	DATAOUTH = (uint8_t)(data);
-	DATAOUTL = (uint8_t)(data>>8);
+    //put word on bus
+    DATAOUTH = (uint8_t)(data);
+    DATAOUTL = (uint8_t)(data>>8);
 
-	// write to the bus
-	digitalWrite(nCE, LOW);
-	digitalWrite(nWR, LOW);
-	//delayMicroseconds(1);
-	digitalWrite(nWR, HIGH);
-	digitalWrite(nCE, HIGH);
+    // write to the bus
+    digitalWrite(nCE, LOW);
+    digitalWrite(nWR, LOW);
+    //delayMicroseconds(1);
+    digitalWrite(nWR, HIGH);
+    digitalWrite(nCE, HIGH);
   
-	_setDatabusInput();
+    _setDatabusInput();
 }
 
 /*******************************************************************//**
@@ -824,72 +824,72 @@ void umd::writeWord(uint16_t address, uint16_t data)
  **********************************************************************/
 void umd::programByte(uint32_t address, uint8_t data, bool wait)
 {
-  	switch(_mode)
-  	{
-		//MX29F800 program byte with reversed data
-		case PC:
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0xA0);
-			writeByte(address, reverseByte(data));
-			
-			//use data polling to validate end of program cycle
-			if(wait)
-			{
-				while( toggleBit(2, 0) != 2 );
-			}
-			break;
-		//MX29F800 program byte
-		case TG:
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0xA0);
-			writeByte(address, data);
-			
-			//use data polling to validate end of program cycle
-			if(wait)
-			{
-				while( toggleBit(2, 0) != 2 );
-			}
-			break;
-		//MX29F800 program byte through SMS mapper
-		case MS:
-			//enable rom write enable bit
-			writeByte((uint16_t)SMS_CONF_REG_ADDR,0x80);
-		
-			writeByte((uint16_t)0x0AAA, 0xAA);
-			writeByte((uint16_t)0x0555, 0x55);
-			writeByte((uint16_t)0x0AAA, 0xA0);
-			
-			//program byte in through slot 2
-			writeByte(setSMSSlotRegister(2,address), data);
-			
-			//use data polling to validate end of program cycle
-			if(wait)
-			{
-				while( toggleBit(2, 0) != 2 );
-			}
-			
-			//disable rom write enable bit
-			writeByte((uint16_t)SMS_CONF_REG_ADDR,0x00);
-			break;
-		//SST39SF0x0 program byte
-		case CV:
-			writeByte((uint16_t)0x5555, 0xAA);
-			writeByte((uint16_t)0x2AAA, 0x55);
-			writeByte((uint16_t)0x5555, 0xA0);
-			
-			writeByte(address, data);
-			
-			//use data polling to validate end of program cycle
-			if(wait)
-			{
-				while( toggleBit(2, 0) != 2 );
-			}
-      		break;
-		default:
-			break;
-  	}
+    switch(_mode)
+    {
+        //MX29F800 program byte with reversed data
+        case PC:
+            writeByte((uint16_t)0x0AAA, 0xAA);
+            writeByte((uint16_t)0x0555, 0x55);
+            writeByte((uint16_t)0x0AAA, 0xA0);
+            writeByte(address, reverseByte(data));
+            
+            //use data polling to validate end of program cycle
+            if(wait)
+            {
+                while( toggleBit(2, 0) != 2 );
+            }
+            break;
+        //MX29F800 program byte
+        case TG:
+            writeByte((uint16_t)0x0AAA, 0xAA);
+            writeByte((uint16_t)0x0555, 0x55);
+            writeByte((uint16_t)0x0AAA, 0xA0);
+            writeByte(address, data);
+            
+            //use data polling to validate end of program cycle
+            if(wait)
+            {
+                while( toggleBit(2, 0) != 2 );
+            }
+            break;
+        //MX29F800 program byte through SMS mapper
+        case MS:
+            //enable rom write enable bit
+            writeByte((uint16_t)SMS_CONF_REG_ADDR,0x80);
+        
+            writeByte((uint16_t)0x0AAA, 0xAA);
+            writeByte((uint16_t)0x0555, 0x55);
+            writeByte((uint16_t)0x0AAA, 0xA0);
+            
+            //program byte in through slot 2
+            writeByte(setSMSSlotRegister(2,address), data);
+            
+            //use data polling to validate end of program cycle
+            if(wait)
+            {
+                while( toggleBit(2, 0) != 2 );
+            }
+            
+            //disable rom write enable bit
+            writeByte((uint16_t)SMS_CONF_REG_ADDR,0x00);
+            break;
+        //SST39SF0x0 program byte
+        case CV:
+            writeByte((uint16_t)0x5555, 0xAA);
+            writeByte((uint16_t)0x2AAA, 0x55);
+            writeByte((uint16_t)0x5555, 0xA0);
+            
+            writeByte(address, data);
+            
+            //use data polling to validate end of program cycle
+            if(wait)
+            {
+                while( toggleBit(2, 0) != 2 );
+            }
+            break;
+        default:
+            break;
+    }
 }
 
 /*******************************************************************//**
@@ -903,38 +903,38 @@ void umd::programByte(uint32_t address, uint8_t data, bool wait)
  **********************************************************************/
 void umd::programWord(uint32_t address, uint16_t data, bool wait)
 {
-  	switch(_mode)
-  	{
-		//MX29F800 program word
-		case MD:
-			if ( address < GEN_CHIP_1_BASE )
-			{
-				writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
-				writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
-				writeWord( (uint16_t)(0x000555 << 1), 0xA000);
-				writeWord( (uint32_t)address, data );
-				//use toggle bit to validate end of program cycle
-				if(wait)
-				{
-					while( toggleBit(2, 0) != 2 );
-				}
-			}else
-			{
-				writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
-				writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
-				writeWord( (uint16_t)(0x000555 << 1), 0xA000);
-				writeWord( (uint32_t)address, data );
-				//use toggle bit to validate end of program cycle
-				if(wait)
-				{
-					while( toggleBit(2, 1) != 2 );
-				}
-			}
-			
-			break;
-		default:
-			break;
-  	}
+    switch(_mode)
+    {
+        //MX29F800 program word
+        case MD:
+            if ( address < GEN_CHIP_1_BASE )
+            {
+                writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+                writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
+                writeWord( (uint16_t)(0x000555 << 1), 0xA000);
+                writeWord( (uint32_t)address, data );
+                //use toggle bit to validate end of program cycle
+                if(wait)
+                {
+                    while( toggleBit(2, 0) != 2 );
+                }
+            }else
+            {
+                writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
+                writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
+                writeWord( (uint16_t)(0x000555 << 1), 0xA000);
+                writeWord( (uint32_t)address, data );
+                //use toggle bit to validate end of program cycle
+                if(wait)
+                {
+                    while( toggleBit(2, 1) != 2 );
+                }
+            }
+            
+            break;
+        default:
+            break;
+    }
 }
 
 /*******************************************************************//**
@@ -943,85 +943,85 @@ void umd::programWord(uint32_t address, uint16_t data, bool wait)
  **********************************************************************/
 uint8_t umd::toggleBit(uint8_t attempts, uint8_t chip)
 {
-	uint8_t retValue = 0;
-	uint16_t read16Value, old16Value;
-	uint8_t readValue, oldValue;
-	uint8_t i;
-	
-	uint32_t baseAddress = 0;
-	
-  	switch(_mode)
-  	{
-		//mx29f800 toggle bit on bit 6
-		case MD:
-			if( chip == 1 )
-			{
-				baseAddress =  + GEN_CHIP_1_BASE;
-			}
-			
-			//first read of bit 6 - big endian
-			old16Value = readWord((uint32_t)baseAddress) & 0x4000;
-			
-			for( i=0; i<attempts; i++ )
-			{
-				//successive reads compare this read to the previous one for toggle bit
-				read16Value = readWord((uint32_t)baseAddress) & 0x4000;
-				if( old16Value == read16Value )
-				{
-					retValue += 1;
-				}else
-				{
-					retValue = 0;
-				}
-				old16Value = read16Value;
-			}
-			break;
-			
-		//mx29f800 toggle bit on bit 6
-		case MS:
-		case PC:
-		case TG:
-			//first read of bit 6
-			oldValue = readByte((uint16_t)0x0000, false) & 0x40;
-			
-			for( i=0; i<attempts; i++ )
-			{
-				//successive reads compare this read to the previous one for toggle bit
-				readValue = readByte((uint16_t)0x0000, false) & 0x40;
-				if( oldValue == readValue )
-				{
-					retValue += 1;
-				}else
-				{
-					retValue = 0;
-				}
-				oldValue = readValue;
-			}
-			break;
-		//SST39SF0x0 toggle bit on bit 6
-    	case CV:
-			
-			//first read should always be a 1 according to datasheet
-			oldValue = readByte((uint16_t)0x0000, false) & 0x40;
-			
-			for( i=0; i<attempts; i++ )
-			{
-				//successive reads compare this read to the previous one for toggle bit
-				readValue = readByte((uint16_t)0x0000, false) & 0x40;
-				if( oldValue == readValue )
-				{
-					retValue += 1;
-				}else
-				{
-					retValue = 0;
-				}
-				oldValue = readValue;
-			}
-      		break;
-		default:
-			break;
-  	}
-  	return retValue;
+    uint8_t retValue = 0;
+    uint16_t read16Value, old16Value;
+    uint8_t readValue, oldValue;
+    uint8_t i;
+    
+    uint32_t baseAddress = 0;
+    
+    switch(_mode)
+    {
+        //mx29f800 toggle bit on bit 6
+        case MD:
+            if( chip == 1 )
+            {
+                baseAddress =  + GEN_CHIP_1_BASE;
+            }
+            
+            //first read of bit 6 - big endian
+            old16Value = readWord((uint32_t)baseAddress) & 0x4000;
+            
+            for( i=0; i<attempts; i++ )
+            {
+                //successive reads compare this read to the previous one for toggle bit
+                read16Value = readWord((uint32_t)baseAddress) & 0x4000;
+                if( old16Value == read16Value )
+                {
+                    retValue += 1;
+                }else
+                {
+                    retValue = 0;
+                }
+                old16Value = read16Value;
+            }
+            break;
+            
+        //mx29f800 toggle bit on bit 6
+        case MS:
+        case PC:
+        case TG:
+            //first read of bit 6
+            oldValue = readByte((uint16_t)0x0000, false) & 0x40;
+            
+            for( i=0; i<attempts; i++ )
+            {
+                //successive reads compare this read to the previous one for toggle bit
+                readValue = readByte((uint16_t)0x0000, false) & 0x40;
+                if( oldValue == readValue )
+                {
+                    retValue += 1;
+                }else
+                {
+                    retValue = 0;
+                }
+                oldValue = readValue;
+            }
+            break;
+        //SST39SF0x0 toggle bit on bit 6
+        case CV:
+            
+            //first read should always be a 1 according to datasheet
+            oldValue = readByte((uint16_t)0x0000, false) & 0x40;
+            
+            for( i=0; i<attempts; i++ )
+            {
+                //successive reads compare this read to the previous one for toggle bit
+                readValue = readByte((uint16_t)0x0000, false) & 0x40;
+                if( oldValue == readValue )
+                {
+                    retValue += 1;
+                }else
+                {
+                    retValue = 0;
+                }
+                oldValue = readValue;
+            }
+            break;
+        default:
+            break;
+    }
+    return retValue;
 }
 
 /*******************************************************************//**
@@ -1073,26 +1073,26 @@ uint8_t umd::reverseByte(uint8_t data)
  **********************************************************************/
 uint16_t umd::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
 {
-	uint16_t virtualAddress;
-	
-	switch( slotNum )
-	{
-		case 0:
-			writeByte( SMS_SLOT_0_REG_ADDR, (uint8_t)(address >> 14) );
-			virtualAddress = ( SMS_SLOT_0_ADDR | ( (uint16_t)address & 0x3FFF) );
-			break;
-		case 1:
-			writeByte( SMS_SLOT_1_REG_ADDR, (uint8_t)(address >> 14) );
-			virtualAddress = ( SMS_SLOT_1_ADDR | ( (uint16_t)address & 0x3FFF) );
-			break;
-		case 2:
-			writeByte( SMS_SLOT_2_REG_ADDR, (uint8_t)(address >> 14) );
-			virtualAddress = ( SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF) );
-			break;
-		default:
-			writeByte( SMS_SLOT_2_REG_ADDR, (uint8_t)(address >> 14) );
-			virtualAddress = ( SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF) );
-			break;
-	}
-	return virtualAddress;
+    uint16_t virtualAddress;
+    
+    switch( slotNum )
+    {
+        case 0:
+            writeByte( SMS_SLOT_0_REG_ADDR, (uint8_t)(address >> 14) );
+            virtualAddress = ( SMS_SLOT_0_ADDR | ( (uint16_t)address & 0x3FFF) );
+            break;
+        case 1:
+            writeByte( SMS_SLOT_1_REG_ADDR, (uint8_t)(address >> 14) );
+            virtualAddress = ( SMS_SLOT_1_ADDR | ( (uint16_t)address & 0x3FFF) );
+            break;
+        case 2:
+            writeByte( SMS_SLOT_2_REG_ADDR, (uint8_t)(address >> 14) );
+            virtualAddress = ( SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF) );
+            break;
+        default:
+            writeByte( SMS_SLOT_2_REG_ADDR, (uint8_t)(address >> 14) );
+            virtualAddress = ( SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF) );
+            break;
+    }
+    return virtualAddress;
 }
