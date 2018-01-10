@@ -1,41 +1,31 @@
 /*******************************************************************//**
- *  \file dbDumper.h
+ *  \file umd.h
  *  \author René Richard
- *  \brief This program allows to read and write to various game cartridges including: Genesis, Coleco, SMS, PCE - with possibility for future expansion.
- *  
- *  Target Hardware:
- *  Teensy++2.0 with db Electronics TeensyDumper board rev >= 1.1
- *  Arduino IDE settings:
- *  Board Type  - Teensy++2.0
- *  USB Type    - Serial
- *  CPU Speed   - 16 MHz
- **********************************************************************/
- 
- /*
- LICENSE
- 
-    This file is part of dbDumper.
+ *  \brief This program allows to read and write to various game cartridges 
+ *         including: Genesis, Coleco, SMS, PCE - with possibility for 
+ *         future expansion.
+ *
+ * LICENSE
+ *
+ *   This file is part of Universal Mega Dumper.
+ *
+ *   Universal Mega Dumper is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   Universal Mega Dumper is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with Universal Mega Dumper.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-    dbDumper is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+#ifndef umd_h
+#define umd_h
 
-    dbDumper is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with dbDumper.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-#ifndef dbDumper_h
-#define dbDumper_h
-
-//#define _DEBUG_DB
-
-  //define pins
 #define DATAOUTH      PORTD		/**< PORTD used for high byte of databus output */
 #define DATAOUTL      PORTC		/**< PORTD used for low byte of databus output */
 #define DATAINH       PIND		/**< PIND used for high byte databus input */
@@ -44,16 +34,16 @@
 #define DATAL_DDR     DDRC		/**< DDRC data direction for low byte of databus */
 
 /*******************************************************************//** 
- * \class dbDumper
- * \brief Teensy dbDumper class to read and write db Flash Carts
+ * \class umd
+ * \brief Teensy umd class to read and write db Flash Carts
  **********************************************************************/
-class dbDumper
+class umd
 {
 	public:
 
 		/*******************************************************************//**
 		 * \brief eMode Type
-		 * eMode is used by dbDumper to keep track of which mode is currently set
+		 * eMode is used by umd to keep track of which mode is currently set
 		 **********************************************************************/
 		enum eMode
 		{ 
@@ -68,7 +58,7 @@ class dbDumper
 		/*******************************************************************//**
 		 * \brief Constructor
 		 **********************************************************************/
-		dbDumper();
+		umd();
 
 		/*******************************************************************//**
 		 * \brief Reset the Flash IC in the catridge
@@ -77,21 +67,20 @@ class dbDumper
 		void resetCart();
 		
 		/*******************************************************************//**
-		 * \brief Set the operation mode of the dbDumper
-		 * \param eMode enum mode to set
-		 * \return true if cartridge asserts the #CART signal
+		 * \brief Set the operation mode of the umd
+		 * \return true if cartridge asserts the nCART signal
 		 **********************************************************************/
 		bool detectCart();
 		
 		/*******************************************************************//**
-		 * \brief Set the operation mode of the dbDumper
-		 * \param eMode enum mode to set
+		 * \brief Set the operation mode of the umd
+		 * \param mode the mode to set
 		 * \return void
 		 **********************************************************************/
-		void setMode(eMode);
+		void setMode(eMode mode);
 		
 		/*******************************************************************//**
-		 * \brief Set the operation mode of the dbDumper
+		 * \brief Set the operation mode of the umd
 		 * \return eMode of currently set mode
 		 **********************************************************************/
 		eMode getMode() { return _mode; }
@@ -104,9 +93,9 @@ class dbDumper
 		
 		/*******************************************************************//**
 		 * \brief set the SMS slot register value
-		 * \param uint8_t  slot number
-		 * \param uint32_t address
-		 * \return uint16_t address the virtual address to write to the slot
+		 * \param slotNum the slot number
+		 * \param address the real ROM address
+		 * \return virtual address
 		 **********************************************************************/
 		uint16_t setSMSSlotRegister(uint8_t slotNum, uint32_t address);
 
@@ -119,30 +108,30 @@ class dbDumper
 		/**@{*/
 		/*******************************************************************//**
 		 * \brief Read the Manufacturer and Product ID in the Flash IC
-		 * \return uint32_t flashID
+		 * \return flashID
 		 **********************************************************************/
 		uint32_t getFlashID();
 
 		/*******************************************************************//**
 		 * \brief Erase the entire Flash IC
-		 * \param bool wait
-		 * \param uint8_t chip
-		 * \return uint32_t time in millis operation took to complete
+		 * \param wait specify whether to wait for the operation to complete before returning
+		 * \param chip specify which chip to erase
+		 * \return time in millis operation took to complete
 		 **********************************************************************/
 		uint32_t eraseChip(bool wait, uint8_t chip);
 		
 		/*******************************************************************//**
 		 * \brief Erase a sector in the Flash IC
-		 * \param uint32_t address of the sector
+		 * \param sectorAddress an address in the sector to be erased
 		 * \return void
 		 **********************************************************************/
 		void eraseSector(uint32_t sectorAddress);
 		
 		/*******************************************************************//**
 		 * \brief Perform toggle bit algorithm
-		 * \param uint8_t attempts
-		 * \param uint8_t chip
-		 * \return uint8_t success the number of times the bit did not toggle
+		 * \param attempts how many toggle bits to attempt
+		 * \param chip which chip to perform toggle bit on
+		 * \return the number of times the bit successfully toggled
 		 **********************************************************************/
 		uint8_t toggleBit(uint8_t attempts, uint8_t chip);
 
@@ -184,15 +173,15 @@ class dbDumper
 		 **********************************************************************/
 		/**@{*/
 		/*******************************************************************//**
-		 * \brief Write a byte to the #TIME region on genesis
-		 * \param uint16_t address
-		 * \param uint8_t data
+		 * \brief Write a byte to the nTIME region on genesis
+		 * \param address 16bit address
+		 * \param data byte
 		 * \return void
 		 **********************************************************************/
 		void writeByteTime(uint16_t address, uint8_t data);
 		
 		/*******************************************************************//**
-		 * \brief Write a byte to a 16bit address
+		 * \brief Write a byte to a 16bit address in the nTIME range (Genesis only)
 		 * \param address 16bit address
 		 * \param data byte
 		 * \return void
@@ -208,9 +197,9 @@ class dbDumper
 		void writeByte(uint32_t address, uint8_t data);
 		
 		/*******************************************************************//**
-		 * \brief Write a word to the #TIME region on genesis
-		 * \param uint16_t address
-		 * \param uint16_t data
+		 * \brief Write a word to a 16bit address in the nTIME range (Genesis only)
+		 * \param address 24bit address
+		 * \param data word
 		 * \return void
 		 **********************************************************************/
 		void writeWordTime(uint16_t address, uint16_t data);
@@ -243,7 +232,7 @@ class dbDumper
 		 * \brief Program a byte in the Flash IC
 		 * \param address 24bit address
 		 * \param data byte
-		 * \param wait Wait for completion using data polling to return from function
+		 * \param wait Wait for completion using toggle bit to return from function
 		 * \return void
 		 **********************************************************************/
 		void programByte(uint32_t address, uint8_t data, bool wait);
@@ -252,26 +241,33 @@ class dbDumper
 		 * \brief Program a word in the Flash IC
 		 * \param address 24bit address
 		 * \param data word
-		 * \param wait Wait for completion using data polling to return from function
+		 * \param wait Wait for completion using toggle bit to return from function
 		 * \return void
 		 **********************************************************************/
 		void programWord(uint32_t address, uint16_t data, bool wait);
 	
 		/**@}*/
 
+		/*******************************************************************//** 
+		 * \name Master System Constants
+		 * Register addresses in Master System mode
+		 **********************************************************************/
+		/**@{*/
+		static const uint16_t SMS_SLOT_0_ADDR = 0x0000; 	///< SMS Sega Mapper slot 0 base address 0x0000 - 0x3FFF
+		static const uint16_t SMS_SLOT_1_ADDR = 0x4000; 	///< SMS Sega Mapper slot 1 base address 0x4000 - 0x7FFF
+		static const uint16_t SMS_SLOT_2_ADDR = 0x8000; 	///< SMS Sega Mapper slot 2 base address 0x8000 - 0xBFFF
+		static const uint16_t SMS_CONF_REG_ADDR   = 0xFFFC; ///< SMS Sega Mapper RAM mapping and miscellaneous functions register
+		static const uint16_t SMS_SLOT_0_REG_ADDR = 0xFFFD; ///< SMS Sega Mapper slot 0 register address 0x0000 - 0x3FFF
+		static const uint16_t SMS_SLOT_1_REG_ADDR = 0xFFFE; ///< SMS Sega Mapper slot 1 register address 0x4000 - 0x7FFF
+		static const uint16_t SMS_SLOT_2_REG_ADDR = 0xFFFF; ///< SMS Sega Mapper slot 2 register address 0x8000 - 0xBFFF
+		/**@}*/
 
 		//pin numbers UI
-		static const uint8_t nLED = 8;
-		static const uint8_t nPB = 9;
+		static const uint8_t nLED = 8;						///< LED pin number
+		static const uint8_t nPB = 9;						///< Pushbutton pin number
 		
 		//Master System Slot Base Addresses
-		static const uint16_t SMS_SLOT_0_ADDR = 0x0000; /**< SMS Sega Mapper slot 0 base address 0x0000 - 0x3FFF */
-		static const uint16_t SMS_SLOT_1_ADDR = 0x4000; /**< SMS Sega Mapper slot 1 base address 0x4000 - 0x7FFF */
-		static const uint16_t SMS_SLOT_2_ADDR = 0x8000; /**< SMS Sega Mapper slot 2 base address 0x8000 - 0xBFFF */
-		static const uint16_t SMS_CONF_REG_ADDR   = 0xFFFC; /**< SMS Sega Mapper RAM mapping and miscellaneous functions register */
-		static const uint16_t SMS_SLOT_0_REG_ADDR = 0xFFFD; /**< SMS Sega Mapper slot 0 register address 0x0000 - 0x3FFF */
-		static const uint16_t SMS_SLOT_1_REG_ADDR = 0xFFFE; /**< SMS Sega Mapper slot 1 register address 0x4000 - 0x7FFF */
-		static const uint16_t SMS_SLOT_2_REG_ADDR = 0xFFFF; /**< SMS Sega Mapper slot 2 register address 0x8000 - 0xBFFF */
+		
 
 	private:
 		uint8_t _resetPin;
@@ -343,5 +339,5 @@ class dbDumper
 		static const uint8_t SCSp = 20;	
 };
 
-#endif  //dbDumper_h
+#endif  //umd_h
 

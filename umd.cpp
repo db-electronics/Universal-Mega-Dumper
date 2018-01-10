@@ -1,42 +1,35 @@
 /*******************************************************************//**
- * \file dbDumper.cpp
- * \author René Richard
- * \brief This program allows to read and write to various game cartridges including: Genesis, Coleco, SMS, PCE - with possibility for future expansion.
- *  
- * Target Hardware:
- * Teensy++2.0 with db Electronics TeensyDumper board rev >= 1.1
- * Arduino IDE settings:
- * Board Type  - Teensy++2.0
- * USB Type    - Serial
- * CPU Speed   - 16 MHz
- **********************************************************************/
-
- /*
- LICENSE
- 
-    This file is part of dbDumper.
-
-    dbDumper is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    dbDumper is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with dbDumper.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ *  \file umd.cpp
+ *  \author René Richard
+ *  \brief This program allows to read and write to various game cartridges 
+ *         including: Genesis, Coleco, SMS, PCE - with possibility for 
+ *         future expansion.
+ *
+ * LICENSE
+ *
+ *   This file is part of Universal Mega Dumper.
+ *
+ *   Universal Mega Dumper is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   Universal Mega Dumper is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with Universal Mega Dumper.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "Arduino.h"
-#include "dbDumper.h"
+#include "umd.h"
 
 /*******************************************************************//**
  * The constructor sets the mode using setMode() to undefined.
  **********************************************************************/
-dbDumper::dbDumper() 
+umd::umd() 
 {
   	setMode(undefined);
 }
@@ -45,7 +38,7 @@ dbDumper::dbDumper()
  * The _setDatabusInput function sets the databus to inputs and 
  * deactivates the built-in pullup resistors
  **********************************************************************/
-inline void dbDumper::_setDatabusInput()
+inline void umd::_setDatabusInput()
 {
 	//set data to inputs
 	DATAH_DDR = 0x00;
@@ -57,7 +50,7 @@ inline void dbDumper::_setDatabusInput()
 /*******************************************************************//**
  * The _setDatabusOutput function sets the databus to outputs
  **********************************************************************/
-inline void dbDumper::_setDatabusOutput()
+inline void umd::_setDatabusOutput()
 {
 	//set data to outputs
 	DATAH_DDR = 0xFF;
@@ -70,7 +63,7 @@ inline void dbDumper::_setDatabusOutput()
  * 
  * \warning setMode() must be called prior to using this function.
   **********************************************************************/
-void dbDumper::resetCart()
+void umd::resetCart()
 {
 	digitalWrite(_resetPin, LOW);
 	delay(200);
@@ -82,7 +75,7 @@ void dbDumper::resetCart()
  * The detectCart() functions tests if the nCART line is pulled low
  * by a cartridge.
  **********************************************************************/
-bool dbDumper::detectCart()
+bool umd::detectCart()
 {
   	bool detect = false;
 
@@ -96,9 +89,9 @@ bool dbDumper::detectCart()
 /*******************************************************************//**
  * The setMode() function configures the Teensy IO properly for the
  * selected cartridge. The _mode and _resetPin variables store the
- * current mode and resetPin #s for later use by the firmware.
+ * current mode and resetPin numbers for later use by the firmware.
  **********************************************************************/
-void dbDumper::setMode(eMode mode)
+void umd::setMode(eMode mode)
 {
 	_setDatabusInput();
 
@@ -199,7 +192,7 @@ void dbDumper::setMode(eMode mode)
  * The _latchAddress function latches a 24bit address to the cartridge
  * \warning incompatible with Colecovision mode
  **********************************************************************/
-inline void dbDumper::_latchAddress(uint32_t address)
+inline void umd::_latchAddress(uint32_t address)
 {
 	uint8_t addrh,addrm,addrl;
 	
@@ -233,7 +226,7 @@ inline void dbDumper::_latchAddress(uint32_t address)
  * The _latchAddress function latches a 16bit address to the cartridge.
  * \warning upper 8 address bits (23..16) are not modified
  **********************************************************************/
-inline void dbDumper::_latchAddress(uint16_t address)
+inline void umd::_latchAddress(uint16_t address)
 {
 	uint8_t addrm,addrl;
 	
@@ -259,7 +252,7 @@ inline void dbDumper::_latchAddress(uint16_t address)
  * 
  * \warning setMode() must be called prior to using this function.
  **********************************************************************/
-uint32_t dbDumper::getFlashID()
+uint32_t umd::getFlashID()
 {
   	uint32_t flashID = 0;
 
@@ -357,14 +350,12 @@ uint32_t dbDumper::getFlashID()
 }
 
 /*******************************************************************//**
- * The setMode() function erases the entire chip. If the wait parameter
+ * The eraseChip() function erases the entire flash. If the wait parameter
  * is true the function will block with toggle bit until the erase 
  * operation has completed. It will return the time in millis the
  * operation required to complete.
- * 
- * \warning setMode() must be called prior to using this function.
  **********************************************************************/
-uint32_t dbDumper::eraseChip(bool wait, uint8_t chip)
+uint32_t umd::eraseChip(bool wait, uint8_t chip)
 {
 	uint32_t startMillis, intervalMillis;
 	
@@ -462,7 +453,7 @@ uint32_t dbDumper::eraseChip(bool wait, uint8_t chip)
 /*******************************************************************//**
  * The eraseSector function erases a sector in the flash memory
  **********************************************************************/
-void dbDumper::eraseSector(uint32_t sectorAddress)
+void umd::eraseSector(uint32_t sectorAddress)
 {
   	switch(_mode)
   	{
@@ -506,7 +497,7 @@ void dbDumper::eraseSector(uint32_t sectorAddress)
  * 
  * \warning setMode() must be called prior to using this function.
  **********************************************************************/
-uint8_t dbDumper::readByte(uint16_t address, bool external)
+uint8_t umd::readByte(uint16_t address, bool external)
 {
 	uint8_t readData;
 
@@ -552,7 +543,7 @@ uint8_t dbDumper::readByte(uint16_t address, bool external)
  * 
  * \warning setMode() must be called prior to using this function.
  **********************************************************************/
-uint8_t dbDumper::readByte(uint32_t address, bool external)
+uint8_t umd::readByte(uint32_t address, bool external)
 {
 	uint8_t readData;
 
@@ -599,7 +590,7 @@ uint8_t dbDumper::readByte(uint32_t address, bool external)
  * \warning setMode() must be called prior to using this function.
  * \warning converts to little endian
  **********************************************************************/
-uint16_t dbDumper::readWord(uint32_t address)
+uint16_t umd::readWord(uint32_t address)
 {
 	//only genesis mode reads words
 
@@ -624,12 +615,12 @@ uint16_t dbDumper::readWord(uint32_t address)
 }
 
 /*******************************************************************//**
- * The writeByteTime function strobes a byte into #TIME region
+ * The writeByteTime function strobes a byte into nTIME region
  * 
  * \warning setMode() must be called prior to using this function.
  * \warning upper 8 address bits (23..16) are not modified
  **********************************************************************/
-void dbDumper::writeByteTime(uint16_t address, uint8_t data)
+void umd::writeByteTime(uint16_t address, uint8_t data)
 {
 	_latchAddress(address);
 	_setDatabusOutput();
@@ -654,7 +645,7 @@ void dbDumper::writeByteTime(uint16_t address, uint8_t data)
  * \warning setMode() must be called prior to using this function.
  * \warning upper 8 address bits (23..16) are not modified
  **********************************************************************/
-void dbDumper::writeByte(uint16_t address, uint8_t data)
+void umd::writeByte(uint16_t address, uint8_t data)
 {
 	_latchAddress(address);
 	_setDatabusOutput();
@@ -704,7 +695,7 @@ void dbDumper::writeByte(uint16_t address, uint8_t data)
  * 
  * \warning setMode() must be called prior to using this function.
  **********************************************************************/
-void dbDumper::writeByte(uint32_t address, uint8_t data)
+void umd::writeByte(uint32_t address, uint8_t data)
 {
 	_latchAddress(address);
 	_setDatabusOutput();
@@ -748,12 +739,12 @@ void dbDumper::writeByte(uint32_t address, uint8_t data)
 }
 
 /*******************************************************************//**
- * The writeGenesisTime function strobes a word into #TIME region
+ * The writeGenesisTime function strobes a word into nTIME region
  * 
  * \warning setMode() must be called prior to using this function.
  * \warning word is converted to big endian
  **********************************************************************/
-void dbDumper::writeWordTime(uint16_t address, uint16_t data)
+void umd::writeWordTime(uint16_t address, uint16_t data)
 {
 	_latchAddress(address);
 	_setDatabusOutput();
@@ -777,7 +768,7 @@ void dbDumper::writeWordTime(uint16_t address, uint16_t data)
  * \warning setMode() must be called prior to using this function.
  * \warning word is converted to big endian
  **********************************************************************/
-void dbDumper::writeWord(uint32_t address, uint16_t data)
+void umd::writeWord(uint32_t address, uint16_t data)
 {
 	_latchAddress(address);
 	_setDatabusOutput();
@@ -803,7 +794,7 @@ void dbDumper::writeWord(uint32_t address, uint16_t data)
  * \warning setMode() must be called prior to using this function.
  * \warning word is converted to big endian
  **********************************************************************/
-void dbDumper::writeWord(uint16_t address, uint16_t data)
+void umd::writeWord(uint16_t address, uint16_t data)
 {
 	_latchAddress(address);
 	_setDatabusOutput();
@@ -831,7 +822,7 @@ void dbDumper::writeWord(uint16_t address, uint16_t data)
  * \warning setMode() must be called prior to using this function.
  * \warning Sector or entire IC must be erased prior to programming
  **********************************************************************/
-void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
+void umd::programByte(uint32_t address, uint8_t data, bool wait)
 {
   	switch(_mode)
   	{
@@ -910,7 +901,7 @@ void dbDumper::programByte(uint32_t address, uint8_t data, bool wait)
  * \warning setMode() must be called prior to using this function.
  * \warning Sector or entire IC must be erased prior to programming
  **********************************************************************/
-void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
+void umd::programWord(uint32_t address, uint16_t data, bool wait)
 {
   	switch(_mode)
   	{
@@ -950,7 +941,7 @@ void dbDumper::programWord(uint32_t address, uint16_t data, bool wait)
  * The toggleBit uses the toggle bit flash algorithm to determine if
  * the current program operation has completed
  **********************************************************************/
-uint8_t dbDumper::toggleBit(uint8_t attempts, uint8_t chip)
+uint8_t umd::toggleBit(uint8_t attempts, uint8_t chip)
 {
 	uint8_t retValue = 0;
 	uint16_t read16Value, old16Value;
@@ -1037,7 +1028,7 @@ uint8_t dbDumper::toggleBit(uint8_t attempts, uint8_t chip)
  * The reverseByte function uses a table to reverse the bits in a byte
  * Useful for reading reverse databus on PC Engine
  **********************************************************************/
-uint8_t dbDumper::reverseByte(uint8_t data)
+uint8_t umd::reverseByte(uint8_t data)
 {
     static const uint8_t table[] = {
         0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0,
@@ -1080,7 +1071,7 @@ uint8_t dbDumper::reverseByte(uint8_t data)
  * The setSMSSlotRegister function updates the cartridge slot register
  * with the correct bank number of the corresponding address
  **********************************************************************/
-uint16_t dbDumper::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
+uint16_t umd::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
 {
 	uint16_t virtualAddress;
 	

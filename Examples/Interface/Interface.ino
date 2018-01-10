@@ -1,74 +1,67 @@
 /*******************************************************************//**
- *  \file TestDumper.ino
+ *  \file Interface.ino
  *  \author René Richard
- *  \brief This program allows to read and write to various game cartridges including: Genesis, Coleco, SMS, PCE - with possibility for future expansion.
- *  
- *  Target Hardware:
- *  Teensy++2.0 with db Electronics TeensyDumper board rev >= 1.1
- *  Arduino IDE settings:
- *  Board Type  - Teensy++2.0
- *  USB Type    - Serial
- *  CPU Speed   - 16 MHz
- **********************************************************************/
- 
-/*
- LICENSE
- 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ *  \brief This program provides a serial interface over USB to the
+ *         Universal Mega Dumper. 
+ *
+ * LICENSE
+ *
+ *   This file is part of Universal Mega Dumper.
+ *
+ *   Universal Mega Dumper is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   Universal Mega Dumper is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with Universal Mega Dumper.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-#include <SoftwareSerial.h>
-#include <SerialCommand.h>			// https://github.com/PaulStoffregen/SerialFlash
-#include <SerialFlash.h>			// https://github.com/PaulStoffregen/SerialFlash
+#include <SoftwareSerial.h>			
+#include <SerialCommand.h>					// https://github.com/db-electronics/ArduinoSerialCommand
+#include <SerialFlash.h>					// https://github.com/PaulStoffregen/SerialFlash
 #include <SPI.h>
-#include <dbDumper.h>
+#include <umd.h>
 
-#define WRITE_TIMEOUT_MS            10000
-#define DATA_BUFFER_SIZE			2048
-#define FLASH_BUFFER_SIZE    		512
+#define DATA_BUFFER_SIZE			2048	///< Size of serial receive data buffer
 
-SerialCommand SCmd;
-dbDumper db;
+SerialCommand SCmd;							///< Receive and parse serial commands
+umd umd;									///< Universal Mega Dumper declaration
 
-const int FlashChipSelect = 20; 	// digital pin for flash chip CS pin
-SerialFlashFile flashFile;
-uint8_t sflid[5];
-uint32_t sflSize;
+const int FlashChipSelect = 20; 			///< Digital pin for flash chip CS pin
+SerialFlashFile flashFile;					///< Serial flash file object
+uint8_t sfID[5];							///< Serial flash file id
+uint32_t sfSize;							///< Serial flash file size
 
-union{
-	char 		byte[DATA_BUFFER_SIZE];
-	uint16_t 	word[DATA_BUFFER_SIZE/2];
-} dataBuffer;
+union dataBuffer{
+	char 		byte[DATA_BUFFER_SIZE];		///< byte access within dataBuffer
+	uint16_t 	word[DATA_BUFFER_SIZE/2];	///< word access within dataBuffer
+} dataBuffer;								///< union of byte/words to permit the Rx of bytes and Tx of words without hassle
 
 /*******************************************************************//**
- *  \brief Main loop
+ *  \brief Flash the LED, initialize the serial flash memory
+ *         and register all serial commands.
  *  \return Void
  **********************************************************************/
 void setup() {
 
     uint8_t i;
     
-    //hello PC
     Serial.begin(115200);
-    //Serial.println(F("db Electronics TeensyDumper v0.2"));
 
-    db.setMode(db.MD);
+    umd.setMode(umd.MD);
 
     //flash to show we're alive
     for( i=0 ; i<4 ; i++ )
     {
-        digitalWrite(db.nLED, LOW);
+        digitalWrite(umd.nLED, LOW);
         delay(250);
-        digitalWrite(db.nLED, HIGH);
+        digitalWrite(umd.nLED, HIGH);
         delay(250);
     }
 
@@ -76,46 +69,51 @@ void setup() {
 		//error("Unable to access SPI Flash chip");
 	}else
 	{
-		SerialFlash.readID(sflid);
-		sflSize = SerialFlash.capacity(sflid);
+		SerialFlash.readID(sfID);
+		sfSize = SerialFlash.capacity(sfID);
 	}
 
     //register callbacks for SerialCommand related to the cartridge
-    SCmd.addCommand("flash",dbTD_flashCMD);
-    SCmd.addCommand("detect",dbTD_detectCMD);
-    SCmd.addCommand("setmode",dbTD_setModeCMD);
-    SCmd.addCommand("erase",dbTD_eraseChipCMD);
-    SCmd.addCommand("getid",dbTD_flashIDCMD);
-    SCmd.addCommand("rdword",dbTD_readWordCMD);
-    SCmd.addCommand("rdbyte",dbTD_readByteCMD);
-    SCmd.addCommand("rdbblk",dbTD_readByteBlockCMD);
-    SCmd.addCommand("rdwblk",dbTD_readWordBlockCMD);
-    SCmd.addCommand("wrbyte",dbTD_writeByteCMD);
-    SCmd.addCommand("wrword",dbTD_writeWordCMD);
-    SCmd.addCommand("prgbyte",dbTD_programByteCMD);
-    SCmd.addCommand("prgbblk",dbTD_programByteBlockCMD);
-    SCmd.addCommand("prgword",dbTD_programWordCMD);
-    SCmd.addCommand("prgwblk",dbTD_programWordBlockCMD);
-    SCmd.addCommand("rdswblk",dbTD_readSRAMWordBlockCMD);
-    SCmd.addCommand("rdsbblk",dbTD_readSRAMByteBlockCMD);
-    SCmd.addCommand("wrsblk",dbTD_writeSRAMByteBlockCMD);
-    SCmd.addCommand("wrbrblk",dbTD_writeBRAMByteBlockCMD);
+    SCmd.addCommand("flash",  _flashThunder);
+    SCmd.addCommand("detect", _detect);
+    SCmd.addCommand("setmode",_setMode);
+    
+    //register callbacks for SerialCommand related to the cartridge
+    SCmd.addCommand("erase",  eraseChip);
+    SCmd.addCommand("getid",  getFlashID);
+    
+    SCmd.addCommand("rdbyte", readByte);
+    SCmd.addCommand("rdbblk", readByteBlock);
+    SCmd.addCommand("rdsbblk",readSRAMByteBlock);
+    SCmd.addCommand("rdword", readWord);
+    SCmd.addCommand("rdwblk", readWordBlock);
+    SCmd.addCommand("rdswblk",readSRAMWordBlock);
+    
+    SCmd.addCommand("wrbyte", writeByte);
+    SCmd.addCommand("wrsblk", writeSRAMByteBlock);
+    SCmd.addCommand("wrbrblk",writeBRAMByteBlock);
+    SCmd.addCommand("wrword", writeWord);
+    
+    SCmd.addCommand("prgbyte",programByte);
+    SCmd.addCommand("prgbblk",programByteBlock);
+    SCmd.addCommand("prgword",programWord);
+    SCmd.addCommand("prgwblk",programWordBlock);
     
     //register callbacks for SerialCommand related to the onboard serial flash
-    SCmd.addCommand("sfgetid",dbTD_sflIDCMD);
-    SCmd.addCommand("sfsize",dbTD_sflGetSize);
-    SCmd.addCommand("sferase",dbTD_sflErase);
-    SCmd.addCommand("sfwrite",dbTD_sflWriteFile);
-    SCmd.addCommand("sflist",dbTD_sflListFiles);
-    SCmd.addCommand("sfread",dbTD_sflReadFile);
-    SCmd.addCommand("sfburn",dbTD_sflBurnCart);
+    SCmd.addCommand("sfgetid",sfGetID);
+    SCmd.addCommand("sfsize", sfGetSize);
+    SCmd.addCommand("sferase",sfEraseAll);
+    SCmd.addCommand("sfwrite",sfWriteFile);
+    SCmd.addCommand("sflist", sfListFiles);
+    SCmd.addCommand("sfread", sfReadFile);
+    SCmd.addCommand("sfburn", sfBurnCart);
     
-    SCmd.addDefaultHandler(unknownCMD);
+    SCmd.addDefaultHandler(_unknownCMD);
     SCmd.clearBuffer();
 }
 
 /*******************************************************************//**
- *  \brief Main loop
+ *  \brief Keep checking for serial commands.
  *  \return Void
  **********************************************************************/
 void loop()
@@ -124,75 +122,59 @@ void loop()
 }
 
 /*******************************************************************//**
- *  \brief Prints a list of registered commands on the console
+ *  \brief Prints a list of registered commands
  *  \param command The unknown command
  *  \return Void
  **********************************************************************/
-void unknownCMD(const char *command)
+void _unknownCMD(const char *command)
 {
     Serial.println(F("Unrecognized command: \""));
     Serial.println(command);
     Serial.println(F("\". Registered Commands:"));
-    Serial.println(SCmd.getCommandList());  //Returns all registered commands
+    Serial.println(SCmd.getCommandList());
 }
 
 /*******************************************************************//**
  *  \brief Auto response for detection on PC side
- *  
- *  Usage:
- *  flash
- *  
  *  \return Void
  **********************************************************************/
-void dbTD_flashCMD()
+void _flashThunder()
 {
     Serial.println(F("thunder"));
-    digitalWrite(db.nLED, LOW);
+    digitalWrite(umd.nLED, LOW);
 	delay(100);
-	digitalWrite(db.nLED, HIGH);
+	digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
  *  \brief Read the onboard serial flash ID
- *  
- *  Usage:
- *  sflgetid
- *  
  *  \return Void
  **********************************************************************/
-void dbTD_sflIDCMD()
+void sfGetID()
 {
 	//W25Q128FVSIG
-    Serial.write(sflid[0]);
-    Serial.write(sflid[1]);
-    Serial.write(sflid[2]);
-    Serial.write(sflid[3]);
-    Serial.write(sflid[4]);
+    Serial.write(sfID[0]);
+    Serial.write(sfID[1]);
+    Serial.write(sfID[2]);
+    Serial.write(sfID[3]);
+    Serial.write(sfID[4]);
 }
 
 /*******************************************************************//**
  *  \brief Get the size of the onboard serial flash
- *  
- *  Usage:
- *  sflsize
- *  
  *  \return Void
  **********************************************************************/
-void dbTD_sflGetSize()
+void sfGetSize()
 {
 	//W25Q128FVSIG
-    Serial.println(sflSize,DEC);
+    Serial.println(sfSize,DEC);
 }
 
 /*******************************************************************//**
  *  \brief Erase the serial flash
- *  
- *  Usage:
- *  sflerase
- *  
  *  \return Void
  **********************************************************************/
-void dbTD_sflErase()
+void sfEraseAll()
 {
 	char *arg;
 
@@ -206,9 +188,9 @@ void dbTD_sflErase()
                 SerialFlash.eraseAll();
 				while (SerialFlash.ready() == false) {
 					// wait, 30 seconds to 2 minutes for most chips
-					digitalWrite(db.nLED, LOW);
+					digitalWrite(umd.nLED, LOW);
 					delay(250);
-					digitalWrite(db.nLED, HIGH);
+					digitalWrite(umd.nLED, HIGH);
 					delay(250);
 					Serial.print(".");
 				}
@@ -231,7 +213,7 @@ void dbTD_sflErase()
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_sflBurnCart()
+void sfBurnCart()
 {
 	char *arg;
 	uint16_t blockSize, i;
@@ -262,19 +244,19 @@ void dbTD_sflBurnCart()
 		{
 			flashFile.read(dataBuffer.byte, blockSize);
 			
-			switch( db.getMode() )
+			switch( umd.getMode() )
 			{
-				case db.MD:
+				case umd.MD:
 					for( i=0 ; i < ( blockSize >> 1) ; i++ )
 					{
-						db.programWord(address, dataBuffer.word[i], true);
+						umd.programWord(address, dataBuffer.word[i], true);
 						address += 2;
 					}
 					break;
 				default:
 					for( i=0 ; i < blockSize ; i++ )
 					{
-						db.programByte(address, dataBuffer.byte[i], true);
+						umd.programByte(address, dataBuffer.byte[i], true);
 						address++;
 					}
 					break;
@@ -299,7 +281,7 @@ void dbTD_sflBurnCart()
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_sflReadFile()
+void sfReadFile()
 {
 	char *arg;
 	uint16_t blockSize, i;
@@ -357,7 +339,7 @@ void dbTD_sflReadFile()
  * 
  *  \return Void
  **********************************************************************/
-void dbTD_sflWriteFile()
+void sfWriteFile()
 {
 	char *arg;
 	uint16_t i, count, blockSize;
@@ -412,7 +394,7 @@ void dbTD_sflWriteFile()
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_sflListFiles()
+void sfListFiles()
 {
 	//W25Q128FVSIG
 	char fileName[64];
@@ -435,8 +417,8 @@ void dbTD_sflListFiles()
 }
 
 /*******************************************************************//**
- *  \brief Detects the state of the #CART signal
- *  If a cart asserts the #CART signal it will be detected.
+ *  \brief Detects the state of the nCART signal
+ *  If a cart asserts the nCART signal it will be detected.
  *  Note that the mode must be set prior to issuing this command
  *  
  *  Usage:
@@ -444,9 +426,9 @@ void dbTD_sflListFiles()
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_detectCMD()
+void _detect()
 {
-    if(db.detectCart())
+    if(umd.detectCart())
     {
         Serial.println(F("True")); 
     }else
@@ -467,35 +449,35 @@ void dbTD_detectCMD()
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_setModeCMD()
+void _setMode()
 {
     char *arg;
     arg = SCmd.next();
     switch(*arg)
     {
         case 'g':
-            db.setMode(db.MD);
+            umd.setMode(umd.MD);
             Serial.println(F("mode = g")); 
             break;
         case 'p':
-            db.setMode(db.PC);
+            umd.setMode(umd.PC);
             Serial.println(F("mode = p")); 
             break;
         case 't':
-            db.setMode(db.TG);
+            umd.setMode(umd.TG);
             Serial.println(F("mode = t")); 
             break;
         case 'c':
-            db.setMode(db.CV);
+            umd.setMode(umd.CV);
             Serial.println(F("mode = c")); 
             break;
         case 'm':
-			db.setMode(db.MS);
+			umd.setMode(umd.MS);
 			Serial.println(F("mode = m"));
 			break;
         default:
             Serial.println(F("mode = undefined")); 
-            db.setMode(db.undefined);
+            umd.setMode(umd.undefined);
             break;
     }  
 }
@@ -512,7 +494,7 @@ void dbTD_setModeCMD()
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_eraseChipCMD()
+void eraseChip()
 {
     char *arg;
 	uint8_t chip;
@@ -528,14 +510,14 @@ void dbTD_eraseChipCMD()
         {
 			//wait for operation to complete, measure time
             case 'w':
-                db.eraseChip(true, chip);
+                umd.eraseChip(true, chip);
                 break;
             default:
                 break;
         }
     }else
     {
-        db.eraseChip(false, chip);
+        umd.eraseChip(false, chip);
     }
 }
 
@@ -551,14 +533,14 @@ void dbTD_eraseChipCMD()
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_flashIDCMD()
+void getFlashID()
 {
     char *arg;
     
     uint32_t data;
     
     //read the flash ID
-    data = db.getFlashID();
+    data = umd.getFlashID();
 
 	//check if we should output a formatted string
     arg = SCmd.next();
@@ -586,15 +568,14 @@ void dbTD_flashIDCMD()
  *  \brief Read a word from the cartridge
  *  Read a 16bit word from the cartridge, only valid for 16bit buses.
  *  
- *  Usage:
  *  readword 0x0000
- *    - returns unformated word
+ *      - returns unformated word
  *  readword 0x0000 h
- *    - returns HEX formatted word with \n\r
+ *      - returns HEX formatted word with eol
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_readWordCMD()
+void readWord()
 {
     char *arg;
     uint32_t address=0;
@@ -605,7 +586,7 @@ void dbTD_readWordCMD()
     address = strtoul(arg, (char**)0, 0);
     
     //read the word
-    data = db.readWord(address);
+    data = umd.readWord(address);
 
 	//check if we should output a formatted string
     arg = SCmd.next();
@@ -630,18 +611,15 @@ void dbTD_readWordCMD()
 
 /*******************************************************************//**
  *  \brief Read a byte from the cartridge
- *  Read an 8bit byte from the cartridge. In Coleco mode
- *  the address is forced to uint16_t.
  *  
- *  Usage:
  *  readbyte 0x0000
- *    - returns unformated byte
+ *      - returns unformated byte
  *  readbyte 0x0000 h
- *    - returns HEX formatted byte with \n\r
+ *      - returns HEX formatted byte with eol
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_readByteCMD()
+void readByte()
 {
     char *arg;
     uint32_t address = 0;
@@ -651,14 +629,14 @@ void dbTD_readByteCMD()
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
-    switch(db.getMode())
+    switch(umd.getMode())
     {
-		case db.MS:
+		case umd.MS:
 			//calculate effective SMS address in slot 2
-			data = db.readByte(db.setSMSSlotRegister(2, address), true);
+			data = umd.readByte(umd.setSMSSlotRegister(2, address), true);
 			break;
 		default:
-			data = db.readByte(address, true);
+			data = umd.readByte(address, true);
 			break;
 	}
 	
@@ -692,7 +670,7 @@ void dbTD_readByteCMD()
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_readByteBlockCMD()
+void readByteBlock()
 {
     char *arg;
     uint32_t address = 0;
@@ -707,14 +685,14 @@ void dbTD_readByteBlockCMD()
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
 	
-	switch(db.getMode())
+	switch(umd.getMode())
     {
-		case db.MS:
+		case umd.MS:
 
 			for( i = 0; i < blockSize; i++ )
 			{
 				//calculate effective SMS address in slot 2
-				data = db.readByte(db.setSMSSlotRegister(2, address++), true);
+				data = umd.readByte(umd.setSMSSlotRegister(2, address++), true);
 				Serial.write((char)(data));	
 			}
 			break;
@@ -722,7 +700,7 @@ void dbTD_readByteBlockCMD()
 		default:
 			for( i = 0; i < blockSize; i++ )
 			{
-				data = db.readByte(address++, true);
+				data = umd.readByte(address++, true);
 				Serial.write((char)(data));
 			}
 			break;
@@ -740,7 +718,7 @@ void dbTD_readByteBlockCMD()
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_readSRAMByteBlockCMD()
+void readSRAMByteBlock()
 {
     char *arg;
     uint32_t address = 0;
@@ -755,21 +733,21 @@ void dbTD_readSRAMByteBlockCMD()
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
 	
-	switch(db.getMode())
+	switch(umd.getMode())
     {
-		case db.MS:
+		case umd.MS:
 			
 			//enable the corresponding RAM bank in slot 2
-			smsAddress = ((uint16_t)address & 0x3FFF) | db.SMS_SLOT_2_ADDR;
-			db.writeByte((uint16_t)db.SMS_CONF_REG_ADDR,0x88);
+			smsAddress = ((uint16_t)address & 0x3FFF) | umd.SMS_SLOT_2_ADDR;
+			umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x88);
 			for( i = 0; i < blockSize; i++ )
 			{
 				//calculate effective SMS address in slot 2
-				data = db.readByte(smsAddress++ , true);
+				data = umd.readByte(smsAddress++ , true);
 				Serial.write((char)(data));	
 			}
 			//disable RAM Bank
-			db.writeByte((uint16_t)db.SMS_CONF_REG_ADDR,0x00);
+			umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x00);
 			break;
 			
 		default:
@@ -786,7 +764,7 @@ void dbTD_readSRAMByteBlockCMD()
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_readWordBlockCMD()
+void readWordBlock()
 {
     char *arg;
     uint32_t address = 0;
@@ -804,7 +782,7 @@ void dbTD_readWordBlockCMD()
 	//read words from block, output converts to little endian
     for( i = 0; i < blockSize; i += 2 )
     {
-		data = db.readWord(address);
+		data = umd.readWord(address);
 		address += 2;
 		Serial.write((char)(data));
         Serial.write((char)(data>>8));
@@ -822,7 +800,7 @@ void dbTD_readWordBlockCMD()
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_writeByteCMD()
+void writeByte()
 {
     char *arg;
     uint32_t address = 0;
@@ -837,7 +815,7 @@ void dbTD_writeByteCMD()
     data = strtoul(arg, (char**)0, 0);
 	
 	//write word
-	db.writeByte(address, data);
+	umd.writeByte(address, data);
 }
 
 /*******************************************************************//**
@@ -851,7 +829,7 @@ void dbTD_writeByteCMD()
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_writeWordCMD()
+void writeWord()
 {
     char *arg;
     uint32_t address = 0;
@@ -867,25 +845,24 @@ void dbTD_writeWordCMD()
     data = strtoul(arg, (char**)0, 0);
 	
 	//write word
-	db.writeWord(address, data);
+	umd.writeWord(address, data);
 }
 
 /*******************************************************************//**
- *  \brief Program a byte in the cartridge
- *  Program a byte in the cartridge. Prior to progamming,
+ *  \brief Program a byte in the cartridge. Prior to progamming,
  *  the sector or entire chip must be erased. The function
  *  returns immediately without checking if the operation
  *  has completed (i.e. toggle bit)
  *  
- *  Usage:
  *  progbyte 0x0000 0x12
- *    - programs 0x12 into address 0x0000
+ *      - programs 0x12 into address 0x0000
+ * 
  *  progbyte 412 12
- *    - programs decimal 12 into address decimal 412
+ *      - programs decimal 12 into address decimal 412
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_programByteCMD()
+void programByte()
 {
     char *arg;
     uint32_t address=0;
@@ -901,12 +878,12 @@ void dbTD_programByteCMD()
 	readBack = ~data;
 
     //if coleco, force 16 bit address program
-    if( db.getMode() == db.CV )
+    if( umd.getMode() == umd.CV )
     {
 		address = (uint16_t)(address);      
     }
     
-    db.programByte(address, data, false);
+    umd.programByte(address, data, false);
     
     //check if we should verify the write
     arg = SCmd.next();
@@ -916,7 +893,7 @@ void dbTD_programByteCMD()
         {
 			case 'v':
 				delayMicroseconds(50);
-				readBack = db.readByte(address, true);
+				readBack = umd.readByte(address, true);
 				break;
 			default:
 				break;
@@ -979,7 +956,7 @@ void dbTD_programByteCMD()
  
  * \return Void
  **********************************************************************/
-void dbTD_readSRAMWordBlockCMD()
+void readSRAMWordBlock()
 {
     char *arg;
     uint32_t address = 0;
@@ -994,18 +971,18 @@ void dbTD_readSRAMWordBlockCMD()
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
 	
-	db.writeByteTime(0,3);
+	umd.writeByteTime(0,3);
 	
 	//read words from block, output converts to little endian
     for( i = 0; i < blockSize; i += 2 )
     {
-		data = db.readWord(address);
+		data = umd.readWord(address);
 		address += 2;
 		Serial.write((char)(data));
         Serial.write((char)(data>>8));
 	}
 	
-	db.writeByteTime(0,0);
+	umd.writeByteTime(0,0);
 }
 
 /*******************************************************************//**
@@ -1014,7 +991,7 @@ void dbTD_readSRAMWordBlockCMD()
  
  * \return Void
  **********************************************************************/
-void dbTD_writeSRAMByteBlockCMD()
+void writeSRAMByteBlock()
 {
     char *arg;
     uint32_t address=0;
@@ -1041,31 +1018,31 @@ void dbTD_writeSRAMByteBlockCMD()
 	
 	SCmd.clearBuffer();
 	count = 0;
-	switch(db.getMode())
+	switch(umd.getMode())
     {
-		case db.MD:
+		case umd.MD:
 			//enable the ram latch
-			db.writeByteTime(0,3);
+			umd.writeByteTime(0,3);
 			
 			// only odd bytes are valid for Genesis, start at 1 and inc by 2
 			for( count=1; count < blockSize ; count += 2 )
 			{
-				db.writeByte( address, dataBuffer.byte[count]);
+				umd.writeByte( address, dataBuffer.byte[count]);
 				address += 2;
 			}
 			//disable the ram latch
-			db.writeByteTime(0,0);
+			umd.writeByteTime(0,0);
 			break;
-		case db.MS:
+		case umd.MS:
 			//enable the corresponding RAM bank in slot 2
-			smsAddress = ((uint16_t)address & 0x3FFF) | db.SMS_SLOT_2_ADDR;
-			db.writeByte((uint16_t)db.SMS_CONF_REG_ADDR,0x88);
+			smsAddress = ((uint16_t)address & 0x3FFF) | umd.SMS_SLOT_2_ADDR;
+			umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x88);
 			for( count=0; count < blockSize ; count++ )
 			{
-				db.writeByte(smsAddress++, dataBuffer.byte[count]);
+				umd.writeByte(smsAddress++, dataBuffer.byte[count]);
 			}
 			//disable RAM Bank
-			db.writeByte((uint16_t)db.SMS_CONF_REG_ADDR,0x00);
+			umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x00);
 			break;
 		default:
 			break;
@@ -1081,7 +1058,7 @@ void dbTD_writeSRAMByteBlockCMD()
  
  * \return Void
  **********************************************************************/
-void dbTD_writeBRAMByteBlockCMD()
+void writeBRAMByteBlock()
 {
     char *arg;
     uint32_t address=0;
@@ -1110,17 +1087,17 @@ void dbTD_writeBRAMByteBlockCMD()
 	count = 0;
 	
 	//enable write latch for CD BRAM
-	db.writeByte( (uint32_t)0x700000, 0xFF );
+	umd.writeByte( (uint32_t)0x700000, 0xFF );
 	
 	// only odd bytes are valid for Genesis, start at 1 and inc by 2
 	for( count=1; count < blockSize ; count += 2 )
 	{
-		db.writeByte( address, dataBuffer.byte[count]);
+		umd.writeByte( address, dataBuffer.byte[count]);
 		address += 2;
 	}
 
 	//disable write latch for CD BRAM
-	db.writeByte( (uint32_t)0x700000, 0x00 );
+	umd.writeByte( (uint32_t)0x700000, 0x00 );
 
 	//Serial.println(address,HEX);
 	Serial.println(F("done"));
@@ -1139,7 +1116,7 @@ void dbTD_writeBRAMByteBlockCMD()
  *  
  * \return Void
  **********************************************************************/
-void dbTD_programByteBlockCMD()
+void programByteBlock()
 {
     char *arg;
     uint32_t address=0;
@@ -1170,7 +1147,7 @@ void dbTD_programByteBlockCMD()
 	count = 0;
 	while( count < blockSize )
 	{
-		db.programByte(address, dataBuffer.byte[count++], true);
+		umd.programByte(address, dataBuffer.byte[count++], true);
 		address++;
 	}
 	
@@ -1192,7 +1169,7 @@ void dbTD_programByteBlockCMD()
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_programWordCMD()
+void programWord()
 {
     char *arg;
     uint32_t address=0;
@@ -1206,7 +1183,7 @@ void dbTD_programWordCMD()
     arg = SCmd.next(); 
     data = (uint16_t)strtoul(arg, (char**)0, 0);
     
-    db.programWord(address, data, false);
+    umd.programWord(address, data, false);
 }
 
 /*******************************************************************//**
@@ -1224,7 +1201,7 @@ void dbTD_programWordCMD()
  *  
  *  \return Void
  **********************************************************************/
-void dbTD_programWordBlockCMD()
+void programWordBlock()
 {
     char *arg;
     uint32_t address=0;
@@ -1255,7 +1232,7 @@ void dbTD_programWordBlockCMD()
 	count = 0;
 	while( count < ( blockSize >> 1) )
 	{
-		db.programWord(address, dataBuffer.word[count++], true);
+		umd.programWord(address, dataBuffer.word[count++], true);
 		address += 2;
 	}
 	

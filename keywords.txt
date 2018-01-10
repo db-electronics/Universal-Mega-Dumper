@@ -6,7 +6,7 @@
 # Datatypes (KEYWORD1)
 #######################################
 
-dbDumper		KEYWORD1
+UMD				KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
