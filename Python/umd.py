@@ -1,6 +1,12 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
-
+########################################################################
+# \file umd.h
+# \author René Richard
+# \brief This program allows to read and write to various game cartridges 
+#        including: Genesis, Coleco, SMS, PCE - with possibility for 
+#        future expansion.
+# 
 # LICENSE
 #
 #   This file is part of Universal Mega Dumper.
@@ -17,6 +23,8 @@
 #
 #   You should have received a copy of the GNU General Public License
 #   along with Universal Mega Dumper.  If not, see <http://www.gnu.org/licenses/>.
+#
+########################################################################
 
 import os
 import sys
@@ -27,25 +35,7 @@ import getopt
 import argparse
 import struct
 
-##### sudo apt install python3-pip
-##### python3 -m pip install pyserial 
-
 ## https://docs.python.org/3/howto/argparse.html
-
-##### working with bytes and string
-#>>> b'\xde\xad\xbe\xef'.hex()
-#'deadbeef'
-#and reverse:
-#>>> bytes.fromhex('deadbeef')
-#b'\xde\xad\xbe\xef'
-
-## open file, create if not there, append data
-#with open("out.bin", "ab+") as f:
-#   f.write(b'\xde\xad\xbe\xef')
-
-## open file, create if not there, overwrite data
-#with open("out.bin", "wb+") as f:
-#   f.write(b'\xde\xad\xbe\xef')
 
 ####################################################################################
 # class dbDumper
