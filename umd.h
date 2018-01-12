@@ -5,9 +5,7 @@
  *         including: Genesis, Coleco, SMS, PCE - with possibility for 
  *         future expansion.
  *
- * LICENSE
- *
- *   This file is part of Universal Mega Dumper.
+ * \copyright This file is part of Universal Mega Dumper.
  *
  *   Universal Mega Dumper is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -125,7 +123,7 @@ class umd
          * \param sectorAddress an address in the sector to be erased
          * \return void
          **********************************************************************/
-        void eraseSector(uint32_t sectorAddress);
+        void eraseSector(bool wait, uint32_t sectorAddress);
         
         /*******************************************************************//**
          * \brief Perform toggle bit algorithm

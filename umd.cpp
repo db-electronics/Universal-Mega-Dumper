@@ -5,9 +5,7 @@
  *         including: Genesis, Coleco, SMS, PCE - with possibility for 
  *         future expansion.
  *
- * LICENSE
- *
- *   This file is part of Universal Mega Dumper.
+ * \copyright This file is part of Universal Mega Dumper.
  *
  *   Universal Mega Dumper is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -61,7 +59,6 @@ inline void umd::_setDatabusOutput()
  * The resetCart() function issues a 250ms active-low reset pulse to
  * the pin specified by the variable _resetPin.
  * 
- * \warning setMode() must be called prior to using this function.
   **********************************************************************/
 void umd::resetCart()
 {
@@ -74,6 +71,8 @@ void umd::resetCart()
 /*******************************************************************//**
  * The detectCart() functions tests if the nCART line is pulled low
  * by a cartridge.
+ * 
+ * \warning incompatible with Colecovision mode
  **********************************************************************/
 bool umd::detectCart()
 {
@@ -88,7 +87,7 @@ bool umd::detectCart()
 
 /*******************************************************************//**
  * The setMode() function configures the Teensy IO properly for the
- * selected cartridge. The _mode and _resetPin variables store the
+ * selected cartridge. The _mode and _resetPin variable store the
  * current mode and resetPin numbers for later use by the firmware.
  **********************************************************************/
 void umd::setMode(eMode mode)
@@ -223,7 +222,8 @@ inline void umd::_latchAddress(uint32_t address)
 }
 
 /*******************************************************************//**
- * The _latchAddress function latches a 16bit address to the cartridge.
+ * The _latchAddress(uint16_t) function latches a 16bit address to the cartridge.
+ * 
  * \warning upper 8 address bits (23..16) are not modified
  **********************************************************************/
 inline void umd::_latchAddress(uint16_t address)
@@ -246,11 +246,9 @@ inline void umd::_latchAddress(uint16_t address)
 }
 
 /*******************************************************************//**
- * The setMode() function returns the manufacturer and product ID from 
+ * The getFlashID() function returns the manufacturer and product ID from 
  * the Flash IC as a uint16_t. It automatically performs the correct
  * flash ID read sequence based on the currently selected mode.
- * 
- * \warning setMode() must be called prior to using this function.
  **********************************************************************/
 uint32_t umd::getFlashID()
 {
@@ -451,40 +449,59 @@ uint32_t umd::eraseChip(bool wait, uint8_t chip)
 }
 
 /*******************************************************************//**
- * The eraseSector function erases a sector in the flash memory
+ * The eraseSector function erases a sector in the flash memory. The
+ * Address specified can be any address in the sector.
  **********************************************************************/
-void umd::eraseSector(uint32_t sectorAddress)
+void umd::eraseSector(bool wait, uint32_t sectorAddress)
 {
     switch(_mode)
     {
         case MD:
-            //mx29f800 chip erase word mode
+            //mx29f800 sector erase word mode
             writeWord((uint16_t)(0x0555 << 1), 0xAA00);
             writeWord((uint16_t)(0x02AA << 1), 0x5500);
             writeWord((uint16_t)(0x0555 << 1), 0x8000);
             writeWord((uint16_t)(0x0555 << 1), 0xAA00);
             writeWord((uint16_t)(0x02AA << 1), 0x5500);
-            writeWord((uint16_t)(0x0555 << 1), 0x1000);
+            writeWord((uint32_t)sectorAddress, 0x3000);
+            
+            //use data polling to validate end of program cycle
+            if(wait)
+            {
+                while( toggleBit(2, 0) != 2 );
+            }
             break;
         case TG:
-            //mx29f800 chip erase byte mode
+            //mx29f800 sector erase byte mode
             writeByte((uint16_t)0x0AAA, 0xAA);
             writeByte((uint16_t)0x0555, 0x55);
             writeByte((uint16_t)0x0AAA, 0x80);
             writeByte((uint16_t)0x0AAA, 0xAA);
             writeByte((uint16_t)0x0555, 0x55);
-            writeByte((uint16_t)0x0AAA, 0x10);
+            writeByte((uint32_t)sectorAddress, 0x30);
+            
+            //use data polling to validate end of program cycle
+            if(wait)
+            {
+                while( toggleBit(2, 0) != 2 );
+            }
+            break;
             break;
         case CV:
-            //SST39SF0x0 chip erase
+            //SST39SF0x0 sector erase
             writeByte((uint16_t)0x5555, 0xAA);
             writeByte((uint16_t)0x2AAA, 0x55);
             writeByte((uint16_t)0x5555, 0x80);
             writeByte((uint16_t)0x5555, 0xAA);
             writeByte((uint16_t)0x2AAA, 0x55);
-
-            //sector address comes here
-            writeByte((uint16_t)0x5555, 0x10);
+            writeByte((uint32_t)sectorAddress, 0x30);
+            
+            //use data polling to validate end of program cycle
+            if(wait)
+            {
+                while( toggleBit(2, 0) != 2 );
+            }
+            break;
             break;
         default:
             break;
@@ -495,7 +512,8 @@ void umd::eraseSector(uint32_t sectorAddress)
  * The readByte(uint16_t) function returns a byte read from 
  * a 16bit address.
  * 
- * \warning setMode() must be called prior to using this function.
+ * \warning in PC Engine mode, reads from outside this class need to
+ * reverse the databus for consistency.
  **********************************************************************/
 uint8_t umd::readByte(uint16_t address, bool external)
 {
@@ -520,9 +538,6 @@ uint8_t umd::readByte(uint16_t address, bool external)
             }
             break;
         case MS:
-            delayMicroseconds(2);
-            readData = DATAINL;
-            break;
         case MD:
         case TG:
         case CV:
@@ -541,7 +556,8 @@ uint8_t umd::readByte(uint16_t address, bool external)
  * The readByte(uint32_t) function returns a byte read from 
  * a 24bit address.
  * 
- * \warning setMode() must be called prior to using this function.
+ * \warning in PC Engine mode, reads from outside this class need to
+ * reverse the databus for consistency.
  **********************************************************************/
 uint8_t umd::readByte(uint32_t address, bool external)
 {
@@ -566,9 +582,6 @@ uint8_t umd::readByte(uint32_t address, bool external)
             }
             break;
         case MS:
-            delayMicroseconds(2);
-            readData = DATAINL;
-            break;
         case MD:
         case TG:
         case CV:
@@ -587,7 +600,6 @@ uint8_t umd::readByte(uint32_t address, bool external)
  * The readWord(uint32_t) function returns a word read from 
  * a 24bit address.
  * 
- * \warning setMode() must be called prior to using this function.
  * \warning converts to little endian
  **********************************************************************/
 uint16_t umd::readWord(uint32_t address)
@@ -617,7 +629,6 @@ uint16_t umd::readWord(uint32_t address)
 /*******************************************************************//**
  * The writeByteTime function strobes a byte into nTIME region
  * 
- * \warning setMode() must be called prior to using this function.
  * \warning upper 8 address bits (23..16) are not modified
  **********************************************************************/
 void umd::writeByteTime(uint16_t address, uint8_t data)
@@ -642,7 +653,6 @@ void umd::writeByteTime(uint16_t address, uint8_t data)
  * by this function so this can be used to perform quicker successive
  * writes within a 64k boundary.
  * 
- * \warning setMode() must be called prior to using this function.
  * \warning upper 8 address bits (23..16) are not modified
  **********************************************************************/
 void umd::writeByte(uint16_t address, uint8_t data)
@@ -663,14 +673,6 @@ void umd::writeByte(uint16_t address, uint8_t data)
             digitalWrite(nCE, HIGH);
             break;
         case MS:
-            DATAOUTL = data;
-            // write to the bus
-            digitalWrite(nCE, LOW);
-            digitalWrite(nWR, LOW);
-            delayMicroseconds(2);
-            digitalWrite(nWR, HIGH);
-            digitalWrite(nCE, HIGH);
-            break;
         case PC:
         case TG:
         case CV:
@@ -692,8 +694,6 @@ void umd::writeByte(uint16_t address, uint8_t data)
 /*******************************************************************//**
  * The writeByte function strobes a byte into the cartridge at a 24bit
  * address.
- * 
- * \warning setMode() must be called prior to using this function.
  **********************************************************************/
 void umd::writeByte(uint32_t address, uint8_t data)
 {
@@ -741,8 +741,8 @@ void umd::writeByte(uint32_t address, uint8_t data)
 /*******************************************************************//**
  * The writeGenesisTime function strobes a word into nTIME region
  * 
- * \warning setMode() must be called prior to using this function.
  * \warning word is converted to big endian
+ * \warning upper 8 address bits (23..16) are not modified
  **********************************************************************/
 void umd::writeWordTime(uint16_t address, uint16_t data)
 {
@@ -765,7 +765,6 @@ void umd::writeWordTime(uint16_t address, uint16_t data)
  * The writeWord function strobes a word into the cartridge at a 24bit
  * address.
  * 
- * \warning setMode() must be called prior to using this function.
  * \warning word is converted to big endian
  **********************************************************************/
 void umd::writeWord(uint32_t address, uint16_t data)
@@ -791,8 +790,8 @@ void umd::writeWord(uint32_t address, uint16_t data)
  * The writeWord function strobes a word into the cartridge at a 16bit
  * address.
  * 
- * \warning setMode() must be called prior to using this function.
  * \warning word is converted to big endian
+ * \warning upper 8 address bits (23..16) are not modified
  **********************************************************************/
 void umd::writeWord(uint16_t address, uint16_t data)
 {
@@ -819,7 +818,6 @@ void umd::writeWord(uint16_t address, uint16_t data)
  * for the program operation to complete using data polling before 
  * returning.
  * 
- * \warning setMode() must be called prior to using this function.
  * \warning Sector or entire IC must be erased prior to programming
  **********************************************************************/
 void umd::programByte(uint32_t address, uint8_t data, bool wait)
@@ -898,7 +896,6 @@ void umd::programByte(uint32_t address, uint8_t data, bool wait)
  * for the program operation to complete using data polling before 
  * returning.
  * 
- * \warning setMode() must be called prior to using this function.
  * \warning Sector or entire IC must be erased prior to programming
  **********************************************************************/
 void umd::programWord(uint32_t address, uint16_t data, bool wait)
@@ -907,6 +904,7 @@ void umd::programWord(uint32_t address, uint16_t data, bool wait)
     {
         //MX29F800 program word
         case MD:
+            //Genesis MDCart can have multiple flash ICs
             if ( address < GEN_CHIP_1_BASE )
             {
                 writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
