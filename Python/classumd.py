@@ -39,6 +39,14 @@ import struct
 #  as several ROM header read and checksum calculation routines.
 class umd:
     
+    ## UMD Modes
+    modes = {"None" : 0,
+            "Colecovision" : 1,
+            "Genesis" : 2, 
+            "Master System" : 3,
+            "PC Engine" : 4,
+            "Turbografx-16" : 5 }
+    
     ## serial port object on which the UMD is found
     serialPort = ""
     flashID = ""
