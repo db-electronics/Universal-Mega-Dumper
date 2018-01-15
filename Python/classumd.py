@@ -40,6 +40,7 @@ import struct
 class umd:
     
     ## UMD Modes
+    cartType = ""
     modes = {"None" : 0,
             "Colecovision" : 1,
             "Genesis" : 2, 
@@ -54,6 +55,12 @@ class umd:
             "SMS" : 8,
             "PCEngine" : 8,
             "Turbografx-16" : 8 }
+    
+    writeBlockSize = {
+            "sf"   : 512,
+            "rom"  : 256,
+            "save" : 128,
+            "bram" : 128 }
     
     ## serial port object on which the UMD is found
     serialPort = ""
@@ -83,8 +90,8 @@ class umd:
 #
 #  Windows/Linux agnostic, searches for the UMD
 ########################################################################
-    def __init__(self):        
-        dbPort = ""
+    def __init__(self, mode):        
+        self.cartType = mode
 
 ########################################################################    
 ## connectUMD
@@ -117,9 +124,11 @@ class umd:
                 ser.close()
             except (OSError, serial.SerialException):
                 pass
-                
+        
+        # use the port found above to setup a 'permanent' object to communicate with the UMD        
         try:
             self.serialPort = serial.Serial( port = dbPort, baudrate = 460800, bytesize = serial.EIGHTBITS, parity = serial.PARITY_NONE, stopbits = serial.STOPBITS_ONE, timeout=1)
+            # set the UMD mode while we're at it
             self.setMode(mode)
         except (OSError, serial.SerialException):
             print("class umd.__init__ - could not connect to umd")
@@ -129,7 +138,6 @@ class umd:
 ########################################################################    
 ## getFlashID
 #  \param self self
-#  \param dataWidth 8 bits or 16 bits
 #  
 #  Retrieve the ROM's manufacturer flash ID
 ########################################################################     
@@ -137,7 +145,7 @@ class umd:
         
         self.serialPort.write(bytes("getid\r\n","utf-8"))
         readBytes = self.serialPort.read(4)
-        if( dataWidth == 16):
+        if( self.cartType == "Genesis" ):
             self.flashID = int.from_bytes(readBytes, byteorder="big")
         else:
             self.flashID = int.from_bytes(readBytes, byteorder="little")
@@ -320,11 +328,11 @@ class umd:
 ## sfWriteFile
 #  \param self self
 #  \param sfFileName the 8.3 name of the serial flash file
-#  \param fileName the local file
+#  \param filename the local file
 #  
 #  Write a file to the UMD's serial flash
 ########################################################################
-    def sfWriteFile(self, sfFilename, fileName):
+    def sfWriteFile(self, sfFilename, filename):
         
         if ( len(sfFilename) > 12 ):
             print("{0} is longer than the maximum (8.3) 12 characters".format(sfFilename))
@@ -332,7 +340,7 @@ class umd:
             
         startTime = time.time()
         pos = 0
-        fileSize = os.path.getsize(fileName)
+        fileSize = os.path.getsize(filename)
 
         cmd = "sfwrite {0} {1} {2}\r\n".format(sfFilename, fileSize, self.sfWriteChunkSize)
         #print("command = {0}".format(cmd), end="")
@@ -343,7 +351,7 @@ class umd:
         #response = self.serialPort.readline().decode("utf-8") 
         #print(response)
         
-        with open(fileName, "rb") as f:
+        with open(filename, "rb") as f:
             while( pos < fileSize ):
                 if( ( fileSize - pos ) >= self.sfWriteChunkSize):
                     sizeOfWrite = self.sfWriteChunkSize
@@ -383,42 +391,41 @@ class umd:
         print("")
 
 ########################################################################    
-## program
+## programSingle
 #  \param self self
 #  \param address the address at which to program
 #  \param value the value to write
-#  \param dataWidth 8 bits or 16 bits
 #  
 #  Program a single byte/word into the cartridge
 ######################################################################## 
-    def program(self, address, value, dataWidth):
+    def programSingle(self, address, value):
         
         # 8bits or 16bits wide?
-        if (dataWidth == 8):
-            progCmd = "prgbyte"
-        else:
+        if cartType == "Genesis":
             progCmd = "prgword"
+        else:
+            progCmd = "prgbyte"
             
         cmd = "{0} {1} {2}\r\n".format(progCmd, address, value)
         self.serialPort.write(bytes(cmd,"utf-8"))
 
 ########################################################################    
-## readnew
+## read
 #  \param self self
 #  \param address the address at which to start the read operation
 #  \param size how many bytes to read
-#  \param width 8 bits or 16 bits
-#  \param what memory to read from the UMD
+#  \param target what memory to read from the UMD
 #  \param outfile the file in which to dump the binary data
 #  
 #  Read a succession of bytes from the cartridge, the output can be
 #  displayed in the console window if "console" is specified in outfile
 #  else a new file will be created/overwritten with the binary data
 ########################################################################
-    def readnew(self, address, size, width, target, outfile):
+    def read(self, address, size, target, outfile):
     
         endAddress = address + size
         startAddress = address
+        width = self.busWidth.get(self.cartType)
         
         #["rom", "save", "bram", "header"]
         if( width == 8 ):
@@ -519,227 +526,59 @@ class umd:
         self.opTime = time.time() - startTime
 
 ########################################################################    
-## read
+## write
 #  \param self self
-#  \param outfile the file in which to dump the binary data
-#  \param address the address at which to start the read operation
-#  \param size how many bytes to read
-#  \param dataWidth 8 bits or 16 bits
-#  \param ram reading cartridge RAM (TRUE) or cartridge RAM (FALSE)
-#  
-#  Read a succession of bytes from the cartridge, the output can be
-#  displayed in the console window if "console" is specified in outfile
-#  else a new file will be created/overwritten with the binary data
-########################################################################
-    def read(self, outfile, address, size, dataWidth, ram):
-    
-        endAddress = address + size
-        startAddress = address
-    
-        # read 8bits or 16bits wide?
-        if (dataWidth == 8) :
-            if not ram:
-                readCmd = "rdbblk"
-            else:
-                readCmd = "rdsbblk"
-        else:
-            if not ram:
-                readCmd = "rdwblk"
-            else:
-                readCmd = "rdswblk"
-
-        startTime = time.time()
-        
-        # read from dumper, output to console
-        if outfile == "console":
-            responsePtr = 0
-            while address < endAddress:
-                # read chunkSize or less
-                if (endAddress - address) > self.readChunkSize: 
-                    sizeOfRead = self.readChunkSize
-                else:
-                    sizeOfRead = (endAddress - address)
-                
-                cmd = "{0} {1} {2}\r\n".format(readCmd, address, sizeOfRead)
-                
-                self.serialPort.write(bytes(cmd,"utf-8"))
-                response = self.serialPort.read(sizeOfRead)
-                
-                # loop through results, pretty display to console
-                respCount = len(response)
-                i = 0
-
-                while i < respCount:
-                    # display bytesPerLine or less
-                    if (respCount - i) > self.dispBytesPerLine:
-                        bytesThisLine = self.dispBytesPerLine
-                    else:
-                        bytesThisLine = (respCount - i)
-                    
-                    # get bytes for this line
-                    line = []
-                    for col in range(i, (i + bytesThisLine) ):
-                        line.append(response[col])
-                    
-                    # print address offset at start of line
-                    print("{0:0{1}X}".format( (address+i), 6), end=": ")
-                    
-                    # print hex values with space in between every byte
-                    for c in line:
-                        print("{0:0{1}X}".format(c,2), end = " ")
-
-                    # only print readable ascii chars, rest display as "."
-                    for c in line:
-                        if 32 <= c <= 126:
-                            print("{0:s}".format(chr(c)), end = "")
-                        else:
-                            print(".", end = "")
-                    print("")
-                        
-                    i += bytesThisLine
-                
-                address += sizeOfRead   
-                
-        # output to file       
-        else:
-            try:
-                os.remove(outfile)
-            except OSError:
-                pass
-            with open(outfile, "wb+") as f:
-                while address < endAddress:
-                    # read chunkSize or less
-                    if (endAddress - address) > self.readChunkSize: 
-                        sizeOfRead = self.readChunkSize
-                    else:
-                        sizeOfRead = (endAddress - address)
-                    
-                    cmd = "{0} {1} {2}\r\n".format(readCmd, address, sizeOfRead)
-                                            
-                    # send command to Teensy, read response    
-                    self.serialPort.write(bytes(cmd,"utf-8"))
-                    response = self.serialPort.read(sizeOfRead)
-                    f.write(response)
-                    address += sizeOfRead
-                    self.printProgress( ((address - startAddress)/size) , self.progressBarSize )
-                    
-        self.opTime = time.time() - startTime
-
-########################################################################    
-## burn
-#  \param self self
-#  \param fileName the local file to write
 #  \param address the address at which to start the write
-#  \param datawidth 8 bits or 16 bits
-#  
-#  Burn the contents of a local file cartridge flash memory
-######################################################################## 
-    def burn(self, fileName, address, dataWidth):
-        
-        pos = 0
-        fileSize = os.path.getsize(fileName)
-        
-        ## read 8bits or 16bits wide?
-        if (dataWidth == 8):
-            progCmd = "prgbblk"
-        else:
-            progCmd = "prgwblk"
-        
-        startTime = time.time()
-        
-        with open(fileName, "rb") as f:
-            while( pos < fileSize ):
-                if( ( fileSize - pos ) >= self.burnChunkSize):
-                    sizeOfWrite = self.burnChunkSize
-                else:
-                    sizeOfWrite = ( fileSize - pos )
-                    
-                line = f.read(sizeOfWrite)
-                cmd = "{0} {1} {2}\r\n".format(progCmd, address, sizeOfWrite)   
-                self.serialPort.write(bytes(cmd,"utf-8"))
-                self.serialPort.write(line)
-                
-                response = self.serialPort.readline().decode("utf-8")
-                #print(response, end="")
-                
-                pos += sizeOfWrite
-                address += sizeOfWrite
-                self.printProgress( (pos/fileSize) , self.progressBarSize )
-            
-        self.opTime = time.time() - startTime
-
-########################################################################    
-## saveWrite
-#  \param self self
-#  \param fileName the local file to write
-#  \param address the address at which to start the write
-#  \param datawidth 8 bits or 16 bits
-#  
-#  Write the contents of a local file to the save memory of the cartridge.
-########################################################################  
-    def saveWrite(self, fileName, address, datawidth):      
-        
-        startTime = time.time()
-        pos = 0
-        fileSize = os.path.getsize(fileName)
-
-        ## read 8bits or 16bits wide?
-        if (dataWidth == 8) :
-            progCmd = "wrsblk"
-        else:
-            progCmd = "wrsblk"
-    
-        with open(fileName, "rb") as f:
-            while( pos < fileSize ):
-                if( ( fileSize - pos ) >= self.sramWriteChunkSize):
-                    sizeOfWrite = self.sramWriteChunkSize
-                else:
-                    sizeOfWrite = ( fileSize - pos )
-                    
-                line = f.read(sizeOfWrite)
-                cmd = "{0} {1} {2}\r\n".format(progCmd, address, sizeOfWrite)   
-                self.serialPort.write(bytes(cmd,"utf-8"))
-                self.serialPort.write(line)
-                
-                response = self.serialPort.readline().decode("utf-8")
-                #print(response, end="")
-                
-                pos += sizeOfWrite
-                address += sizeOfWrite
-                self.printProgress( (pos/fileSize) , self.progressBarSize )
-            
-        self.opTime = time.time() - startTime
-
-########################################################################    
-## cdWrite
-#  \param self self
-#  \param fileName the local file to write
-#  \param address the address at which to start the write
+#  \param target what memory to write on the UMD
+#  \param filename the local file to write
 #  
 #  Write the contents of a local file to the CD Backup RAM Cart.
+# def read(self, address, size, width, target, outfile):
 ######################################################################## 
-    def cdWrite(self, fileName, address):       
+    def write(self, address, target, filename):       
         
         startTime = time.time()
+        fileSize = os.path.getsize(filename)
+        blockSize = self.writeBlockSize.get(target)
+        width = self.busWidth.get(self.cartType)
         pos = 0
-        fileSize = os.path.getsize(fileName)
-
-        progCmd = "wrbrblk"
     
-        with open(fileName, "rb") as f:
+        #["rom", "save", "bram", "sf", "header"]
+        if( width == 8 ):
+            if target == "rom":
+                writeCmd = "prgbblk"
+            elif target == "save":
+                writeCmd = "wrsblk"
+            elif target == "bram":
+                writeCmd = "wrbrblk"
+            else:
+                pass
+        elif( width == 16 ):
+            if target == "rom":
+                writeCmd = "prgwblk"
+            elif target == "save":
+                writeCmd = "wrsblk"
+            elif target == "bram":
+                writeCmd = "wrbrblk"
+            else:
+                pass
+        else:    
+            pass
+    
+        with open(filename, "rb") as f:
             while( pos < fileSize ):
-                if( ( fileSize - pos ) >= self.sramWriteChunkSize):
-                    sizeOfWrite = self.sramWriteChunkSize
+                if( ( fileSize - pos ) >= blockSize):
+                    sizeOfWrite = blockSize
                 else:
                     sizeOfWrite = ( fileSize - pos )
                     
                 line = f.read(sizeOfWrite)
-                cmd = "{0} {1} {2}\r\n".format(progCmd, address, sizeOfWrite)   
+                cmd = "{0} {1} {2}\r\n".format(writeCmd, address, sizeOfWrite)   
                 self.serialPort.write(bytes(cmd,"utf-8"))
                 self.serialPort.write(line)
                 
+                # UMD writes "done\n\r" when complete"
                 response = self.serialPort.readline().decode("utf-8")
-                #print(response, end="")
                 
                 pos += sizeOfWrite
                 address += sizeOfWrite

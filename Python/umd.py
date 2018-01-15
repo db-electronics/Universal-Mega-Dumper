@@ -53,13 +53,8 @@ if __name__ == "__main__":
     parser.add_argument("--mode", help="Set the cartridge type", choices=["cv", "gen", "sms", "pce", "tg16"], type=str, default="none")
     
     readWriteArgs = parser.add_mutually_exclusive_group()
-    readWriteArgs.add_argument("--sfburn", nargs=1, help="Burn Serial Flash filename to cartridge", type=str, metavar=('filename'))
     readWriteArgs.add_argument("--checksum", help="Calculate ROM checksum", action="store_true")
 
-    readWriteArgs.add_argument("--savewrite", nargs=1, help="Write FILE to SAVE MEMORY", type=str, metavar=('address'))
-    readWriteArgs.add_argument("--cdwrite", nargs=1, help="Write FILE to CD MEMORY", type=str, metavar=('address'))
-    readWriteArgs.add_argument("--burn", nargs=1, help="Burn FILE contents at ADDRESS", type=str, metavar=('address'))
-    
     readWriteArgs.add_argument("--swapbytes", nargs=1, help="Reverse the endianness of a file", type=str, metavar=('new file'))
     
     readWriteArgs.add_argument("--rd", 
@@ -69,26 +64,24 @@ if __name__ == "__main__":
     
     readWriteArgs.add_argument("--wr", 
                                 help="Write to UMD", 
-                                choices=["rom", "save", "bram", "sf", "header"], 
+                                choices=["rom", "save", "bram", "sf"], 
                                 type=str)
     
     readWriteArgs.add_argument("--clr", 
                                 help="Clear a memory in the UMD", 
-                                choices=["rom", "save", "bram", "sf"], 
+                                choices=["rom", "rom2", "save", "bram", "sf"], 
                                 type=str)
     
     parser.add_argument("--addr", 
                         nargs=1, 
                         help="Address for current command", 
-                        type=str, 
-                        metavar=('address'),
+                        type=str,
                         default="0")
     
     parser.add_argument("--size", 
                         nargs=1, 
                         help="Size in bytes for current command", 
-                        type=str, 
-                        metavar=('size'),
+                        type=str,
                         default="1")
     
     parser.add_argument("--file", 
@@ -102,16 +95,13 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    dumper = umd()
-    #print( dumper.modes )
-    #print( dumper.modes.get("Genesis") )
+    # init UMD object, set console type
+    cartType = carts.get(args.mode)
+    dumper = umd(cartType)
     
     if( args.mode != "none" ):
         #print( "setting mode to {0}".format(carts.get(args.mode)) )
-        dumper.connectUMD( carts.get(args.mode) )
-    
-    dataWidth = dumper.busWidth.get( carts.get(args.mode) )
-    console = carts.get(args.mode)
+        dumper.connectUMD(cartType)
     
     #figure out the size of the operation, default to 1 in arguments so OK to calc everytime
     if( args.size[0].endswith("Kb") ):  
@@ -165,17 +155,18 @@ if __name__ == "__main__":
         
         # read the flash id - obviously does not work on original games with OTP roms
         elif args.rd == "fid":
-            dumper.getFlashID(dataWidth)
+            dumper.getFlashID()
             print("0x{0:0{1}X}".format(dumper.flashID,8))
             
+        # read the serial flash id
         elif args.rd == "sfid":
             dumper.sfGetId()
             print (''.join('0x{:02X} '.format(x) for x in dumper.sfID))
                 
         # read from the cartridge, ROM/SAVE/BRAM specified in args.rd
         else:
-            print("reading {0} bytes starting at address 0x{1:X} from {2}".format(byteCount, address, console))
-            dumper.readnew(address, byteCount, dataWidth, args.rd, args.file)
+            print("reading {0} bytes starting at address 0x{1:X} from {2} {3}".format(byteCount, address, cartType, args.rd))
+            dumper.read(address, byteCount, args.rd, args.file)
             print("read {0} bytes completed in {1:.3f} s".format(byteCount, dumper.opTime))
 
     # clear operations - erase various memories
@@ -186,6 +177,17 @@ if __name__ == "__main__":
             print("erasing serial flash...")
             dumper.sfEraseAll()
             print("erase serial flash completed in {0:.3f} s".format(dumper.opTime))
+        
+        # erase the save memory on a cartridge, create an empty file filled with zeros and write it to the save
+        elif args.clr == "save":
+            print("erasing save memory...")
+            with open("zeros.bin", "wb+") as f:
+                f.write(bytes(byteCount))
+            dumper.write(address, "save", "zeros.bin")
+            try:
+                os.remove("zeros.bin")
+            except OSError:
+                pass
             
         # erase the flash rom on a cartridge, some cart types have multiple chips, need to figure out if more than 1 is connected
         elif args.clr == "rom":
@@ -216,26 +218,19 @@ if __name__ == "__main__":
             # first check if a local file is to be written to the cartridge
             if args.file != "console":
                 print("burning {0} contents to ROM at address 0x{1:X}".format(args.file, address))
-                dumper.burn(args.file, address, dataWidth)
+                dumper.write(address, args.wr, args.file)
                 print("burn {0} completed in {1:.3f} s".format(args.file, dumper.opTime))
             else:
                 if args.sfile:
                     dumper.sfBurnCart(args.sfile)
-                    print("burned {0} from serial flash to {1} in {2:.3f} s".format(args.sfile, console, dumper.opTime))
-                    
+                    print("burned {0} from serial flash to {1} in {2:.3f} s".format(args.sfile, cartType, dumper.opTime))
 
-    elif args.burn:
-        filename = args.file
-        address = int(args.burn[0], 0)
-        print("burning {0} contents to ROM at address 0x{1:X}".format(filename, address))
-        dumper.burn(filename, address, dataWidth)
-        print("burn {0} completed in {1:.3f} s".format(filename, dumper.opTime))
-    
-    elif args.sfburn:
-        sfFilename = args.sfburn[0]
-        dumper.sfBurnCart(sfFilename)
-        print("burned {0} from serial flash to {1} in {2:.3f} s".format(sfFilename, console, dumper.opTime))
+        # all other writes handled here
+        else:
+            dumper.write(address, args.wr, args.file)
+            print("wrote to {0} in {1:.3f} s".format(args.wr, dumper.opTime))
 
+    # checksum operations
     elif args.checksum:
         if mode == "gen":
             dumper.checksumGenesis()
@@ -243,18 +238,6 @@ if __name__ == "__main__":
         if mode == "sms":
             dumper.checksumSMS()
             print("checksum completed in {0:.3f} s, calculated {1} expected {2}".format(dumper.opTime, dumper.checksumCalculated, dumper.checksumCart)) 
-    
-    elif args.savewrite:
-        filename = args.file
-        address = int(args.savewrite[0], 0)
-        dumper.saveWrite(filename, address, dataWidth)
-        print("wrote {0} to SRAM in {1:.3f} s".format(filename, dumper.opTime))
-    
-    elif args.cdwrite:
-        filename = args.file
-        address = int(args.cdwrite[0], 0)
-        dumper.cdWrite(filename, address)
-        print("wrote {0} to CD RAM in {1:.3f} s".format(filename, dumper.opTime))
 
     elif args.swapbytes:
         filename = args.file
