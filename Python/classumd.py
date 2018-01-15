@@ -43,9 +43,17 @@ class umd:
     modes = {"None" : 0,
             "Colecovision" : 1,
             "Genesis" : 2, 
-            "Master System" : 3,
-            "PC Engine" : 4,
+            "SMS" : 3,
+            "PCEngine" : 4,
             "Turbografx-16" : 5 }
+    
+    ## Console bus widths
+    busWidth = {"None" : 0,
+            "Colecovision" : 8,
+            "Genesis" : 16, 
+            "SMS" : 8,
+            "PCEngine" : 8,
+            "Turbografx-16" : 8 }
     
     ## serial port object on which the UMD is found
     serialPort = ""
@@ -75,7 +83,19 @@ class umd:
 #
 #  Windows/Linux agnostic, searches for the UMD
 ########################################################################
-    def __init__(self):
+    def __init__(self):        
+        dbPort = ""
+
+########################################################################    
+## connectUMD
+#  \param self self
+#  \param mode the UMD mode
+#  
+#  Retrieve the ROM's manufacturer flash ID
+########################################################################
+    def connectUMD(self, mode):
+
+        print("mode set value = {0}".format(self.modes.get(mode)))
         
         dbPort = ""
         # enumerate ports
@@ -103,7 +123,8 @@ class umd:
         except (OSError, serial.SerialException):
             print("class umd.__init__ - could not connect to umd")
             sys.exit(1)
-    
+
+
 ########################################################################    
 ## getFlashID
 #  \param self self

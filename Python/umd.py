@@ -41,8 +41,16 @@ from classumd import umd
 ####################################################################################
 if __name__ == "__main__":
     
+    ## UMD Modes, names on the right must match values inside the classumd.py dicts
+    carts = {"none" : "none",
+            "cv" : "Colecovision",
+            "gen" : "Genesis", 
+            "sms" : "SMS",
+            "pce" : "PCEngine",
+            "tg16" : "Turbografx-16" }
+    
     parser = argparse.ArgumentParser(prog="umd 0.1.0.0")
-    parser.add_argument("--mode", help="Set the cartridge type", choices=["cv", "gn", "tg", "pc", "ms", "none"], type=str, required=True)
+    parser.add_argument("--mode", help="Set the cartridge type", choices=["cv", "gen", "sms", "pce", "tg16"], type=str, default="none")
     
     readWriteArgs = parser.add_mutually_exclusive_group()
     readWriteArgs.add_argument("--getid", help="Get Flash ID from cartridge", action="store_true")
@@ -99,40 +107,36 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    # figure out the selected mode, and set it on the umd
-    mode = args.mode
-    dbMode = ""         # single letter code for Teensy, just easier to switch/case single chars on Teensy
     console = ""        # human readable
     dataWidth = ""
     
+    dumper = umd()
+    #print( dumper.modes )
+    #print( dumper.modes.get("Genesis") )
+    
+    if( args.mode != "none" ):
+        print( "setting mode to {0}".format(carts.get(args.mode)) )
+        dumper.connectUMD( carts.get(args.mode) )
+    
+    sys.exit(0)
+    
     if mode == "cv":
-        dumper = umd()
-        dumper.setMode("c")
         console = "Colecovision"
         dataWidth = 8
     elif mode == "gn":
-        dumper = umd()
-        dumper.setMode("g")
         console = "Genesis"
         dataWidth = 16
     elif mode == "pc":
-        dumper = umd()
-        dumper.setMode("p")
         console = "PC Engine"
         dataWidth = 8
     elif mode == "tg":
-        dumper = umd()
-        dumper.setMode("t")
         console = "Turbografx"
         dataWidth = 8
     elif mode == "ms":
-        dumper = umd()
-        dumper.setMode("m")
         console = "Master System"
         dataWidth = 8
     elif mode == "none":
         console = "None"
-        #dumper = umd()
     else:
         pass
     
