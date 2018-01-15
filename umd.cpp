@@ -293,7 +293,15 @@ uint32_t umd::getFlashID()
             writeByte((uint16_t)0x0AAA, 0xAA);
             writeByte((uint16_t)0x0555, 0x55);
             writeByte((uint16_t)0x0AAA, 0x90);
-            flashID = (uint32_t)readByte((uint16_t)0x0002, false);
+            flashID = (uint32_t)readByte((uint16_t)0x0000, false);
+            flashID <<= 8;
+            //exit software ID
+            writeByte((uint16_t)0x0000, 0xF0);
+            
+            writeByte((uint16_t)0x0AAA, 0xAA);
+            writeByte((uint16_t)0x0555, 0x55);
+            writeByte((uint16_t)0x0AAA, 0x90);
+            flashID |= (uint32_t)readByte((uint16_t)0x0001, false);
             
             //exit software ID
             writeByte((uint16_t)0x0000, 0xF0);
@@ -305,16 +313,18 @@ uint32_t umd::getFlashID()
             //enable rom write enable bit
             writeByte((uint16_t)SMS_CONF_REG_ADDR,0x80);
             
-            //set proper slot registers, slot 0 for flash ID
-            setSMSSlotRegister(0,0x0000);
-            setSMSSlotRegister(1,0x4000);
-            setSMSSlotRegister(2,0x8000);
+            writeByte((uint16_t)0x0AAA, 0xAA);
+            writeByte((uint16_t)0x0555, 0x55);
+            writeByte((uint16_t)0x0AAA, 0x90);
+            flashID = (uint32_t)readByte((uint16_t)0x0000, false);
+            flashID <<= 8;
+            //exit software ID
+            writeByte((uint16_t)0x0000, 0xF0);
             
             writeByte((uint16_t)0x0AAA, 0xAA);
             writeByte((uint16_t)0x0555, 0x55);
             writeByte((uint16_t)0x0AAA, 0x90);
-            
-            flashID = (uint32_t)readByte((uint16_t)0x0002, false);
+            flashID |= (uint32_t)readByte((uint16_t)0x0001, false);
             
             //exit software ID
             writeByte((uint16_t)0x0000,0xF0);

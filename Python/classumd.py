@@ -109,7 +109,7 @@ class umd:
         # test for dumper on port
         for serialport in ports:
             try:
-                ser = serial.Serial( port = serialport, baudrate = 115200, bytesize = serial.EIGHTBITS, parity = serial.PARITY_NONE, stopbits = serial.STOPBITS_ONE, timeout=0.1)
+                ser = serial.Serial( port = serialport, baudrate = 460800, bytesize = serial.EIGHTBITS, parity = serial.PARITY_NONE, stopbits = serial.STOPBITS_ONE, timeout=0.1)
                 ser.write(bytes("flash\r\n","utf-8"))
                 response = ser.readline().decode("utf-8")
                 if response == "thunder\r\n":
@@ -119,7 +119,7 @@ class umd:
                 pass
                 
         try:
-            self.serialPort = serial.Serial( port = dbPort, baudrate = 115200, bytesize = serial.EIGHTBITS, parity = serial.PARITY_NONE, stopbits = serial.STOPBITS_ONE, timeout=1)
+            self.serialPort = serial.Serial( port = dbPort, baudrate = 460800, bytesize = serial.EIGHTBITS, parity = serial.PARITY_NONE, stopbits = serial.STOPBITS_ONE, timeout=1)
             self.setMode(mode)
         except (OSError, serial.SerialException):
             print("class umd.__init__ - could not connect to umd")
@@ -304,7 +304,7 @@ class umd:
         if (response == "found\r\n"):
             response = self.serialPort.readline().decode("utf-8")
             fileSize = int(response)
-            print("burning {0} bytes from {1} to the cartridge".format(fileSize, sfFilename))
+            print("burning {0} bytes from serial flash file {1} to the cartridge".format(fileSize, sfFilename))
             
             response = self.serialPort.readline().decode("utf-8")
             while (response != "done\r\n"):

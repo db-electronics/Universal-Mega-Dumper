@@ -50,12 +50,12 @@ void setup() {
 
     uint8_t i;
     
-    Serial.begin(115200);
+    Serial.begin(460800);
 
     umd.setMode(umd.MD);
 
     //flash to show we're alive
-    for( i=0 ; i<4 ; i++ )
+    for( i=0 ; i<2 ; i++ )
     {
         digitalWrite(umd.nLED, LOW);
         delay(250);
@@ -139,9 +139,6 @@ void _unknownCMD(const char *command)
 void _flashThunder()
 {
     Serial.println(F("thunder"));
-    digitalWrite(umd.nLED, LOW);
-    delay(100);
-    digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -231,6 +228,8 @@ void sfBurnCart()
     arg = SCmd.next();
     blockSize = strtoul(arg, (char**)0, 0);
     
+    digitalWrite(umd.nLED, LOW);
+    
     flashFile = SerialFlash.open(fileName);
     if (flashFile)
     {
@@ -269,6 +268,7 @@ void sfBurnCart()
     }
     
     flashFile.close();
+    digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -299,6 +299,8 @@ void sfReadFile()
     arg = SCmd.next();
     blockSize = strtoul(arg, (char**)0, 0);
     
+    digitalWrite(umd.nLED, LOW);
+    
     flashFile = SerialFlash.open(fileName);
     if (flashFile)
     {
@@ -326,6 +328,8 @@ void sfReadFile()
         Serial.println(F("error"));
     }
     flashFile.close();
+    
+    digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -361,6 +365,8 @@ void sfWriteFile()
     arg = SCmd.next();
     blockSize = strtoul(arg, (char**)0, 0);
     
+    digitalWrite(umd.nLED, LOW);
+    
     Serial.read(); //there's an extra byte here for some reason - discard
 
     SerialFlash.create(fileName, fileSize);
@@ -382,6 +388,8 @@ void sfWriteFile()
         Serial.println(F("rdy"));
     }
     flashFile.close();
+    
+    digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -398,6 +406,8 @@ void sfListFiles()
     char fileName[64];
     uint32_t fileSize;
     
+    digitalWrite(umd.nLED, LOW);
+    
     SerialFlash.opendir();
     while (1) {
         if (SerialFlash.readdir(fileName, sizeof(fileName), fileSize))
@@ -412,6 +422,8 @@ void sfListFiles()
             break; // no more files
         }
     }
+    
+    digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -531,38 +543,20 @@ void eraseChip()
  *  
  *  Usage:
  *  getid
- *  getid h
  *  
  *  \return Void
  **********************************************************************/
 void getFlashID()
 {
-    char *arg;
-    
     uint32_t data;
     
     //read the flash ID
     data = umd.getFlashID();
 
-    //check if we should output a formatted string
-    arg = SCmd.next();
-    if( arg != NULL )
-    {
-        switch(*arg)
-        {
-            case 'h': 
-                Serial.println(data,HEX);
-                break;
-            default:
-                break;
-        }
-    }else
-    {
-        Serial.write((char)(data));
-        Serial.write((char)(data>>8));
-        Serial.write((char)(data>>16));
-        Serial.write((char)(data>>24));
-    }
+    Serial.write((char)(data));
+    Serial.write((char)(data>>8));
+    Serial.write((char)(data>>16));
+    Serial.write((char)(data>>24));
 }
 
 
@@ -572,8 +566,6 @@ void getFlashID()
  *  
  *  readword 0x0000
  *      - returns unformated word
- *  readword 0x0000 h
- *      - returns HEX formatted word with eol
  *  
  *  \return Void
  **********************************************************************/
@@ -589,24 +581,8 @@ void readWord()
     
     //read the word
     data = umd.readWord(address);
-
-    //check if we should output a formatted string
-    arg = SCmd.next();
-    if( arg != NULL )
-    {
-        switch(*arg)
-        {
-            case 'h':
-                Serial.println(data,HEX);
-                break;
-            default:
-                break;
-        }   
-    }else
-    {
-        Serial.write((char)(data));
-        Serial.write((char)(data>>8));
-    }
+    Serial.write((char)(data));
+    Serial.write((char)(data>>8));
 
 }
 
@@ -642,23 +618,7 @@ void readByte()
             break;
     }
     
-
-    //check if we should output a formatted string
-    arg = SCmd.next();
-    if( arg != NULL )
-    {
-        switch(*arg)
-        {
-            case 'h':
-                Serial.println(data,HEX);
-                break;
-            default:
-                break;
-        }
-    }else
-    {
-        Serial.write((char)(data));
-    }
+    Serial.write((char)(data));
 }
 
 /*******************************************************************//**
@@ -687,6 +647,8 @@ void readByteBlock()
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
     
+    digitalWrite(umd.nLED, LOW);
+    
     switch(umd.getMode())
     {
         case umd.MS:
@@ -707,10 +669,12 @@ void readByteBlock()
             }
             break;
     }
+    
+    digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
- *  \brief Read a block of bytes from the cartridge
+ *  \brief Read a block of bytes from the cartridge's sram
  *  Read an 8bit byte from the cartridge. In Coleco mode
  *  the address is forced to uint16_t.
  *  
@@ -735,6 +699,8 @@ void readSRAMByteBlock()
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
     
+    digitalWrite(umd.nLED, LOW);
+    
     switch(umd.getMode())
     {
         case umd.MS:
@@ -755,6 +721,8 @@ void readSRAMByteBlock()
         default:
             break;
     }
+    
+    digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -781,6 +749,8 @@ void readWordBlock()
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
     
+    digitalWrite(umd.nLED, LOW);
+    
     //read words from block, output converts to little endian
     for( i = 0; i < blockSize; i += 2 )
     {
@@ -789,6 +759,8 @@ void readWordBlock()
         Serial.write((char)(data));
         Serial.write((char)(data>>8));
     }
+    
+    digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -868,7 +840,7 @@ void programByte()
 {
     char *arg;
     uint32_t address=0;
-    uint8_t data, readBack;
+    uint8_t data;
         
     //get the address in the next argument
     arg = SCmd.next();
@@ -877,7 +849,6 @@ void programByte()
     //get the data in the next argument
     arg = SCmd.next(); 
     data = (uint8_t)strtoul(arg, (char**)0, 0);
-    readBack = ~data;
 
     //if coleco, force 16 bit address program
     if( umd.getMode() == umd.CV )
@@ -885,71 +856,7 @@ void programByte()
         address = (uint16_t)(address);      
     }
     
-    umd.programByte(address, data, false);
-    
-    //check if we should verify the write
-    arg = SCmd.next();
-    if( arg != NULL )
-    {
-        switch(*arg)
-        {
-            case 'v':
-                delayMicroseconds(50);
-                readBack = umd.readByte(address, true);
-                break;
-            default:
-                break;
-        }
-        
-        //compare values
-        if( readBack == data )
-        {
-            //check if we should output a formatted string
-            arg = SCmd.next();
-            if( arg != NULL )
-            {
-                switch(*arg)
-                {
-                    case 'h':
-                        Serial.print(F("ok 0x")); 
-                        Serial.print(readBack,HEX);
-                        Serial.print(F(" at address 0x")); 
-                        Serial.println(address,HEX);
-                        break;
-                    default:
-                        break;
-                }
-            }else
-            {
-                Serial.write((char)(data));
-            }
-        }else
-        {
-            //check if we should output a formatted string
-            arg = SCmd.next();
-            if( arg != NULL )
-            {
-                switch(*arg)
-                {
-                    case 'h':
-                        Serial.print(F("read 0x")); 
-                        Serial.print(readBack,HEX);
-                        Serial.print(F(" expected 0x")); 
-                        Serial.print(data,HEX);
-                        Serial.print(F(" at address 0x")); 
-                        Serial.println(address,HEX);
-                        break;
-                    default:
-                        break;
-                }
-            }else
-            {
-                Serial.write((char)(data));
-            }
-        }
-    }
-    
-    
+    umd.programByte(address, data, true);
 }
 
 /*******************************************************************//**
@@ -973,6 +880,8 @@ void readSRAMWordBlock()
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
     
+    digitalWrite(umd.nLED, LOW);
+    
     umd.writeByteTime(0,3);
     
     //read words from block, output converts to little endian
@@ -985,6 +894,8 @@ void readSRAMWordBlock()
     }
     
     umd.writeByteTime(0,0);
+    
+    digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -1006,6 +917,8 @@ void writeSRAMByteBlock()
     //get the size in the next argument
     arg = SCmd.next();
     blockSize = strtoul(arg, (char**)0, 0);
+    
+    digitalWrite(umd.nLED, LOW);
     
     //receive size bytes
     Serial.read(); //there's an extra byte here for some reason - discard
@@ -1052,6 +965,8 @@ void writeSRAMByteBlock()
     
     //Serial.println(address,HEX);
     Serial.println(F("done"));
+    
+    digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -1073,6 +988,8 @@ void writeBRAMByteBlock()
     //get the size in the next argument
     arg = SCmd.next();
     blockSize = strtoul(arg, (char**)0, 0);
+    
+    digitalWrite(umd.nLED, LOW);
     
     //receive size bytes
     Serial.read(); //there's an extra byte here for some reason - discard
@@ -1103,6 +1020,8 @@ void writeBRAMByteBlock()
 
     //Serial.println(address,HEX);
     Serial.println(F("done"));
+    
+    digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -1132,6 +1051,8 @@ void programByteBlock()
     arg = SCmd.next();
     blockSize = strtoul(arg, (char**)0, 0);
     
+    digitalWrite(umd.nLED, LOW);
+    
     //receive size bytes
     Serial.read(); //there's an extra byte here for some reason - discard
     
@@ -1154,6 +1075,8 @@ void programByteBlock()
     }
     
     Serial.println(F("done"));
+    
+    digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -1185,7 +1108,7 @@ void programWord()
     arg = SCmd.next(); 
     data = (uint16_t)strtoul(arg, (char**)0, 0);
     
-    umd.programWord(address, data, false);
+    umd.programWord(address, data, true);
 }
 
 /*******************************************************************//**
@@ -1217,6 +1140,8 @@ void programWordBlock()
     arg = SCmd.next();
     blockSize = strtoul(arg, (char**)0, 0);
     
+    digitalWrite(umd.nLED, LOW);
+    
     //receive size bytes
     Serial.read(); //there's an extra byte here for some reason - discard
     
@@ -1239,5 +1164,7 @@ void programWordBlock()
     }
     
     Serial.println(F("done"));
+    
+    digitalWrite(umd.nLED, HIGH);
 }
 
