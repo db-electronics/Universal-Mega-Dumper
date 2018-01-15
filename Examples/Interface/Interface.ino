@@ -450,28 +450,32 @@ void _detect()
 void _setMode()
 {
     char *arg;
+    uint8_t mode;
+    
     arg = SCmd.next();
-    switch(*arg)
+    mode = (uint8_t)strtoul(arg, (char**)0, 0);
+    
+    switch(mode)
     {
-        case 'g':
-            umd.setMode(umd.MD);
-            Serial.println(F("mode = g")); 
-            break;
-        case 'p':
-            umd.setMode(umd.PC);
-            Serial.println(F("mode = p")); 
-            break;
-        case 't':
-            umd.setMode(umd.TG);
-            Serial.println(F("mode = t")); 
-            break;
-        case 'c':
+        case 1:
             umd.setMode(umd.CV);
-            Serial.println(F("mode = c")); 
+            Serial.println(F("mode = 1")); 
             break;
-        case 'm':
+        case 2:
+            umd.setMode(umd.MD);
+            Serial.println(F("mode = 2")); 
+            break;
+        case 3:
             umd.setMode(umd.MS);
-            Serial.println(F("mode = m"));
+            Serial.println(F("mode = 3")); 
+            break;
+        case 4:
+            umd.setMode(umd.PC);
+            Serial.println(F("mode = 4")); 
+            break;
+        case 5:
+            umd.setMode(umd.TG);
+            Serial.println(F("mode = 5"));
             break;
         default:
             Serial.println(F("mode = undefined")); 

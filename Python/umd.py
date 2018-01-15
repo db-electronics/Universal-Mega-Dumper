@@ -58,11 +58,9 @@ if __name__ == "__main__":
     readWriteArgs.add_argument("--sferase", help="Erase Serial Flash", action="store_true")
     readWriteArgs.add_argument("--sflist", help="List Serial Flash Files", action="store_true")
     readWriteArgs.add_argument("--sfwrite", nargs=1, help="Write FILE to Serial Flash", type=str, metavar=('filename'))
-    readWriteArgs.add_argument("--sfread", nargs=1, help="Read Serial Flash filename to FILE", type=str, metavar=('filename'))
     readWriteArgs.add_argument("--sfburn", nargs=1, help="Burn Serial Flash filename to cartridge", type=str, metavar=('filename'))
     readWriteArgs.add_argument("--checksum", help="Calculate ROM checksum", action="store_true")
     
-    readWriteArgs.add_argument("--info", help="Read ROM header information", action="store_true")
     readWriteArgs.add_argument("--read", nargs=2, help="Read BYTECOUNT from ADDRESS, to FILE or console if not specified", type=str, metavar=('bytecount', 'address'))
     readWriteArgs.add_argument("--write", nargs=2, help="Write VALUE at ADDRESS", type=str, metavar=('value', 'address'))
     readWriteArgs.add_argument("--savewrite", nargs=1, help="Write FILE to SAVE MEMORY", type=str, metavar=('address'))
@@ -102,43 +100,22 @@ if __name__ == "__main__":
                         metavar=('size'),
                         default="1")
     
-    parser.add_argument("-f","--file", help="File path for read/write operations", default="console")
+    parser.add_argument("--file", help="File path for read/write operations", type=str, default="console")
+    parser.add_argument("--sffile", help="8.3 filename for UMD's serial flash", type=str)
     parser.add_argument("--ram", help="Target RAM/ROM memory on cartridge", action="store_true")
     
     args = parser.parse_args()
-    
-    console = ""        # human readable
-    dataWidth = ""
     
     dumper = umd()
     #print( dumper.modes )
     #print( dumper.modes.get("Genesis") )
     
     if( args.mode != "none" ):
-        print( "setting mode to {0}".format(carts.get(args.mode)) )
+        #print( "setting mode to {0}".format(carts.get(args.mode)) )
         dumper.connectUMD( carts.get(args.mode) )
     
-    sys.exit(0)
-    
-    if mode == "cv":
-        console = "Colecovision"
-        dataWidth = 8
-    elif mode == "gn":
-        console = "Genesis"
-        dataWidth = 16
-    elif mode == "pc":
-        console = "PC Engine"
-        dataWidth = 8
-    elif mode == "tg":
-        console = "Turbografx"
-        dataWidth = 8
-    elif mode == "ms":
-        console = "Master System"
-        dataWidth = 8
-    elif mode == "none":
-        console = "None"
-    else:
-        pass
+    dataWidth = dumper.busWidth.get( carts.get(args.mode) )
+    console = carts.get(args.mode)
     
     #figure out the size of the operation, default to 1 in arguments so OK to calc everytime
     if( args.size[0].endswith("Kb") ):  
@@ -167,10 +144,18 @@ if __name__ == "__main__":
                 
             freeSpace = dumper.sfSize - usedSpace
             print("\n\r{0} of {1} bytes remaining".format(freeSpace, dumper.sfSize))
+        
+        elif args.rd == "sffile":
+            if ( args.file == "console" ):
+                print("must specify a local --FILE to write the serial flash file's contents into")
+            else:
+                dumper.sfReadFile(args.sffile, args.file)
+                print("read {0} from serial flash to {1} in {2:.3f} s".format(args.sffile, args.file, dumper.opTime))
+            
         elif args.rd == "header":
-            if mode == "gn":
+            if args.mode == "gen":
                 dumper.readGenesisROMHeader()
-            if mode == "ms":
+            if args.mode == "sms":
                 dumper.readSMSROMHeader()
             
             for item in sorted(dumper.romInfo.items()):
@@ -220,29 +205,6 @@ if __name__ == "__main__":
             dumper.sfReadFile(sfFilename, filename)
             print("read {0} from serial flash to {1} in {2:.3f} s".format(sfFilename, filename, dumper.opTime))
     
-    elif args.sflist:
-        dumper.sfGetFileList()
-        usedSpace = 0
-        freeSpace = 0
-        print("name           : bytes")
-        print("--------------------------")
-        for item in dumper.sfFileList.items():
-            #print(item)
-            print("{0}: {1}".format(item[0].ljust(15), item[1]))
-            usedSpace += item[1]
-            
-        freeSpace = dumper.sfSize - usedSpace
-        print("\n\r{0} of {1} bytes remaining".format(freeSpace, dumper.sfSize))
-    
-    elif args.info:
-        if mode == "gn":
-            dumper.readGenesisROMHeader()
-        if mode == "ms":
-            dumper.readSMSROMHeader()
-            
-        for item in sorted(dumper.romInfo.items()):
-            print(item)
-    
     elif args.erase:
         eraseChips = args.erase[0].split(",")
         for eraseChip in eraseChips:    
@@ -251,10 +213,10 @@ if __name__ == "__main__":
             print("erase flash chip {0} completed in {1:.3f} s".format(eraseChip, dumper.opTime))
     
     elif args.checksum:
-        if mode == "gn":
+        if mode == "gen":
             dumper.checksumGenesis()
             print("checksum completed in {0:.3f} s, calculated {1} expected {2}".format(dumper.opTime, dumper.checksumCalculated, dumper.checksumCart)) 
-        if mode == "ms":
+        if mode == "sms":
             dumper.checksumSMS()
             print("checksum completed in {0:.3f} s, calculated {1} expected {2}".format(dumper.opTime, dumper.checksumCalculated, dumper.checksumCart)) 
         

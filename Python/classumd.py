@@ -95,7 +95,7 @@ class umd:
 ########################################################################
     def connectUMD(self, mode):
 
-        print("mode set value = {0}".format(self.modes.get(mode)))
+        #print("mode set value = {0}".format(self.modes.get(mode)))
         
         dbPort = ""
         # enumerate ports
@@ -120,6 +120,7 @@ class umd:
                 
         try:
             self.serialPort = serial.Serial( port = dbPort, baudrate = 115200, bytesize = serial.EIGHTBITS, parity = serial.PARITY_NONE, stopbits = serial.STOPBITS_ONE, timeout=1)
+            self.setMode(mode)
         except (OSError, serial.SerialException):
             print("class umd.__init__ - could not connect to umd")
             sys.exit(1)
@@ -150,10 +151,11 @@ class umd:
 ######################################################################## 
     def setMode(self, mode):
         
-        self.mode = mode
-        self.serialPort.write(bytes("setmode {}\r\n".format(mode),"utf-8"))
+        #self.modes.get(mode)
+        
+        self.serialPort.write(bytes("setmode {}\r\n".format(self.modes.get(mode)),"utf-8"))
         response = self.serialPort.readline().decode("utf-8")
-        expect = "mode = {}\r\n".format(mode)
+        expect = "mode = {}\r\n".format(self.modes.get(mode))
         if ( response != expect ):
             print("umd.setMode - expected '{}' : received '{}'".format(expect, response))
 
@@ -418,10 +420,8 @@ class umd:
         endAddress = address + size
         startAddress = address
         
-        #["rom", "save", "bram", "sffile", "header"]
-        if target == "sffile":
-            readCmd = "sfread"
-        elif( width == 8 ):
+        #["rom", "save", "bram", "header"]
+        if( width == 8 ):
             if target == "rom":
                 readCmd = "rdbblk"
             elif target == "save":
