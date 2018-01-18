@@ -188,6 +188,7 @@ if __name__ == "__main__":
                 os.remove("zeros.bin")
             except OSError:
                 pass
+            print("cleared {0} bytes of save at address 0x{1:X} in {2:.3f} s".format(byteCount, address, dumper.opTime))
             
         # erase the flash rom on a cartridge, some cart types have multiple chips, need to figure out if more than 1 is connected
         elif args.clr == "rom":
