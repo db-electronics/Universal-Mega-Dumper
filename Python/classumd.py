@@ -831,58 +831,6 @@ class umd:
             self.printProgress( (address/endAddress) , self.progressBarSize )
             
         self.opTime = time.time() - startTime
-        
-########################################################################    
-## checksumGenesis
-#  \param self self
-#  
-#  Compare the checksum in the Genesis cartridge's header with a calculated
-#  checksum.
-########################################################################  
-    def checksumGenesis(self):
-        
-        # read ROM header
-        self.readGenesisROMHeader()
-        
-        # Genesis checksums start after the header
-        address = 512
-        startAddress = 512
-        self.checksumCalculated = 0
-        
-        # get integer value of checksum
-        self.checksumCart = self.romInfo["Checksum"][0]
-        endAddress = self.romInfo["ROM End"][0] + 1
-        size = endAddress - address
-        
-        startTime = time.time()
-        
-        while address < endAddress:
-            # read chunkSize or less
-            if (endAddress - address) > self.readChunkSize: 
-                sizeOfRead = self.readChunkSize
-            else:
-                sizeOfRead = (endAddress - address)
-            
-            cmd = "rdwblk {0} {1}\r\n".format(address, sizeOfRead)
-                                    
-            # send command to UMD, read response    
-            self.serialPort.write(bytes(cmd,"utf-8"))
-            response = self.serialPort.read(sizeOfRead)
-            
-            # add up each word in response, limit to 16 bit width
-            # loop through results
-            respCount = len(response)
-            i = 0
-            while i < respCount:
-                thisWord = response[i],response[i + 1]
-                intVal = int.from_bytes(thisWord, byteorder="big")
-                self.checksumCalculated = (self.checksumCalculated + intVal) & 0xFFFF
-                i += 2
-            
-            address += sizeOfRead
-            self.printProgress( ((address - startAddress)/size) , self.progressBarSize )
-            
-        self.opTime = time.time() - startTime
 
 ########################################################################    
 ## printProgress

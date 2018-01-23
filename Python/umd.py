@@ -33,6 +33,7 @@ import getopt
 import argparse
 import struct
 from classumd import umd
+from romopsumd import romOperations
 
 # https://docs.python.org/3/howto/argparse.html
 
@@ -55,7 +56,7 @@ if __name__ == "__main__":
     readWriteArgs = parser.add_mutually_exclusive_group()
     readWriteArgs.add_argument("--checksum", help="Calculate ROM checksum", action="store_true")
 
-    readWriteArgs.add_argument("--swapbytes", nargs=1, help="Reverse the endianness of a file", type=str, metavar=('new file'))
+    readWriteArgs.add_argument("--byteswap", nargs=1, help="Reverse the endianness of a file", type=str, metavar=('file to byte swap'))
     
     readWriteArgs.add_argument("--rd", 
                                 help="Read from UMD", 
@@ -101,7 +102,8 @@ if __name__ == "__main__":
     
     if( args.mode != "none" ):
         #print( "setting mode to {0}".format(carts.get(args.mode)) )
-        dumper.connectUMD(cartType)
+        if( not(args.checksum & ( args.file != "console") ) ):
+            dumper.connectUMD(cartType)
     
     #figure out the size of the operation, default to 1 in arguments so OK to calc everytime
     if( args.size[0].endswith("Kb") ):  
@@ -233,33 +235,27 @@ if __name__ == "__main__":
 
     # checksum operations
     elif args.checksum:
-        if mode == "gen":
-            dumper.checksumGenesis()
-            print("checksum completed in {0:.3f} s, calculated {1} expected {2}".format(dumper.opTime, dumper.checksumCalculated, dumper.checksumCart)) 
-        if mode == "sms":
+        if args.mode == "gen":
+            if args.file:
+                startTime = time.time()
+                romOps = romOperations()
+                checksum = romOps.checksumGenesis(args.file)
+                opTime = time.time() - startTime
+                print("checksum completed in {0:.3f} s, calculated {1} expected {2}".format(opTime, romOps.checksumCalc, romOps.checksumRom)) 
+                del romOps
+            else:
+                pass
+                
+        if args.mode == "sms":
             dumper.checksumSMS()
             print("checksum completed in {0:.3f} s, calculated {1} expected {2}".format(dumper.opTime, dumper.checksumCalculated, dumper.checksumCart)) 
 
-    elif args.swapbytes:
-        filename = args.file
-        outFile = args.swapbytes[0]
-        fileSize = os.path.getsize(filename)
-        pos = 0
-        
-        try:
-            os.remove(outFile)
-        except OSError:
-            pass
-            
-        with open(outFile, "wb+") as fwrite:
-            with open(filename, "rb") as fread:
-                while(pos < fileSize):  
-                    badEndian = fread.read(2)
-                    revEndian = struct.pack('<h', *struct.unpack('>h', badEndian))
-                    fwrite.write(revEndian)
-                    pos += 2
-        
-
+    elif args.byteswap:
+        startTime = time.time()
+        romOps = romOperations()
+        romOps.byteSwap(args.byteswap[0], args.file)
+        opTime = time.time() - startTime
+        del romOps
     else:
         parser.print_help()
         pass
