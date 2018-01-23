@@ -50,7 +50,7 @@ if __name__ == "__main__":
             "tg" : "Turbografx-16" }
     
     parser = argparse.ArgumentParser(prog="umd 0.1.0.0")
-    parser.add_argument("--mode", help="Set the cartridge type", choices=["cv", "gen", "sms", "pce", "tg16"], type=str, default="none")
+    parser.add_argument("--mode", help="Set the cartridge type", choices=["cv", "gen", "sms", "pce", "tg"], type=str, default="none")
     
     readWriteArgs = parser.add_mutually_exclusive_group()
     readWriteArgs.add_argument("--checksum", help="Calculate ROM checksum", action="store_true")

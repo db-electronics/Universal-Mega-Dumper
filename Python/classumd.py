@@ -141,7 +141,7 @@ class umd:
 #  
 #  Retrieve the ROM's manufacturer flash ID
 ########################################################################     
-    def getFlashID(self, dataWidth):
+    def getFlashID(self):
         
         self.serialPort.write(bytes("getid\r\n","utf-8"))
         readBytes = self.serialPort.read(4)
