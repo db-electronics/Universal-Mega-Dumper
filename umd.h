@@ -289,7 +289,8 @@ class umd
 
         //globally affected pins
         static const uint8_t nRD = 25;  
-        static const uint8_t nWR = 24;
+        static const uint8_t nWR = 24; //for 3.3V testing
+        //static const uint8_t nWR = 44;
         static const uint8_t nCE = 19;
         static const uint8_t nCART = 18;
 
@@ -328,6 +329,7 @@ class umd
         static const uint8_t GEN_nVRES = 42;
         static const uint8_t GEN_nLWR = 43;
         static const uint8_t GEN_nUWR = 44;
+        //static const uint8_t GEN_nUWR = 24; //for 3.3V testing
         static const uint8_t GEN_nTIME = 45;
         
         //SPI pins

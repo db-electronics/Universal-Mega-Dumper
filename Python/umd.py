@@ -241,14 +241,22 @@ if __name__ == "__main__":
                 romOps = romOperations()
                 checksum = romOps.checksumGenesis(args.file)
                 opTime = time.time() - startTime
-                print("checksum completed in {0:.3f} s, calculated {1} expected {2}".format(opTime, romOps.checksumCalc, romOps.checksumRom)) 
+                print("checksum completed in {0:.3f} s, calculated 0x{1:X} expected 0x{2:X}".format(opTime, romOps.checksumCalc, romOps.checksumRom)) 
                 del romOps
             else:
                 pass
                 
         if args.mode == "sms":
-            dumper.checksumSMS()
-            print("checksum completed in {0:.3f} s, calculated {1} expected {2}".format(dumper.opTime, dumper.checksumCalculated, dumper.checksumCart)) 
+            if args.file:
+                startTime = time.time()
+                romOps = romOperations()
+                checksum = romOps.checksumSMS(args.file)
+                opTime = time.time() - startTime
+                print("checksum completed in {0:.3f} s, calculated 0x{1:X} expected 0x{2:X}".format(opTime, romOps.checksumCalc, romOps.checksumRom)) 
+                del romOps
+            else:
+                pass
+
 
     elif args.byteswap:
         startTime = time.time()
