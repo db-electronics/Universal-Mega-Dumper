@@ -183,7 +183,7 @@ class romOperations:
             # print("romsize = {0}".format(romsize) )
             
             # jump back to beginning of file
-            f.seek(0,
+            f.seek(0, 0)
             
             while( pos < romsize ):
                 if( ( romsize - pos ) >= self.readChunkSize):
