@@ -52,7 +52,7 @@ void setup() {
     
     Serial.begin(460800);
 
-    umd.setMode(umd.MD);
+    umd.setMode(umd.undefined);
 
     //flash to show we're alive
     for( i=0 ; i<2 ; i++ )
