@@ -142,6 +142,75 @@ void _flashThunder()
 }
 
 /*******************************************************************//**
+ *  \brief Detects the state of the nCART signal
+ *  If a cart asserts the nCART signal it will be detected.
+ *  Note that the mode must be set prior to issuing this command
+ *  
+ *  Usage:
+ *  detect
+ *  
+ *  \return Void
+ **********************************************************************/
+void _detect()
+{
+    if(umd.detectCart())
+    {
+        Serial.println(F("True")); 
+    }else
+    {
+        Serial.println(F("False")); 
+    }
+}
+
+/*******************************************************************//**
+ *  \brief Sets the dumper mode
+ *  Configures the dumper's I/O for the corresponding system.
+ *  Mode set is required to be issued prior to most other commands as most
+ *  commands require a mode to function properly.
+ *  
+ *  Usage:
+ *  setmode c
+ *  
+ *  \return Void
+ **********************************************************************/
+void _setMode()
+{
+    char *arg;
+    uint8_t mode;
+    
+    arg = SCmd.next();
+    mode = (uint8_t)strtoul(arg, (char**)0, 0);
+    
+    switch(mode)
+    {
+        case 1:
+            umd.setMode(umd.CV);
+            Serial.println(F("mode = 1")); 
+            break;
+        case 2:
+            umd.setMode(umd.MD);
+            Serial.println(F("mode = 2")); 
+            break;
+        case 3:
+            umd.setMode(umd.MS);
+            Serial.println(F("mode = 3")); 
+            break;
+        case 4:
+            umd.setMode(umd.PC);
+            Serial.println(F("mode = 4")); 
+            break;
+        case 5:
+            umd.setMode(umd.TG);
+            Serial.println(F("mode = 5"));
+            break;
+        default:
+            Serial.println(F("mode = undefined")); 
+            umd.setMode(umd.undefined);
+            break;
+    }  
+}
+
+/*******************************************************************//**
  *  \brief Read the onboard serial flash ID
  *  \return Void
  **********************************************************************/
@@ -154,6 +223,7 @@ void sfGetID()
     Serial.write(sfID[3]);
     Serial.write(sfID[4]);
 }
+
 
 /*******************************************************************//**
  *  \brief Get the size of the onboard serial flash
@@ -427,77 +497,6 @@ void sfListFiles()
 }
 
 /*******************************************************************//**
- *  \brief Detects the state of the nCART signal
- *  If a cart asserts the nCART signal it will be detected.
- *  Note that the mode must be set prior to issuing this command
- *  
- *  Usage:
- *  detect
- *  
- *  \return Void
- **********************************************************************/
-void _detect()
-{
-    if(umd.detectCart())
-    {
-        Serial.println(F("True")); 
-    }else
-    {
-        Serial.println(F("False")); 
-    }
-}
-
-
-/*******************************************************************//**
- *  \brief Sets the dumper mode
- *  Configures the dumper's I/O for the corresponding system.
- *  Mode set is required to be issued prior to most other commands as most
- *  commands require a mode to function properly.
- *  
- *  Usage:
- *  setmode c
- *  
- *  \return Void
- **********************************************************************/
-void _setMode()
-{
-    char *arg;
-    uint8_t mode;
-    
-    arg = SCmd.next();
-    mode = (uint8_t)strtoul(arg, (char**)0, 0);
-    
-    switch(mode)
-    {
-        case 1:
-            umd.setMode(umd.CV);
-            Serial.println(F("mode = 1")); 
-            break;
-        case 2:
-            umd.setMode(umd.MD);
-            Serial.println(F("mode = 2")); 
-            break;
-        case 3:
-            umd.setMode(umd.MS);
-            Serial.println(F("mode = 3")); 
-            break;
-        case 4:
-            umd.setMode(umd.PC);
-            Serial.println(F("mode = 4")); 
-            break;
-        case 5:
-            umd.setMode(umd.TG);
-            Serial.println(F("mode = 5"));
-            break;
-        default:
-            Serial.println(F("mode = undefined")); 
-            umd.setMode(umd.undefined);
-            break;
-    }  
-}
-
-
-/*******************************************************************//**
  *  \brief Erases the contents of the cart
  *  Erases the correspoding Flash IC on the cart.
  *  Requires set mode to be issued prior.
@@ -559,6 +558,67 @@ void getFlashID()
     Serial.write((char)(data>>24));
 }
 
+/*******************************************************************//**
+ *  \brief Read a byte from the cartridge
+ *  
+ *  rdbyte 0x0000
+ *      - returns unformated byte
+ *  
+ *  \return Void
+ **********************************************************************/
+void readByte()
+{
+    char *arg;
+    uint32_t address = 0;
+    uint16_t smsAddress;
+    uint8_t data;
+    
+    //get the address in the next argument
+    arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //check for next argument, if present
+    arg = SCmd.next();
+    if( arg != NULL )
+    {
+        switch(*arg)
+        {
+            //read SRAM byte
+            case 's':
+                switch(umd.getMode())
+                {
+                    case umd.MS:
+                        //enable the corresponding RAM bank in slot 2
+                        smsAddress = ((uint16_t)address & 0x3FFF) | umd.SMS_SLOT_2_ADDR;
+                        umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x88);
+                        //calculate effective SMS address in slot 2
+                        data = umd.readByte(umd.setSMSSlotRegister(2, address), true);
+                        //disable RAM Bank
+                        umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x00);
+                        break;
+                    default:
+                        break;
+                }
+            default:
+                break;
+        }
+        
+    }else
+    {
+        switch(umd.getMode())
+        {
+            case umd.MS:
+                //calculate effective SMS address in slot 2
+                data = umd.readByte(umd.setSMSSlotRegister(2, address), true);
+                break;
+            default:
+                data = umd.readByte(address, true);
+                break;
+        }
+    }
+    
+    Serial.write((char)(data));
+}
 
 /*******************************************************************//**
  *  \brief Read a word from the cartridge
@@ -586,55 +646,21 @@ void readWord()
 
 }
 
-
-/*******************************************************************//**
- *  \brief Read a byte from the cartridge
- *  
- *  readbyte 0x0000
- *      - returns unformated byte
- *  readbyte 0x0000 h
- *      - returns HEX formatted byte with eol
- *  
- *  \return Void
- **********************************************************************/
-void readByte()
-{
-    char *arg;
-    uint32_t address = 0;
-    uint8_t data;
-    
-    //get the address in the next argument
-    arg = SCmd.next();
-    address = strtoul(arg, (char**)0, 0);
-    
-    switch(umd.getMode())
-    {
-        case umd.MS:
-            //calculate effective SMS address in slot 2
-            data = umd.readByte(umd.setSMSSlotRegister(2, address), true);
-            break;
-        default:
-            data = umd.readByte(address, true);
-            break;
-    }
-    
-    Serial.write((char)(data));
-}
-
 /*******************************************************************//**
  *  \brief Read a block of bytes from the cartridge
- *  Read an 8bit byte from the cartridge. In Coleco mode
+ *  Read an 8bit byte block from the cartridge. In Coleco mode
  *  the address is forced to uint16_t.
  *  
  *  Usage:
- *  readbbyte 0x0000 128
- *    - returns 128 unformated bytes
+ *  rdbblk 0x0000 128
+ *    - returns 128 bytes starting at address 0x0000
  *  
  *  \return Void
  **********************************************************************/
 void readByteBlock()
 {
     char *arg;
+    bool sramRead = false;
     uint32_t address = 0;
     uint16_t blockSize = 0, i;
     uint8_t data;
@@ -647,18 +673,44 @@ void readByteBlock()
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
     
+    //check for next argument, if present, for type of read
+    arg = SCmd.next();
+    if( arg != NULL )
+    {
+        switch(*arg)
+        {
+            case 's':
+                sramRead = true;
+                break;
+            default:
+                break;
+        }
+    }
+    
     digitalWrite(umd.nLED, LOW);
     
     switch(umd.getMode())
     {
         case umd.MS:
-
+            if( sramRead )
+            {
+                //enable the corresponding RAM bank in slot 2
+                umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR, 0x88);
+            }
+            
             for( i = 0; i < blockSize; i++ )
             {
                 //calculate effective SMS address in slot 2
                 data = umd.readByte(umd.setSMSSlotRegister(2, address++), true);
                 Serial.write((char)(data)); 
             }
+            
+            if( sramRead )
+            {
+                //disable RAM Bank
+                umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR, 0x00);
+            }
+            
             break;
             
         default:
@@ -729,8 +781,8 @@ void readSRAMByteBlock()
  *  \brief Read a block of words from the cartridge
  *  
  *  Usage:
- *  readbbyte 0x0000 128
- *    - returns 128 unformated bytes
+ *  rdwblk 0x0000 128
+ *    - returns 128 unformated words
  *  
  *  \return Void
  **********************************************************************/
@@ -751,7 +803,7 @@ void readWordBlock()
     
     digitalWrite(umd.nLED, LOW);
     
-    //read words from block, output converts to little endian
+    //read words from block, output is little endian
     for( i = 0; i < blockSize; i += 2 )
     {
         data = umd.readWord(address);
@@ -772,6 +824,10 @@ void readWordBlock()
  *  writebyte 0x100 0xFE
  *    - writes 0xFE to address 0x100
  *  
+ *  Usage:
+ *  writebyte 0x00 0x01 t
+ *    - writes 0xFE to address 0x00 by strobing Genesis nTIME signal
+ * 
  *  \return Void
  **********************************************************************/
 void writeByte()
@@ -788,8 +844,26 @@ void writeByte()
     arg = SCmd.next(); 
     data = strtoul(arg, (char**)0, 0);
     
-    //write word
-    umd.writeByte(address, data);
+    //check next arg, if present, for write type
+    arg = SCmd.next();
+    if( arg != NULL )
+    {
+        switch(*arg)
+        {
+            //write time byte on Genesis
+            case 't':
+                umd.writeByteTime((uint16_t)address, data);
+                break;
+            default
+                break;
+        }
+    }else
+    {
+        //write the byte
+        umd.writeByte(address, data);
+    }
+    
+
 }
 
 /*******************************************************************//**
