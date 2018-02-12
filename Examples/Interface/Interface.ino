@@ -854,7 +854,7 @@ void writeByte()
             case 't':
                 umd.writeByteTime((uint16_t)address, data);
                 break;
-            default
+            default:
                 break;
         }
     }else
