@@ -60,7 +60,7 @@ if __name__ == "__main__":
     
     readWriteArgs.add_argument("--rd", 
                                 help="Read from UMD", 
-                                choices=["rom", "save", "bram", "header", "fid", "sfid", "sf", "sflist"], 
+                                choices=["rom", "save", "bram", "header", "fid", "sfid", "sf", "sflist", "byte", "word", "sbyte", "sword"], 
                                 type=str)
     
     readWriteArgs.add_argument("--wr", 

@@ -423,32 +423,26 @@ class umd:
 ########################################################################
     def read(self, address, size, target, outfile):
     
-        endAddress = address + size
-        startAddress = address
+        
         width = self.busWidth.get(self.cartType)
         
         #["rom", "save", "bram", "header"]
         if( width == 8 ):
-            if target == "rom":
-                readCmd = "rdbblk"
-            elif target == "save":
-                readCmd = "rdsbblk"
-            elif target == "bram":
-                readCmd = "rdbblk"
+            if( target == "byte" or target == "sbyte" ):
+                readCmd = "rdbyte"
             else:
-                pass
+                readCmd = "rdbblk"
         elif( width == 16 ):
-            if target == "rom":
-                readCmd = "rdwblk"
-            elif target == "save":
-                readCmd = "rdswblk"
-            elif target == "bram":
-                readCmd = "rdwblk"
+            if( target == "word" or target == "sword" ):
+                readCmd = "rdword"
+                size = 2
             else:
-                pass
+                readCmd = "rdwblk"
         else:    
             pass
         
+        endAddress = address + size
+        startAddress = address
         startTime = time.time()
         
         # read from UMD, output to console
@@ -460,7 +454,17 @@ class umd:
                 else:
                     sizeOfRead = (endAddress - address)
                 
-                cmd = "{0} {1} {2}\r\n".format(readCmd, address, sizeOfRead)
+                if( target == "byte" or target == "word" ):
+                    cmd = "{0} {1}\r\n".format(readCmd, address)
+                elif( target == "sbyte" or target == "sword" ):
+                    cmd = "{0} {1} s\r\n".format(readCmd, address)
+                elif( target == "save" ):
+                    cmd = "{0} {1} {2} s\r\n".format(readCmd, address, sizeOfRead)
+                else:
+                    cmd = "{0} {1} {2}\r\n".format(readCmd, address, sizeOfRead)
+                
+                # show command
+                print(cmd, end="")
                 
                 self.serialPort.write(bytes(cmd,"utf-8"))
                 response = self.serialPort.read(sizeOfRead)

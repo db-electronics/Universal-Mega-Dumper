@@ -58,9 +58,9 @@ void setup() {
     for( i=0 ; i<2 ; i++ )
     {
         digitalWrite(umd.nLED, LOW);
-        delay(250);
+        delay(100);
         digitalWrite(umd.nLED, HIGH);
-        delay(250);
+        delay(100);
     }
 
     if (!SerialFlash.begin(FlashChipSelect)) {
@@ -80,12 +80,11 @@ void setup() {
     SCmd.addCommand("erase",  eraseChip);
     SCmd.addCommand("getid",  getFlashID);
     
+    //read commands
     SCmd.addCommand("rdbyte", readByte);
     SCmd.addCommand("rdbblk", readByteBlock);
-    SCmd.addCommand("rdsbblk",readSRAMByteBlock);
     SCmd.addCommand("rdword", readWord);
     SCmd.addCommand("rdwblk", readWordBlock);
-    SCmd.addCommand("rdswblk",readSRAMWordBlock);
     
     SCmd.addCommand("wrbyte", writeByte);
     SCmd.addCommand("wrsblk", writeSRAMByteBlock);
@@ -570,8 +569,7 @@ void readByte()
 {
     char *arg;
     uint32_t address = 0;
-    uint16_t smsAddress;
-    uint8_t data;
+    uint8_t data = 0;
     
     //get the address in the next argument
     arg = SCmd.next();
@@ -589,7 +587,6 @@ void readByte()
                 {
                     case umd.MS:
                         //enable the corresponding RAM bank in slot 2
-                        smsAddress = ((uint16_t)address & 0x3FFF) | umd.SMS_SLOT_2_ADDR;
                         umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x88);
                         //calculate effective SMS address in slot 2
                         data = umd.readByte(umd.setSMSSlotRegister(2, address), true);
@@ -632,6 +629,7 @@ void readByte()
 void readWord()
 {
     char *arg;
+    bool sramRead = false;
     uint32_t address=0;
     uint16_t data;
     
@@ -639,11 +637,39 @@ void readWord()
     arg = SCmd.next();
     address = strtoul(arg, (char**)0, 0);
     
-    //read the word
-    data = umd.readWord(address);
-    Serial.write((char)(data));
-    Serial.write((char)(data>>8));
+    //check for next argument, if present, for type of read
+    arg = SCmd.next();
+    if( arg != NULL )
+    {
+        switch(*arg)
+        {
+            case 's':
+                sramRead = true;
+                break;
+            default:
+                break;
+        }
+    }
+    
+    digitalWrite(umd.nLED, LOW);
+    
+    if( sramRead )
+    {
+        //read the word
+        umd.writeByteTime(0,3);
+        data = umd.readWord(address);
+        Serial.write((char)(data));
+        Serial.write((char)(data>>8));
+        umd.writeByteTime(0,0);
+    }else
+    {
+        //read the word
+        data = umd.readWord(address);
+        Serial.write((char)(data));
+        Serial.write((char)(data>>8));
+    }
 
+    digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -662,7 +688,7 @@ void readByteBlock()
     char *arg;
     bool sramRead = false;
     uint32_t address = 0;
-    uint16_t blockSize = 0, i;
+    uint16_t smsAddress, blockSize = 0, i;
     uint8_t data;
 
     //get the address in the next argument
@@ -695,22 +721,26 @@ void readByteBlock()
             if( sramRead )
             {
                 //enable the corresponding RAM bank in slot 2
-                umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR, 0x88);
-            }
-            
-            for( i = 0; i < blockSize; i++ )
-            {
-                //calculate effective SMS address in slot 2
-                data = umd.readByte(umd.setSMSSlotRegister(2, address++), true);
-                Serial.write((char)(data)); 
-            }
-            
-            if( sramRead )
-            {
+                smsAddress = ((uint16_t)address & 0x3FFF) | umd.SMS_SLOT_2_ADDR;
+                umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x88);
+                for( i = 0; i < blockSize; i++ )
+                {
+                    //calculate effective SMS address in slot 2
+                    data = umd.readByte(smsAddress++, true);
+                    Serial.write((char)(data)); 
+                }
                 //disable RAM Bank
                 umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR, 0x00);
+            }else
+            {
+                for( i = 0; i < blockSize; i++ )
+                {
+                    //calculate effective SMS address in slot 2
+                    data = umd.readByte(umd.setSMSSlotRegister(2, address++), true);
+                    Serial.write((char)(data)); 
+                }
             }
-            
+
             break;
             
         default:
@@ -719,58 +749,6 @@ void readByteBlock()
                 data = umd.readByte(address++, true);
                 Serial.write((char)(data));
             }
-            break;
-    }
-    
-    digitalWrite(umd.nLED, HIGH);
-}
-
-/*******************************************************************//**
- *  \brief Read a block of bytes from the cartridge's sram
- *  Read an 8bit byte from the cartridge. In Coleco mode
- *  the address is forced to uint16_t.
- *  
- *  Usage:
- *  readbbyte 0x0000 128
- *    - returns 128 unformated bytes
- *  
- *  \return Void
- **********************************************************************/
-void readSRAMByteBlock()
-{
-    char *arg;
-    uint32_t address = 0;
-    uint16_t smsAddress,blockSize = 0, i;
-    uint8_t data;
-
-    //get the address in the next argument
-    arg = SCmd.next();
-    address = strtoul(arg, (char**)0, 0);
-    
-    //get the size in the next argument
-    arg = SCmd.next(); 
-    blockSize = strtoul(arg, (char**)0, 0);
-    
-    digitalWrite(umd.nLED, LOW);
-    
-    switch(umd.getMode())
-    {
-        case umd.MS:
-            
-            //enable the corresponding RAM bank in slot 2
-            smsAddress = ((uint16_t)address & 0x3FFF) | umd.SMS_SLOT_2_ADDR;
-            umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x88);
-            for( i = 0; i < blockSize; i++ )
-            {
-                //calculate effective SMS address in slot 2
-                data = umd.readByte(smsAddress++ , true);
-                Serial.write((char)(data)); 
-            }
-            //disable RAM Bank
-            umd.writeByte((uint16_t)umd.SMS_CONF_REG_ADDR,0x00);
-            break;
-            
-        default:
             break;
     }
     
@@ -789,6 +767,7 @@ void readSRAMByteBlock()
 void readWordBlock()
 {
     char *arg;
+    bool sramRead = false;
     uint32_t address = 0;
     uint16_t blockSize = 0, i;
     uint16_t data;
@@ -801,16 +780,46 @@ void readWordBlock()
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
     
+    //check for next argument, if present, for type of read
+    arg = SCmd.next();
+    if( arg != NULL )
+    {
+        switch(*arg)
+        {
+            case 's':
+                sramRead = true;
+                break;
+            default:
+                break;
+        }
+    }
+    
     digitalWrite(umd.nLED, LOW);
     
-    //read words from block, output is little endian
-    for( i = 0; i < blockSize; i += 2 )
+    if( sramRead )
     {
-        data = umd.readWord(address);
-        address += 2;
-        Serial.write((char)(data));
-        Serial.write((char)(data>>8));
+        umd.writeByteTime(0,3);
+        //read words from block, output converts to little endian
+        for( i = 0; i < blockSize; i += 2 )
+        {
+            data = umd.readWord(address);
+            address += 2;
+            Serial.write((char)(data));
+            Serial.write((char)(data>>8));
+        }
+        umd.writeByteTime(0,0);
+    }else
+    {
+        //read words from block, output is little endian
+        for( i = 0; i < blockSize; i += 2 )
+        {
+            data = umd.readWord(address);
+            address += 2;
+            Serial.write((char)(data));
+            Serial.write((char)(data>>8));
+        }
     }
+    
     
     digitalWrite(umd.nLED, HIGH);
 }
@@ -931,45 +940,6 @@ void programByte()
     }
     
     umd.programByte(address, data, true);
-}
-
-/*******************************************************************//**
- * \brief
- * Usage:
- 
- * \return Void
- **********************************************************************/
-void readSRAMWordBlock()
-{
-    char *arg;
-    uint32_t address = 0;
-    uint16_t blockSize = 0, i;
-    uint16_t data;
-
-    //get the address in the next argument
-    arg = SCmd.next();
-    address = strtoul(arg, (char**)0, 0);
-    
-    //get the size in the next argument
-    arg = SCmd.next(); 
-    blockSize = strtoul(arg, (char**)0, 0);
-    
-    digitalWrite(umd.nLED, LOW);
-    
-    umd.writeByteTime(0,3);
-    
-    //read words from block, output converts to little endian
-    for( i = 0; i < blockSize; i += 2 )
-    {
-        data = umd.readWord(address);
-        address += 2;
-        Serial.write((char)(data));
-        Serial.write((char)(data>>8));
-    }
-    
-    umd.writeByteTime(0,0);
-    
-    digitalWrite(umd.nLED, HIGH);
 }
 
 /*******************************************************************//**
