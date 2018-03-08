@@ -195,7 +195,7 @@ if __name__ == "__main__":
         # erase the flash rom on a cartridge, some cart types have multiple chips, need to figure out if more than 1 is connected
         elif args.clr == "rom":
             if args.mode == "gen":
-                for eraseChip in range(0,1):    
+                for eraseChip in range(0,2):    
                     print("erasing flash chip {0}...".format(eraseChip))
                     dumper.eraseChip(eraseChip)
                     print("erase flash chip {0} completed in {1:.3f} s".format(eraseChip, dumper.opTime))
