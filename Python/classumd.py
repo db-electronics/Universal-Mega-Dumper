@@ -622,17 +622,18 @@ class umd:
             response = response.decode("utf-8", "replace")
             print("{0} is plausibly the game's title found in 0x7FC0 header".format(response))
 
-        # check for valid header at 0x7FC0
-        cmd = "rdbblk 0x7FF0 21\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(21)
+        else:
+            # check for valid header at 0x7FC0
+            cmd = "rdbblk 0x7FF0 21\r\n"
+            self.serialPort.write(bytes(cmd,"utf-8"))
+            response = self.serialPort.read(21)
 
-        headerHi = True
-        for testChar in response:
-            if not(0x20 <= testChar <= 0x7F):
-                print("invalid ascii char {0} found in 0xFFC0 header".format(testChar))
-                headerLo = False
-                break
+            headerHi = True
+            for testChar in response:
+                if not(0x20 <= testChar <= 0x7F):
+                    print("invalid ascii char {0} found in 0xFFC0 header".format(testChar))
+                    headerLo = False
+                    break
 
 ########################################################################    
 ## readSMSROMHeader
@@ -831,54 +832,6 @@ class umd:
         response = self.serialPort.read(16).decode("utf-8", "replace")
         self.romInfo.update({"Country Support": response })
 
-########################################################################    
-## checksumSMS
-#  \param self self
-#  
-#  Compare the checksum in the SMS cartridge's header with a calculated
-#  checksum.
-######################################################################## 
-    def checksumSMS(self):
-        # read ROM header
-        self.readSMSROMHeader()
-        
-        # SMS checksums skip the header data at between 0x7FF0 and 0x8000
-        self.checksumCalculated = 0
-        self.checksumCart = self.romInfo["Checksum"][0]
-        address = 0
-        endAddress = self.romInfo["Size"]
-        
-        startTime = time.time()
-        
-        while address < endAddress:
-            # read chunkSize or less
-            if (endAddress - address) > self.readChunkSize: 
-                sizeOfRead = self.readChunkSize
-            else:
-                sizeOfRead = (endAddress - address)
-            
-            # must ignore header data
-            
-            cmd = "rdbblk {0} {1}\r\n".format(address, sizeOfRead)
-        
-            # send command to Teensy, read response    
-            self.serialPort.write(bytes(cmd,"utf-8"))
-            response = self.serialPort.read(sizeOfRead)
-        
-            # add up each word in response, limit to 16 bit width
-            # loop through results
-            respCount = len(response)
-            i = 0
-            while i < respCount:
-                thisWord = response[i],response[i + 1]
-                intVal = int.from_bytes(thisWord, byteorder="little")
-                self.checksumCalculated = (self.checksumCalculated + intVal) & 0xFFFF
-                i += 2
-            
-            address += sizeOfRead
-            self.printProgress( (address/endAddress) , self.progressBarSize )
-            
-        self.opTime = time.time() - startTime
 
 ########################################################################    
 ## printProgress
