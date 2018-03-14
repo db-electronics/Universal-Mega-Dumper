@@ -36,7 +36,27 @@ Next, copy this file to /etc/udev/rules.d/
 ```
 sudo cp 49-teensy.rules /etc/udev/rules.d/
 ```
-I believe a reboot is required after updating the udev rules.
+
+Now trigger udev to re-evaluate the rules
+```
+sudo udevadm trigger
+```
+
+If you have any issues with the Arduino IDE or teensyduino detecting the board, reboot.
+
+
+# Arduino IDE Preferences
+
+Open the Arduino IDE and go to File->Preferences.
+
+In the "Sketchbook location" field, change it to the directory you plan to clone the UMD repository and dependent libraries.
+
+For example:
+```
+/home/username/projects/umd
+```
+
+The ``libraries`` directory under this directory is where you should clone this repository and the required Arduino libraries.
 
 # Python Setup
 For linux users, python3 is more likely than not already installed in your distro. UMD depends on pyserial, run the following commands to install it.
@@ -51,10 +71,30 @@ will allow you to build the Teensy firmware.
 ## Arduino Serial Command
 I have forked Arduino Serial Command and made a few modifications. Clone the Arduino Serial Command repo into your Arudino/libraries folder.
 
-https://github.com/db-electronics/ArduinoSerialCommand
+```
+git clone https://github.com/db-electronics/ArduinoSerialCommand
+```
 
 ## Serial Flash
 Paul Stoffregen, the creator of Teensy, provides a very good SPI Serial Flash library with a rudimentary filesystem. Clone the Serial Flash
 repo into your Arduino/libraries folder.
 
-https://github.com/PaulStoffregen/SerialFlash
+```
+git clone https://github.com/PaulStoffregen/SerialFlash
+```
+You should have a directory layout like this:
+
+```
+libraries/ArduinoSerialCommand
+libraries/SerialFlash
+libraries/Universal-Mega-Dumper
+```
+
+# Program the teensy
+
+  1. In the Arduino IDE, select Tools->Board->Teensy++2.0
+  2. Open the sketch Universal-Mega-Dumper/Examples/Interface.ino
+  3. Click the Verify (checkbox) button.
+  4. Press the button on the teensy
+     A teensy window should open showing that it's programming and rebooting.  If not, click the upload button.
+
