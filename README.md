@@ -46,8 +46,9 @@ If you have any issues with the Arduino IDE or teensyduino detecting the board, 
 
 
 # Arduino IDE Preferences
+You can use the default Arduino library directory, which is ``~/Arduino/libraries``.  If you're ok with this, clone this and the required libraries there, and ignore the rest of this section.
 
-Open the Arduino IDE and go to File->Preferences.
+If you don't want to use the default, open the Arduino IDE and go to File->Preferences.
 
 In the "Sketchbook location" field, change it to the directory you plan to clone the UMD repository and dependent libraries.
 
