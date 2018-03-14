@@ -50,7 +50,8 @@ class umd
             MD,         /**< Genesis Megadrive mode */
             TG,         /**< TG-16 mode */
             PC,         /**< PC Engine mode */
-            MS          /**< Master System mode */
+            MS,         /**< Master System mode */
+            SN          /**< Super Nintendo mode */
         };
 
         /*******************************************************************//**
@@ -263,9 +264,6 @@ class umd
         //pin numbers UI
         static const uint8_t nLED = 8;                      ///< LED pin number
         static const uint8_t nPB = 9;                       ///< Pushbutton pin number
-        
-        //Master System Slot Base Addresses
-        
 
     private:
         uint8_t _resetPin;
@@ -289,8 +287,7 @@ class umd
 
         //globally affected pins
         static const uint8_t nRD = 25;  
-        static const uint8_t nWR = 24; //for 3.3V testing
-        //static const uint8_t nWR = 44;
+        static const uint8_t nWR = 24;
         static const uint8_t nCE = 19;
         static const uint8_t nCART = 18;
 
@@ -307,16 +304,8 @@ class umd
         //Turbografx-16 pin functions
         static const uint8_t TG_nRST = 38;
 
-        //Coleco pin functions
-        //static const uint8_t COL_nBPRES = 39;
-        //static const uint8_t COL_nE000 = 38;
-        //static const uint8_t COL_A16 = 38;
-        //static const uint8_t COL_nC000 = 40;
-        //static const uint8_t COL_A15 = 40;
-        //static const uint8_t COL_nA000 = 41;
-        //static const uint8_t COL_A14 = 41;
-        //static const uint8_t COL_n8000 = 43;
-        //static const uint8_t COL_A13 = 43;    
+        //Super Nintendo pin functions
+        static const uint8_t SN_nRST = 45;
 
         //Master System pin functions
         static const uint8_t SMS_nRST = 42;
@@ -329,7 +318,6 @@ class umd
         static const uint8_t GEN_nVRES = 42;
         static const uint8_t GEN_nLWR = 43;
         static const uint8_t GEN_nUWR = 44;
-        //static const uint8_t GEN_nUWR = 24; //for 3.3V testing
         static const uint8_t GEN_nTIME = 45;
         
         //SPI pins

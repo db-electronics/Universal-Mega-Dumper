@@ -202,6 +202,10 @@ void _setMode()
             umd.setMode(umd.TG);
             Serial.println(F("mode = 5"));
             break;
+        case 6:
+            umd.setMode(umd.SN);
+            Serial.println(F("mode = 6"));
+            break;
         default:
             Serial.println(F("mode = undefined")); 
             umd.setMode(umd.undefined);

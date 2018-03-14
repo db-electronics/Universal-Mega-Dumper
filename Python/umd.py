@@ -48,10 +48,11 @@ if __name__ == "__main__":
             "gen" : "Genesis", 
             "sms" : "SMS",
             "pce" : "PCEngine",
-            "tg" : "Turbografx-16" }
+            "tg" : "Turbografx-16",
+            "snes" : "Super Nintendo" }
     
     parser = argparse.ArgumentParser(prog="umd 0.1.0.0")
-    parser.add_argument("--mode", help="Set the cartridge type", choices=["cv", "gen", "sms", "pce", "tg"], type=str, default="none")
+    parser.add_argument("--mode", help="Set the cartridge type", choices=["cv", "gen", "sms", "pce", "tg", "snes"], type=str, default="none")
     
     readWriteArgs = parser.add_mutually_exclusive_group()
     readWriteArgs.add_argument("--checksum", help="Calculate ROM checksum", action="store_true")
@@ -151,6 +152,8 @@ if __name__ == "__main__":
                 dumper.readGenesisROMHeader()
             if args.mode == "sms":
                 dumper.readSMSROMHeader()
+            if args.mode == "snes":
+                dumper.readSNESROMHeader()
             
             for item in sorted(dumper.romInfo.items()):
                 print(item)

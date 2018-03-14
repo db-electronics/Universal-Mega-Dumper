@@ -146,10 +146,9 @@ void umd::setMode(eMode mode)
             _resetPin = GEN_nVRES;
             resetCart();
             _mode = MD;
-
             break;
+            
         case PC:
-
             pinMode(TG_nRST, OUTPUT);
             digitalWrite(TG_nRST, HIGH);
             _resetPin = TG_nRST;
@@ -158,7 +157,6 @@ void umd::setMode(eMode mode)
             break;
             
         case TG:
-            
             pinMode(TG_nRST, OUTPUT);
             digitalWrite(TG_nRST, HIGH);
             _resetPin = TG_nRST;
@@ -167,18 +165,26 @@ void umd::setMode(eMode mode)
             break;
             
         case CV:
-
             _resetPin = 45; //unused with coleco
             _mode = CV;
             break;
+            
         case MS:
-
             pinMode(SMS_nRST, OUTPUT);
             digitalWrite(SMS_nRST, HIGH);
             _resetPin = SMS_nRST;
             resetCart();
             _mode = MS;
             break;
+            
+        case SN:
+            pinMode(SN_nRST, OUTPUT);
+            digitalWrite(SN_nRST, HIGH);
+            _resetPin = SN_nRST;
+            resetCart();
+            _mode = SN;
+            break;
+            
         default:
             //control signals default to all inputs
 
@@ -289,6 +295,7 @@ uint32_t umd::getFlashID()
             break;
         //mx29f800 software ID detect byte mode
         case PC:
+        case SN:
         case TG:
             writeByte((uint16_t)0x0AAA, 0xAA);
             writeByte((uint16_t)0x0555, 0x55);
@@ -411,6 +418,7 @@ uint32_t umd::eraseChip(bool wait, uint8_t chip)
             
             break;
         case PC:
+        case SN:
         case TG:
             writeByte((uint16_t)0x0AAA, 0xAA);
             writeByte((uint16_t)0x0555, 0x55);
@@ -550,6 +558,7 @@ uint8_t umd::readByte(uint16_t address, bool external)
         case MS:
         case MD:
         case TG:
+        case SN:
         case CV:
         default:
             readData = DATAINL;
@@ -594,6 +603,7 @@ uint8_t umd::readByte(uint32_t address, bool external)
         case MS:
         case MD:
         case TG:
+        case SN:
         case CV:
         default:
             readData = DATAINL;
@@ -685,6 +695,7 @@ void umd::writeByte(uint16_t address, uint8_t data)
         case MS:
         case PC:
         case TG:
+        case SN:
         case CV:
         default:
             DATAOUTL = data;
@@ -732,6 +743,7 @@ void umd::writeByte(uint32_t address, uint8_t data)
             break;
         case PC:
         case TG:
+        case SN:
         case CV:
         default:
             DATAOUTL = data;
@@ -848,6 +860,7 @@ void umd::programByte(uint32_t address, uint8_t data, bool wait)
             }
             break;
         //MX29F800 program byte
+        case SN:
         case TG:
             writeByte((uint16_t)0x0AAA, 0xAA);
             writeByte((uint16_t)0x0555, 0x55);
@@ -988,6 +1001,7 @@ uint8_t umd::toggleBit(uint8_t attempts, uint8_t chip)
         //mx29f800 toggle bit on bit 6
         case MS:
         case PC:
+        case SN:
         case TG:
             //first read of bit 6
             oldValue = readByte((uint16_t)0x0000, false) & 0x40;

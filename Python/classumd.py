@@ -46,7 +46,8 @@ class umd:
             "Genesis" : 2, 
             "SMS" : 3,
             "PCEngine" : 4,
-            "Turbografx-16" : 5 }
+            "Turbografx-16" : 5,
+            "Super Nintendo" : 6 }
     
     ## Console bus widths
     busWidth = {"None" : 0,
@@ -54,7 +55,8 @@ class umd:
             "Genesis" : 16, 
             "SMS" : 8,
             "PCEngine" : 8,
-            "Turbografx-16" : 8 }
+            "Turbografx-16" : 8,
+            "Super Nintendo" : 8 }
     
     writeBlockSize = {
             "sf"   : 512,
@@ -591,6 +593,48 @@ class umd:
         self.opTime = time.time() - startTime
 
 ########################################################################    
+## readSNESROMHeader
+#  \param self self
+#  
+#  Read and format the ROM header for Super Nintendo cartridge
+########################################################################
+    def readSNESROMHeader(self):
+        
+        # clear current rom info dictionnary
+        self.romInfo.clear()
+
+        # header data could be in one of two places, 0x7FC0 or 0xFFC0
+        # search for 21 ASCII characters at the beginning of the header
+        
+        # check for valid header at 0x7FC0
+        cmd = "rdbblk 0x7FC0 21\r\n"
+        self.serialPort.write(bytes(cmd,"utf-8"))
+        response = self.serialPort.read(21)
+
+        headerLo = True
+        for testChar in response:
+            if not(0x20 <= testChar <= 0x7F):
+                print("invalid ascii char {0} found in 0x7FC0 header".format(testChar))
+                headerLo = False
+                break
+        
+        if headerLo:
+            response = response.decode("utf-8", "replace")
+            print("{0} is plausibly the game's title found in 0x7FC0 header".format(response))
+
+        # check for valid header at 0x7FC0
+        cmd = "rdbblk 0x7FF0 21\r\n"
+        self.serialPort.write(bytes(cmd,"utf-8"))
+        response = self.serialPort.read(21)
+
+        headerHi = True
+        for testChar in response:
+            if not(0x20 <= testChar <= 0x7F):
+                print("invalid ascii char {0} found in 0xFFC0 header".format(testChar))
+                headerLo = False
+                break
+
+########################################################################    
 ## readSMSROMHeader
 #  \param self self
 #  
@@ -604,7 +648,7 @@ class umd:
         # check for valid header at 0x7FF0
         cmd = "rdbblk 0x7FF0 8\r\n"
         self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(16).decode("utf-8", "replace")
+        response = self.serialPort.read(8).decode("utf-8", "replace")
         self.romInfo.update({"Trademark": response })
         
         # get checksum
