@@ -33,7 +33,8 @@ import getopt
 import argparse
 import struct
 from classumd import umd
-from romopsumd import romOperations
+from genesis import genesis
+from sms import sms
 
 # https://docs.python.org/3/howto/argparse.html
 
@@ -241,32 +242,32 @@ if __name__ == "__main__":
         if args.mode == "gen":
             if args.file:
                 startTime = time.time()
-                romOps = romOperations()
-                checksum = romOps.checksumGenesis(args.file)
+                genesis = genesis()
+                checksum = genesis.checksum(args.file)
                 opTime = time.time() - startTime
-                print("checksum completed in {0:.3f} s, calculated 0x{1:X} expected 0x{2:X}".format(opTime, romOps.checksumCalc, romOps.checksumRom)) 
-                del romOps
+                print("checksum completed in {0:.3f} s, calculated 0x{1:X} expected 0x{2:X}".format(opTime, genesis.checksumCalc, genesis.checksumRom)) 
+                del genesis
             else:
                 pass
                 
         if args.mode == "sms":
             if args.file:
                 startTime = time.time()
-                romOps = romOperations()
-                checksum = romOps.checksumSMS(args.file)
+                sms = sms()
+                checksum = sms.checksum(args.file)
                 opTime = time.time() - startTime
-                print("checksum completed in {0:.3f} s, calculated 0x{1:X} expected 0x{2:X}".format(opTime, romOps.checksumCalc, romOps.checksumRom)) 
-                del romOps
+                print("checksum completed in {0:.3f} s, calculated 0x{1:X} expected 0x{2:X}".format(opTime, sms.checksumCalc, sms.checksumRom)) 
+                del sms
             else:
                 pass
 
 
     elif args.byteswap:
         startTime = time.time()
-        romOps = romOperations()
-        romOps.byteSwap(args.byteswap[0], args.file)
+        genesis = genesis()
+        gensis.byteSwap(args.byteswap[0], args.file)
         opTime = time.time() - startTime
-        del romOps
+        del genesis
     else:
         parser.print_help()
         pass
