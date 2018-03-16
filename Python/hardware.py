@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 ########################################################################
-# \file  classumd.py
+# \file  hardware.py
 # \author René Richard
 # \brief This program allows to read and write to various game cartridges 
 #        including: Genesis, Coleco, SMS, PCE - with possibility for 
@@ -35,8 +35,7 @@ import struct
 
 ## Universal Mega Dumper
 #
-#  All communications with the UMD are handled by the umd class, as well
-#  as several ROM header read and checksum calculation routines.
+#  All communications with the UMD are handled by the umd class
 class umd:
     
     ## UMD Modes
@@ -94,6 +93,7 @@ class umd:
 ########################################################################
     def __init__(self, mode):        
         self.cartType = mode
+        self.connectUMD(mode)
 
 ########################################################################    
 ## connectUMD
@@ -428,7 +428,7 @@ class umd:
         
         width = self.busWidth.get(self.cartType)
         
-        #["rom", "save", "bram", "header"]
+        #["rom", "save", "bram", "header", "fid", "sfid", "sf", "sflist", "byte", "word", "sbyte", "sword"]
         if( width == 8 ):
             if( target == "byte" or target == "sbyte" ):
                 readCmd = "rdbyte"
@@ -592,246 +592,6 @@ class umd:
             
         self.opTime = time.time() - startTime
 
-########################################################################    
-## readSNESROMHeader
-#  \param self self
-#  
-#  Read and format the ROM header for Super Nintendo cartridge
-########################################################################
-    def readSNESROMHeader(self):
-        
-        # clear current rom info dictionnary
-        self.romInfo.clear()
-
-        # header data could be in one of two places, 0x7FC0 or 0xFFC0
-        # search for 21 ASCII characters at the beginning of the header
-        
-        # check for valid header at 0x7FC0
-        cmd = "rdbblk 0x7FC0 21\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(21)
-
-        headerLo = True
-        for testChar in response:
-            if not(0x20 <= testChar <= 0x7F):
-                print("invalid ascii char {0} found in 0x7FC0 header".format(testChar))
-                headerLo = False
-                break
-        
-        if headerLo:
-            response = response.decode("utf-8", "replace")
-            print("{0} is plausibly the game's title found in 0x7FC0 header".format(response))
-
-        else:
-            # check for valid header at 0x7FC0
-            cmd = "rdbblk 0x7FF0 21\r\n"
-            self.serialPort.write(bytes(cmd,"utf-8"))
-            response = self.serialPort.read(21)
-
-            headerHi = True
-            for testChar in response:
-                if not(0x20 <= testChar <= 0x7F):
-                    print("invalid ascii char {0} found in 0xFFC0 header".format(testChar))
-                    headerLo = False
-                    break
-
-########################################################################    
-## readSMSROMHeader
-#  \param self self
-#  
-#  Read and format the ROM header for Sega Master System cartridge
-########################################################################
-    def readSMSROMHeader(self):
-        
-        # clear current rom info dictionnary
-        self.romInfo.clear()
-        
-        # check for valid header at 0x7FF0
-        cmd = "rdbblk 0x7FF0 8\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(8).decode("utf-8", "replace")
-        self.romInfo.update({"Trademark": response })
-        
-        # get checksum
-        cmd = "rdbblk 0x7FFA 2\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(2)
-        intVal = int.from_bytes(response, byteorder="little")
-        self.romInfo.update({"Checksum": [ intVal, hex(intVal) ]})
-        
-        # get product code
-        cmd = "rdbblk 0x7FFC 3\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(3)
-        intVal = int.from_bytes(response, byteorder="little") & 0x0FFFFF
-        self.romInfo.update({"Product Code": [ intVal, hex(intVal) ]})
-        
-        # get region and size
-        cmd = "rdbblk 0x7FFF 1\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(1)
-        intVal = int.from_bytes(response, byteorder="little")
-        
-        regionVal = (intVal & 0xF0) >> 4
-        if regionVal == 3:
-            regionStr = "SMS Japan"
-        elif regionVal == 4:
-            regionStr = "SMS Export"
-        elif regionVal == 5:
-            regionStr = "GG Japan"
-        elif regionVal == 6:
-            regionStr = "GG Export"
-        elif regionVal == 7:
-            regionStr = "GG Internation"
-        else:
-            regionStr = "unknown"
-        
-        self.romInfo.update({"Region": regionStr })
-        
-        romsizeVal = (intVal & 0x0F)
-        if romsizeVal == 10:
-            romsize = 8192
-        elif romsizeVal == 11:
-            romsize = 16384
-        elif romsizeVal == 12:
-            romsize = 32768
-        elif romsizeVal == 13:
-            romsize = 49152
-        elif romsizeVal == 14:
-            romsize = 65536
-        elif romsizeVal == 15:
-            romsize = 131072
-        elif romsizeVal == 0:
-            romsize = 262144
-        elif romsizeVal == 1:
-            romsize = 525288
-        elif romsizeVal == 2:
-            romsize = 1048576
-        else:
-            romsize = "unknown"
-            
-        self.romInfo.update({"Size": romsize }) 
-
-########################################################################    
-## readGenesisROMHeader
-#  \param self self
-#  
-#  Read and format the ROM header for Sega Genesis cartridge
-########################################################################
-    def readGenesisROMHeader(self):
-        
-        # clear current rom info dictionnary
-        self.romInfo.clear()
-        
-        # get console name
-        cmd = "rdwblk 0x100 16\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(16).decode("utf-8", "replace")
-        self.romInfo.update({"Console Name": response })
-        
-        # get copyright information
-        cmd = "rdwblk 0x110 16\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(16).decode("utf-8", "replace")
-        self.romInfo.update({"Copyright": response })
-        
-        # get domestic name
-        cmd = "rdwblk 0x120 48\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(48).decode("utf-8", "replace")
-        self.romInfo.update({"Domestic Name": response })
-        
-        # get overseas name
-        cmd = "rdwblk 0x150 48\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(48).decode("utf-8", "replace")
-        self.romInfo.update({"Overseas Name": response })
-
-        # get serial number
-        cmd = "rdwblk 0x180 14\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(14).decode("utf-8", "replace")
-        self.romInfo.update({"Serial Number": response })
-
-        # get checksum
-        cmd = "rdwblk 0x18E 2\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(2)
-        intVal = int.from_bytes(response, byteorder="big")
-        self.romInfo.update({"Checksum": [ intVal, hex(intVal) ]})
-
-        # get io support
-        cmd = "rdwblk 0x190 16\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(16).decode("utf-8", "replace")
-        self.romInfo.update({"IO Support": response })
-        
-        # get ROM Start Address
-        cmd = "rdwblk 0x1A0 4\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(4)
-        intVal = int.from_bytes(response, byteorder="big")
-        self.romInfo.update({"ROM Begin": [ intVal, hex(intVal) ]})
-
-        # get ROM End Address
-        cmd = "rdwblk 0x1A4 4\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(4)
-        intVal = int.from_bytes(response, byteorder="big")
-        self.romInfo.update({"ROM End": [ intVal, hex(intVal) ]})
-
-        # get Start of RAM
-        cmd = "rdwblk 0x1A8 4\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(4)
-        intVal = int.from_bytes(response, byteorder="big")
-        self.romInfo.update({"RAM Begin": [ intVal, hex(intVal) ]})
-
-        # get End of RAM
-        cmd = "rdwblk 0x1AC 4\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(4)
-        intVal = int.from_bytes(response, byteorder="big")
-        self.romInfo.update({"RAM End": [ intVal, hex(intVal) ]})
-        
-        # get sram support
-        cmd = "rdwblk 0x1B0 4\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(4)
-        self.romInfo.update({"SRAM Support": response })
-        
-        # get start of sram
-        cmd = "rdwblk 0x1B4 4\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(4)
-        intVal = int.from_bytes(response, byteorder="big")
-        self.romInfo.update({"SRAM Begin": [ intVal, hex(intVal) ]})
-        
-        # get end of sram
-        cmd = "rdwblk 0x1B8 4\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(4)
-        intVal = int.from_bytes(response, byteorder="big")
-        self.romInfo.update({"SRAM End": [ intVal, hex(intVal) ]})
-        
-        # get modem support
-        cmd = "rdwblk 0x1BC 12\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(12).decode("utf-8", "replace")
-        self.romInfo.update({"Modem Support": response })
-        
-        # get memo
-        cmd = "rdwblk 0x1C8 40\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(40).decode("utf-8", "replace")
-        self.romInfo.update({"Memo": response })
-        
-        # get country support
-        cmd = "rdwblk 0x1F0 16\r\n"
-        self.serialPort.write(bytes(cmd,"utf-8"))
-        response = self.serialPort.read(16).decode("utf-8", "replace")
-        self.romInfo.update({"Country Support": response })
-
 
 ########################################################################    
 ## printProgress
@@ -855,3 +615,4 @@ class umd:
             print("\rPercent: [{0}] {1:.3f}%\r\n".format(hashes, progress), end="", flush=True)
             #sys.stdout.write("\rPercent: [{0}] {1:.3f}%\r\n".format(hashes, progress))
             #sys.stdout.flush()
+

@@ -35,8 +35,13 @@ class genesis:
     checksumRom = 0
     checksumCalc = 0
     
+    headerAddress = 0x100
+    headerChecksum = 0x18E
+    headerSize = 0x100
+    headerData = {}
+    romStartAddress = 0x200
+    
     readChunkSize = 2048
-    progressBarSize = 64
     
 ########################################################################    
 ## The Constructor
@@ -45,6 +50,7 @@ class genesis:
 ########################################################################
     def __init__(self):        
         pass
+
 
 ########################################################################    
 ## byteSwap(self, ifile, ofile):
@@ -80,7 +86,7 @@ class genesis:
     def checksum(self, filename):
         
         # Genesis checksums start after the header
-        pos = 512
+        pos = self.romStartAddress
         self.checksumCalc = 0
         fileSize = os.path.getsize(filename)
         
@@ -88,13 +94,13 @@ class genesis:
             
             # read the ROM header's checksum value
 
-            f.seek( 0x018E, 0)
+            f.seek( self.headerChecksum, 0)
             data = f.read(2)
             thisWord = data[0],data[1]
             self.checksumRom = int.from_bytes(thisWord, byteorder="big")
             
             # jump ahead of ROM header
-            f.seek(pos, 0)
+            f.seek(self.romStartAddress, 0)
             
             while( pos < fileSize ):
                 if( ( fileSize - pos ) >= self.readChunkSize):
@@ -114,5 +120,59 @@ class genesis:
                 pos += sizeOfRead
 
 
-
+########################################################################    
+## readGenesisROMHeader
+#  \param self self
+#  
+#  Read and format the ROM header for Sega Genesis cartridge
+########################################################################
+    def formatHeader(self, filename):
+        
+        # clear current rom info dictionnary
+        self.headerData.clear()
+        with open(filename, "rb") as f:
+            
+        ## get console name
+            self.headerData.update({"Console Name": f.read(16).decode("utf-8", "replace") })
+        ## get copyright information
+            self.headerData.update({"Copyright": f.read(16).decode("utf-8", "replace") })
+        ## get domestic name
+            self.headerData.update({"Domestic Name": f.read(48).decode("utf-8", "replace") })
+        ## get overseas name
+            self.headerData.update({"Overseas Name": f.read(48).decode("utf-8", "replace") })
+        ## get serial number
+            self.headerData.update({"Serial Number": f.read(14).decode("utf-8", "replace") })
+        ## get checksum
+            data = int.from_bytes(f.read(2), byteorder="big" )
+            self.headerData.update({"Checksum": [data, hex(data)] })
+        ## get io support
+            self.headerData.update({"IO Support": f.read(16).decode("utf-8", "replace") })
+        ## get ROM Start Address
+            data = int.from_bytes(f.read(4), byteorder="big" )
+            self.headerData.update({"ROM Begin": [data, hex(data)] })
+        ## get ROM End Address
+            data = int.from_bytes(f.read(4), byteorder="big" )
+            self.headerData.update({"ROM End": [data, hex(data)] })
+        ## get Start of RAM
+            data = int.from_bytes(f.read(4), byteorder="big" )
+            self.headerData.update({"RAM Begin": [data, hex(data)] })
+        ## get End of RAM
+            data = int.from_bytes(f.read(4), byteorder="big" )
+            self.headerData.update({"RAM End": [data, hex(data)] })
+        ## get sram support
+            self.headerData.update({"SRAM Support": f.read(4) })
+        ## get start of sram
+            data = int.from_bytes(f.read(4), byteorder="big" )
+            self.headerData.update({"SRAM Begin": [data, hex(data)] })
+        ## get end of sram
+            data = int.from_bytes(f.read(4), byteorder="big" )
+            self.headerData.update({"SRAM End": [data, hex(data)] })
+        ## get modem support
+            self.headerData.update({"Modem Support": f.read(12).decode("utf-8", "replace") })
+        ## get memo
+            self.headerData.update({"Memo": f.read(40).decode("utf-8", "replace") })
+        ## get country support
+            self.headerData.update({"Country Support": f.read(16).decode("utf-8", "replace") })
+        
+        return self.headerData
 
