@@ -112,6 +112,8 @@ class umd:
             ports = ["COM%s" % (i + 1) for i in range(256)]
         elif sys.platform.startswith ("linux"):
             ports = glob.glob("/dev/tty[A-Za-z]*")
+        elif sys.platform.startswith ("darwin"):
+            ports = glob.glob("/dev/cu*")
         else:
             raise EnvironmentError("Unsupported platform")
 
