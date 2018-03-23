@@ -709,6 +709,31 @@ void umd::writeByteTime(uint16_t address, uint8_t data)
 }
 
 /*******************************************************************//**
+ * The writeByteTimeFull function strobes a byte into nTIME region
+ * while enabling the rest of the regular signals
+ * 
+ * \warning upper 8 address bits (23..16) are not modified
+ **********************************************************************/
+void umd::writeByteTimeFull(uint32_t address, uint8_t data)
+{
+    _latchAddress(address);
+    _setDatabusOutput();
+
+    //put byte on bus
+    DATAOUTL = data;
+    
+    
+    // write to the bus
+    digitalWrite(GEN_nLWR, LOW);
+    digitalWrite(GEN_nTIME, LOW);
+    delayMicroseconds(1);
+    digitalWrite(GEN_nTIME, HIGH);
+    digitalWrite(GEN_nLWR, HIGH);
+ 
+    _setDatabusInput();
+}
+
+/*******************************************************************//**
  * The writeByte function strobes a byte into the cartridge at a 16bit
  * address. The upper 8 address bits (23..16) are not modified
  * by this function so this can be used to perform quicker successive
