@@ -73,7 +73,6 @@ void setup() {
 
     //register callbacks for SerialCommand related to the cartridge
     SCmd.addCommand("flash",  _flashThunder);
-    SCmd.addCommand("detect", _detect);
     SCmd.addCommand("setmode",_setMode);
     
     //register callbacks for SerialCommand related to the cartridge
@@ -141,27 +140,6 @@ void _flashThunder()
 }
 
 /*******************************************************************//**
- *  \brief Detects the state of the nCART signal
- *  If a cart asserts the nCART signal it will be detected.
- *  Note that the mode must be set prior to issuing this command
- *  
- *  Usage:
- *  detect
- *  
- *  \return Void
- **********************************************************************/
-void _detect()
-{
-    if(umd.detectCart())
-    {
-        Serial.println(F("True")); 
-    }else
-    {
-        Serial.println(F("False")); 
-    }
-}
-
-/*******************************************************************//**
  *  \brief Sets the dumper mode
  *  Configures the dumper's I/O for the corresponding system.
  *  Mode set is required to be issued prior to most other commands as most
@@ -204,6 +182,10 @@ void _setMode()
             break;
         case 6:
             umd.setMode(umd.SN);
+            Serial.println(F("mode = 6"));
+            break;
+        case 7:
+            umd.setMode(umd.SNLO);
             Serial.println(F("mode = 6"));
             break;
         default:
@@ -550,15 +532,22 @@ void eraseChip()
  **********************************************************************/
 void getFlashID()
 {
-    uint32_t data;
+    uint8_t i;
     
-    //read the flash ID
-    data = umd.getFlashID();
+    // read the flash ID
+    umd.getFlashID();
+    
+    // flash ID contained in array, could be one or many chips
+    // PC side listens until end of line
+    
+    for( i = 0 ; i < umd.flashChipNum ; i++ )
+    {
+        Serial.print(umd.flashID[i], HEX);
+    }
+    
+    //EOL
+    Serial.println();
 
-    Serial.write((char)(data));
-    Serial.write((char)(data>>8));
-    Serial.write((char)(data>>16));
-    Serial.write((char)(data>>24));
 }
 
 /*******************************************************************//**

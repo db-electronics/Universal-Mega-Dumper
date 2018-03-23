@@ -69,23 +69,6 @@ void umd::resetCart()
 }
 
 /*******************************************************************//**
- * The detectCart() functions tests if the nCART line is pulled low
- * by a cartridge.
- * 
- * \warning incompatible with Colecovision mode
- **********************************************************************/
-bool umd::detectCart()
-{
-    bool detect = false;
-
-    if (digitalRead(nCART) == LOW)
-    {
-        detect = true;
-    }
-    return detect;
-}
-
-/*******************************************************************//**
  * The setMode() function configures the Teensy IO properly for the
  * selected cartridge. The _mode and _resetPin variable store the
  * current mode and resetPin numbers for later use by the firmware.
@@ -178,6 +161,7 @@ void umd::setMode(eMode mode)
             break;
             
         case SN:
+        case SNLO:
             pinMode(SN_nRST, OUTPUT);
             digitalWrite(SN_nRST, HIGH);
             _resetPin = SN_nRST;
@@ -195,7 +179,7 @@ void umd::setMode(eMode mode)
 
 /*******************************************************************//**
  * The _latchAddress function latches a 24bit address to the cartridge
- * \warning incompatible with Colecovision mode
+ * \warning contains direct port manipulation
  **********************************************************************/
 inline void umd::_latchAddress(uint32_t address)
 {
@@ -211,14 +195,20 @@ inline void umd::_latchAddress(uint32_t address)
     //put low and mid address on bus and latch it
     DATAOUTH = addrm;
     DATAOUTL = addrl;
-    digitalWrite(ALE_low, HIGH);
-    digitalWrite(ALE_low, LOW);
+    
+    //digitalWrite(ALE_low, HIGH);
+    PORTALE |= ALE_low_setmask;
+    //digitalWrite(ALE_low, LOW);
+    PORTALE &= ALE_low_clrmask;
 
     //put high address on bus and latch it
     DATAOUTH = 0x00;
     DATAOUTL = addrh;
-    digitalWrite(ALE_high, HIGH);
-    digitalWrite(ALE_high, LOW);
+    
+    //digitalWrite(ALE_low, HIGH);
+    PORTALE |= ALE_high_setmask;
+    //digitalWrite(ALE_low, LOW);
+    PORTALE &= ALE_high_clrmask;
     
     //without this additional 0x00 write reads to undefined regions would
     //return the last value written to DATAOUTL
@@ -245,8 +235,11 @@ inline void umd::_latchAddress(uint16_t address)
     //put low and mid address on bus and latch it
     DATAOUTH = addrm;
     DATAOUTL = addrl;
-    digitalWrite(ALE_low, HIGH);
-    digitalWrite(ALE_low, LOW);
+    
+    //digitalWrite(ALE_low, HIGH);
+    PORTALE |= ALE_low_setmask;
+    //digitalWrite(ALE_low, LOW);
+    PORTALE &= ALE_low_clrmask;
     
     _setDatabusInput();
 }
@@ -256,9 +249,13 @@ inline void umd::_latchAddress(uint16_t address)
  * the Flash IC as a uint16_t. It automatically performs the correct
  * flash ID read sequence based on the currently selected mode.
  **********************************************************************/
-uint32_t umd::getFlashID()
+void umd::getFlashID()
 {
-    uint32_t flashID = 0;
+    uint16_t readData = 0;
+    
+    flashChipNum = 0;
+    flashID[0] = 0;
+    flashID[1] = 0;
 
     switch(_mode)
     {
@@ -266,102 +263,121 @@ uint32_t umd::getFlashID()
         //A1 of Dumper connected to A0 of MX29F800
         //Automatic big endian on word mode
         case MD:
-            //writeWord(0x00000555, 0xAA00);
-            //writeWord(0x000002AA, 0x5500);
-            //writeWord(0x00000555, 0x9000);
-            //flashID = readWord(0x00000001);
-            //writeWord(0x00000000, 0xF000);
             writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
             writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
             writeWord( (uint32_t)(0x000555 << 1), 0x9000);
-            flashID = (uint32_t)readWord( (uint16_t)(0x000001 << 1) );
+            readData = readWord( (uint16_t)(0x000001 << 1) );
             
             //exit software ID
             writeWord( (uint32_t)0x000000, 0xF000);
+            flashID[0] = readData;
+            flashChipNum++;
             
-            flashID <<= 16;
+            switch(flashID)
+            {
+                // catch all single flash chip boards (mostly 32Mbits)
+                case 0x7E22: //spansion
+                case 0xA722: //macronix MX29LV320
+                case 0xA822: //macronix MX29LV320
+                case 0x5D23: //microchip SST39VF3201B
+                case 0x5C23: //microchip SST39VF3202B
+                    //_flashID[1] = 0;
+                    break;
+                
+                // else, this may be a 2 chip board
+                default:
+                
+                    //try for second chip
+                    writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
+                    writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
+                    writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x9000);
+                    readData = readWord( (0x000001 << 1) + GEN_CHIP_1_BASE );
+                    
+                    //exit software ID
+                    writeWord( (uint32_t)0x000000  + GEN_CHIP_1_BASE, 0xF000);
+                    flashID[1] = readData;
+                    flashChipNum++;
             
-            //try for second chip
-            writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
-            writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
-            writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x9000);
-            flashID |= (uint32_t)readWord( (0x000001 << 1) + GEN_CHIP_1_BASE );
-            
-            //exit software ID
-            writeWord( (uint32_t)0x000000  + GEN_CHIP_1_BASE, 0xF000);
-            
-            _flashID = flashID;
+                    break;                    
+            }
             
             break;
         //mx29f800 software ID detect byte mode
         case PC:
         case SN:
+        case SNLO:
         case TG:
+            //get first byte of ID
             writeByte((uint16_t)0x0AAA, 0xAA);
             writeByte((uint16_t)0x0555, 0x55);
             writeByte((uint16_t)0x0AAA, 0x90);
-            flashID = (uint32_t)readByte((uint16_t)0x0000, false);
-            flashID <<= 8;
+            readData = (uint16_t)readByte((uint16_t)0x0000, false);
+            readData <<= 8;
             //exit software ID
             writeByte((uint16_t)0x0000, 0xF0);
             
+            //get second part
             writeByte((uint16_t)0x0AAA, 0xAA);
             writeByte((uint16_t)0x0555, 0x55);
             writeByte((uint16_t)0x0AAA, 0x90);
-            flashID |= (uint32_t)readByte((uint16_t)0x0001, false);
+            readData |= (uint16_t)readByte((uint16_t)0x0001, false);
             
             //exit software ID
             writeByte((uint16_t)0x0000, 0xF0);
+            flashID[0] = readData;
+            flashChipNum++;
             
-            _flashID = flashID;
             break;
+            
         //mx29f800 software ID detect byte mode through SMS mapper
         case MS:
             //enable rom write enable bit
             writeByte((uint16_t)SMS_CONF_REG_ADDR,0x80);
             
+            //get first byte of ID
             writeByte((uint16_t)0x0AAA, 0xAA);
             writeByte((uint16_t)0x0555, 0x55);
             writeByte((uint16_t)0x0AAA, 0x90);
-            flashID = (uint32_t)readByte((uint16_t)0x0000, false);
-            flashID <<= 8;
+            readData = (uint16_t)readByte((uint16_t)0x0000, false);
+            readData <<= 8;
             //exit software ID
             writeByte((uint16_t)0x0000, 0xF0);
             
+            //get second part
             writeByte((uint16_t)0x0AAA, 0xAA);
             writeByte((uint16_t)0x0555, 0x55);
             writeByte((uint16_t)0x0AAA, 0x90);
-            flashID |= (uint32_t)readByte((uint16_t)0x0001, false);
+            readData |= (uint16_t)readByte((uint16_t)0x0001, false);
             
             //exit software ID
             writeByte((uint16_t)0x0000,0xF0);
-            
-            _flashID = flashID;
+            flashID[0] = readData;
+            flashChipNum++;
             
             //disable rom write enable bit
             writeByte((uint16_t)SMS_CONF_REG_ADDR,0x00);
             break;  
+            
         //SST39SF0x0 software ID detect
         case CV:
+            //get first byte
             writeByte((uint16_t)0x5555,0xAA);
             writeByte((uint16_t)0x2AAA,0x55);
             writeByte((uint16_t)0x5555,0x90);
-            
-            flashID = (uint32_t)readByte((uint16_t)0x0000, false);
+            readData = (uint16_t)readByte((uint16_t)0x0000, false);
             flashID <<= 8;
-            flashID |= (uint32_t)readByte((uint16_t)0x0001, false);
+            //get second byte
+            readData |= (uint16_t)readByte((uint16_t)0x0001, false);
             
             //exit software ID
             writeByte((uint16_t)0x0000,0xF0);
-            
-            _flashID = flashID;
+            flashID[0] = readData;
+            flashChipNum++;
             break;
+            
         default:
-            flashID = 0xFFFFFFFF;
-        break;
+            break;
     }
-
-    return flashID;
 }
 
 /*******************************************************************//**
@@ -419,6 +435,7 @@ uint32_t umd::eraseChip(bool wait, uint8_t chip)
             break;
         case PC:
         case SN:
+        case SNLO:
         case TG:
             writeByte((uint16_t)0x0AAA, 0xAA);
             writeByte((uint16_t)0x0555, 0x55);
@@ -537,16 +554,13 @@ uint8_t umd::readByte(uint16_t address, bool external)
 {
     uint8_t readData;
 
-    _latchAddress(address);
-    _setDatabusInput();
-
-    // read the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nRD, LOW);
-  
     switch(_mode)
     {
         case PC:
+            _latchAddress(address);
+            _setDatabusInput();
+            digitalWrite(nCE, LOW);
+            digitalWrite(nRD, LOW);
             if( external )
             {
                 readData = reverseByte(DATAINL);
@@ -554,20 +568,34 @@ uint8_t umd::readByte(uint16_t address, bool external)
             {
                 readData = DATAINL;
             }
+            digitalWrite(nCE, HIGH);
+            digitalWrite(nRD, HIGH);
             break;
+            
+        case SNLO:
+            _latchAddress(address & 0x7FFF);
+            _setDatabusInput();
+            digitalWrite(nCE, LOW);
+            digitalWrite(nRD, LOW);
+            readData = DATAINL;
+            digitalWrite(nCE, HIGH);
+            digitalWrite(nRD, HIGH);
         case MS:
         case MD:
         case TG:
         case SN:
         case CV:
         default:
+            _latchAddress(address);
+            _setDatabusInput();
+            digitalWrite(nCE, LOW);
+            digitalWrite(nRD, LOW);
             readData = DATAINL;
+            digitalWrite(nCE, HIGH);
+            digitalWrite(nRD, HIGH);
             break;
     }
   
-    digitalWrite(nCE, HIGH);
-    digitalWrite(nRD, HIGH);
-
     return readData;
 }
 
@@ -582,16 +610,13 @@ uint8_t umd::readByte(uint32_t address, bool external)
 {
     uint8_t readData;
 
-    _latchAddress(address);
-    _setDatabusInput();
-
-    // read the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nRD, LOW);
-  
     switch(_mode)
     {
         case PC:
+            _latchAddress(address);
+            _setDatabusInput();
+            digitalWrite(nCE, LOW);
+            digitalWrite(nRD, LOW);
             if( external )
             {
                 readData = reverseByte(DATAINL);
@@ -599,19 +624,35 @@ uint8_t umd::readByte(uint32_t address, bool external)
             {
                 readData = DATAINL;
             }
+            digitalWrite(nCE, HIGH);
+            digitalWrite(nRD, HIGH);
             break;
+            
+        case SNLO:
+            _latchAddress(getSNESLoROMAddress(address));
+            _setDatabusInput();
+            digitalWrite(nCE, LOW);
+            digitalWrite(nRD, LOW);
+            readData = DATAINL;
+            digitalWrite(nCE, HIGH);
+            digitalWrite(nRD, HIGH);
+            break;
+            
         case MS:
         case MD:
         case TG:
         case SN:
         case CV:
         default:
+            _latchAddress(address);
+            _setDatabusInput();
+            digitalWrite(nCE, LOW);
+            digitalWrite(nRD, LOW);
             readData = DATAINL;
+            digitalWrite(nCE, HIGH);
+            digitalWrite(nRD, HIGH);
             break;
     }
-  
-    digitalWrite(nCE, HIGH);
-    digitalWrite(nRD, HIGH);
 
     return readData;
 }
@@ -677,13 +718,12 @@ void umd::writeByteTime(uint16_t address, uint8_t data)
  **********************************************************************/
 void umd::writeByte(uint16_t address, uint8_t data)
 {
-    _latchAddress(address);
-    _setDatabusOutput();
-
     //write genesis odd bytes to the high byte of the bus
     switch(_mode)
     {
         case MD:
+            _latchAddress(address);
+            _setDatabusOutput();
             DATAOUTL = data;
             // write to the bus
             digitalWrite(nCE, LOW);
@@ -692,12 +732,24 @@ void umd::writeByte(uint16_t address, uint8_t data)
             digitalWrite(GEN_nLWR, HIGH);
             digitalWrite(nCE, HIGH);
             break;
+        case SNLO:
+            _latchAddress(address & 0x7FFF);
+            _setDatabusOutput();
+            DATAOUTL = data;
+            // write to the bus
+            digitalWrite(nCE, LOW);
+            digitalWrite(nWR, LOW);
+            delayMicroseconds(1);
+            digitalWrite(nWR, HIGH);
+            digitalWrite(nCE, HIGH);
         case MS:
         case PC:
         case TG:
         case SN:
         case CV:
         default:
+            _latchAddress(address);
+            _setDatabusOutput();
             DATAOUTL = data;
             // write to the bus
             digitalWrite(nCE, LOW);
@@ -718,12 +770,12 @@ void umd::writeByte(uint16_t address, uint8_t data)
  **********************************************************************/
 void umd::writeByte(uint32_t address, uint8_t data)
 {
-    _latchAddress(address);
-    _setDatabusOutput();
-    
+    //write genesis odd bytes to the high byte of the bus
     switch(_mode)
     {
         case MD:
+            _latchAddress(address);
+            _setDatabusOutput();
             DATAOUTL = data;
             // write to the bus
             digitalWrite(nCE, LOW);
@@ -732,20 +784,24 @@ void umd::writeByte(uint32_t address, uint8_t data)
             digitalWrite(GEN_nLWR, HIGH);
             digitalWrite(nCE, HIGH);
             break;
-        case MS:
+        case SNLO:
+            _latchAddress(getSNESLoROMAddress(address));
+            _setDatabusOutput();
             DATAOUTL = data;
             // write to the bus
             digitalWrite(nCE, LOW);
             digitalWrite(nWR, LOW);
-            delayMicroseconds(2);
+            delayMicroseconds(1);
             digitalWrite(nWR, HIGH);
             digitalWrite(nCE, HIGH);
-            break;
+        case MS:
         case PC:
         case TG:
         case SN:
         case CV:
         default:
+            _latchAddress(address);
+            _setDatabusOutput();
             DATAOUTL = data;
             // write to the bus
             digitalWrite(nCE, LOW);
@@ -755,7 +811,7 @@ void umd::writeByte(uint32_t address, uint8_t data)
             digitalWrite(nCE, HIGH);
             break;
     }
-    
+  
     _setDatabusInput();
     
 }
@@ -799,12 +855,18 @@ void umd::writeWord(uint32_t address, uint16_t data)
     DATAOUTL = (uint8_t)(data>>8);
 
     // write to the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nWR, LOW);
-    //delayMicroseconds(1);
-    digitalWrite(nWR, HIGH);
-    digitalWrite(nCE, HIGH);
-  
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nWR, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTWR &= nWR_clrmask;
+    
+    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    
+    //digitalWrite(nWR, HIGH);
+    //digitalWrite(nCE, HIGH);
+    PORTCE |= nWR_setmask;
+    PORTWR |= nCE_setmask;
+    
     _setDatabusInput();
 }
 
@@ -825,12 +887,18 @@ void umd::writeWord(uint16_t address, uint16_t data)
     DATAOUTL = (uint8_t)(data>>8);
 
     // write to the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nWR, LOW);
-    //delayMicroseconds(1);
-    digitalWrite(nWR, HIGH);
-    digitalWrite(nCE, HIGH);
-  
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nWR, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTWR &= nWR_clrmask;
+    
+    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    
+    //digitalWrite(nWR, HIGH);
+    //digitalWrite(nCE, HIGH);
+    PORTCE |= nWR_setmask;
+    PORTWR |= nCE_setmask;
+    
     _setDatabusInput();
 }
 
@@ -951,9 +1019,33 @@ void umd::programWord(uint32_t address, uint16_t data, bool wait)
                     while( toggleBit(2, 1) != 2 );
                 }
             }
-            
             break;
+            
         default:
+            //Genesis MDCart can have multiple flash ICs
+            if ( address < GEN_CHIP_1_BASE )
+            {
+                writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+                writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
+                writeWord( (uint16_t)(0x000555 << 1), 0xA000);
+                writeWord( (uint32_t)address, data );
+                //use toggle bit to validate end of program cycle
+                if(wait)
+                {
+                    while( toggleBit(2, 0) != 2 );
+                }
+            }else
+            {
+                writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
+                writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
+                writeWord( (uint16_t)(0x000555 << 1), 0xA000);
+                writeWord( (uint32_t)address, data );
+                //use toggle bit to validate end of program cycle
+                if(wait)
+                {
+                    while( toggleBit(2, 1) != 2 );
+                }
+            }
             break;
     }
 }
@@ -1117,4 +1209,14 @@ uint16_t umd::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
             break;
     }
     return virtualAddress;
+}
+
+/*******************************************************************//**
+ * The getSNESLoROMAddress function returns the virtual address of a 
+ * corresponding SNES LoROM address. LoROM skips A15 on therefore every
+ * other 32KB of ROM is mirrored.
+ **********************************************************************/
+inline uint32_t umd::getSNESLoROMAddress(uint32_t address)
+{
+    return ( (address << 1) & 0xFFFF0000) | (address & 0x00007FFF);
 }

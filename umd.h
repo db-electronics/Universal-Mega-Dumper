@@ -24,12 +24,16 @@
 #ifndef umd_h
 #define umd_h
 
-#define DATAOUTH      PORTD     /**< PORTD used for high byte of databus output */
-#define DATAOUTL      PORTC     /**< PORTD used for low byte of databus output */
-#define DATAINH       PIND      /**< PIND used for high byte databus input */
-#define DATAINL       PINC      /**< PINC used for low byte databus input */
-#define DATAH_DDR     DDRD      /**< DDRD data direction for high byte of databus */
-#define DATAL_DDR     DDRC      /**< DDRC data direction for low byte of databus */
+#define DATAOUTH        PORTD     /**< PORTD used for high byte of databus output */
+#define DATAOUTL        PORTC     /**< PORTC used for low byte of databus output */
+#define PORTALE         PORTB     /**< PORTB used for address latch control */
+#define PORTRD          PORTB
+#define PORTWR          PORTB
+#define PORTCE          PORTE
+#define DATAINH         PIND      /**< PIND used for high byte databus input */
+#define DATAINL         PINC      /**< PINC used for low byte databus input */
+#define DATAH_DDR       DDRD      /**< DDRD data direction for high byte of databus */
+#define DATAL_DDR       DDRC      /**< DDRC data direction for low byte of databus */
 
 /*******************************************************************//** 
  * \class umd
@@ -51,7 +55,8 @@ class umd
             TG,         /**< TG-16 mode */
             PC,         /**< PC Engine mode */
             MS,         /**< Master System mode */
-            SN          /**< Super Nintendo mode */
+            SN,         /**< Super Nintendo mode */
+            SNLO        /**< Super Nintendo LoROM mode */
         };
 
         /*******************************************************************//**
@@ -64,12 +69,6 @@ class umd
          * \return void
         **********************************************************************/
         void resetCart();
-        
-        /*******************************************************************//**
-         * \brief Set the operation mode of the umd
-         * \return true if cartridge asserts the nCART signal
-         **********************************************************************/
-        bool detectCart();
         
         /*******************************************************************//**
          * \brief Set the operation mode of the umd
@@ -101,15 +100,30 @@ class umd
         /**@}*/
         
         /*******************************************************************//**
+         * \name SNES Functions
+         * This group of functions is specific to the SNES
+         **********************************************************************/
+        /**@{*/
+        
+        /*******************************************************************//**
+         * \brief get the virtual LoROM address
+         * \param address the real ROM address
+         * \return virtual address
+         **********************************************************************/
+        inline uint32_t getSNESLoROMAddress(uint32_t address);
+
+        /**@}*/
+        
+        /*******************************************************************//**
          * \name Cartridge Flash Functions
          * This group of functions is specific to the catridge flash
          **********************************************************************/
         /**@{*/
         /*******************************************************************//**
          * \brief Read the Manufacturer and Product ID in the Flash IC
-         * \return flashID
+         * \return void
          **********************************************************************/
-        uint32_t getFlashID();
+        void getFlashID();
 
         /*******************************************************************//**
          * \brief Erase the entire Flash IC
@@ -265,9 +279,11 @@ class umd
         static const uint8_t nLED = 8;                      ///< LED pin number
         static const uint8_t nPB = 9;                       ///< Pushbutton pin number
 
+        uint8_t flashChipNum 0;
+        uint16_t flashID[4];
+
     private:
         uint8_t _resetPin;
-        uint32_t _flashID;
         eMode _mode;
         
         inline void _latchAddress(uint16_t address);
@@ -282,15 +298,26 @@ class umd
         static const uint32_t GEN_CHIP_1_BASE = 0x100000;
 
         //pin numbers address control
-        static const uint8_t ALE_low = 26;
-        static const uint8_t ALE_high = 27;
 
         //globally affected pins
-        static const uint8_t nRD = 25;  
-        static const uint8_t nWR = 24;
-        static const uint8_t nCE = 19;
+        static const uint8_t ALE_high = 27;                 // PB7
+        static const uint8_t ALE_high_setmask = 0b10000000;
+        static const uint8_t ALE_high_clrmask = 0b01111111;
+        static const uint8_t ALE_low = 26;                  // PB6
+        static const uint8_t ALE_low_setmask = 0b01000000;
+        static const uint8_t ALE_low_clrmask = 0b10111111;
+        static const uint8_t nRD = 25;                      // PB5
+        static const uint8_t nRD_setmask = 0b00100000;
+        static const uint8_t nRD_clrmask = 0b11011111;
+        static const uint8_t nWR = 24;                      // PB4
+        static const uint8_t nWR_setmask = 0b00010000;
+        static const uint8_t nWR_clrmask = 0b11101111;
+        static const uint8_t nCE = 19;                      // PE7
+        static const uint8_t nCE_setmask = 0b10000000;
+        static const uint8_t nCE_clrmask = 0b01111111;
+        
         static const uint8_t nCART = 18;
-
+        
         //general control pins
         static const uint8_t CTRL0 = 38;
         static const uint8_t CTRL1 = 39;
@@ -324,7 +351,7 @@ class umd
         static const uint8_t MISOp = 23;
         static const uint8_t MOSIp = 22;
         static const uint8_t SCKp = 21;
-        static const uint8_t SCSp = 20; 
+        static const uint8_t SCSp = 20;
 };
 
 #endif  //umd_h
