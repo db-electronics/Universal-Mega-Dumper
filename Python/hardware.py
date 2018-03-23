@@ -522,8 +522,15 @@ class umd:
                     else:
                         sizeOfRead = (endAddress - address)
                     
-                    cmd = "{0} {1} {2}\r\n".format(readCmd, address, sizeOfRead)
-                                            
+                    if( target == "byte" or target == "word" ):
+                        cmd = "{0} {1}\r\n".format(readCmd, address)
+                    elif( target == "sbyte" or target == "sword" ):
+                        cmd = "{0} {1} s\r\n".format(readCmd, address)
+                    elif( target == "save" ):
+                        cmd = "{0} {1} {2} s\r\n".format(readCmd, address, sizeOfRead)
+                    else:
+                        cmd = "{0} {1} {2}\r\n".format(readCmd, address, sizeOfRead)
+                                                            
                     # send command to Teensy, read response    
                     self.serialPort.write(bytes(cmd,"utf-8"))
                     response = self.serialPort.read(sizeOfRead)
