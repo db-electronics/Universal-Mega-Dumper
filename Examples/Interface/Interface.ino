@@ -772,8 +772,9 @@ void readWordBlock()
 {
     char *arg;
     bool sramRead = false;
-    uint32_t address = 0;
-    uint16_t blockSize = 0, i;
+    bool latchBankRead = false;
+    uint32_t address = 0, addrOffset = 0;
+    uint16_t blockSize = 0, i, restBlockSize = 0;
     uint16_t data;
 
     //get the address in the next argument
@@ -795,6 +796,22 @@ void readWordBlock()
                 break;
             default:
                 break;
+        }
+    }
+
+    if( address + blockSize >= 0x400000)
+    {
+        latchBankRead = true;
+        restBlockSize = blockSize;
+        if(address < 0x400000)
+        {
+            blockSize = 0x400000 - address;
+            restBlockSize -= blockSize;
+        }
+        else
+        {
+            addrOffset = address - 0x400000;
+            blockSize = 0;
         }
     }
     
@@ -823,8 +840,27 @@ void readWordBlock()
             Serial.write((char)(data>>8));
         }
     }
-    
-    
+
+    if( latchBankRead )
+    {
+        umd.writeByteTimeFull( (uint32_t)0xA130FD, 0x08 ); // map bank 8 to 0x300000 - 0x37FFFF
+        umd.writeByteTimeFull( (uint32_t)0xA130FF, 0x09 ); // map bank 9 to 0x380000 - 0x3FFFFF
+
+        address = 0x300000 + addrOffset; // TODO: Should start at 0x300000 BUG
+
+        //read the rest of the words from bank switched block, output is little endian
+        for( i = 0; i < restBlockSize; i += 2 )
+        {
+            data = umd.readWord(address);
+            address += 2;
+            Serial.write((char)(data));
+            Serial.write((char)(data>>8));
+        }
+
+        umd.writeByteTimeFull( (uint32_t)0xA130FD, 0x06 ); // return banks to original state
+        umd.writeByteTimeFull( (uint32_t)0xA130FF, 0x07 ); // return banks to original state
+    }
+
     digitalWrite(umd.nLED, HIGH);
 }
 
