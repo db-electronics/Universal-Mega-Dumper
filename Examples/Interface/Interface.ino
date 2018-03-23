@@ -799,18 +799,18 @@ void readWordBlock()
         }
     }
 
-    if( address + blockSize > 0x3FFFFF)
+    if( address + blockSize >= 0x400000)
     {
         latchBankRead = true;
         restBlockSize = blockSize;
-        if(address < 0x3FFFFF)
+        if(address < 0x400000)
         {
-            blockSize = 0x3FFFFF - address;
+            blockSize = 0x400000 - address;
             restBlockSize -= blockSize;
         }
         else
         {
-            addrOffset = address - 0x3FFFFF;
+            addrOffset = address - 0x400000;
             blockSize = 0;
         }
     }
@@ -846,7 +846,7 @@ void readWordBlock()
         umd.writeByteTimeFull( (uint32_t)0xA130FD, 0x08 ); // map bank 8 to 0x300000 - 0x37FFFF
         umd.writeByteTimeFull( (uint32_t)0xA130FF, 0x09 ); // map bank 9 to 0x380000 - 0x3FFFFF
 
-        address = 0x300002 + addrOffset; // TODO: Should start at 0x300000 BUG
+        address = 0x300000 + addrOffset; // TODO: Should start at 0x300000 BUG
 
         //read the rest of the words from bank switched block, output is little endian
         for( i = 0; i < restBlockSize; i += 2 )
