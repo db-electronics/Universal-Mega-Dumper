@@ -180,6 +180,14 @@ class umd
         void writeByteTime(uint16_t address, uint8_t data);
         
         /*******************************************************************//**
+         * \brief Write a byte to the nTIME region on genesis with full signals
+         * \param address 16bit address
+         * \param data byte
+         * \return void
+         **********************************************************************/
+        void writeByteTimeFull(uint32_t address, uint8_t data);
+        
+        /*******************************************************************//**
          * \brief Write a byte to a 16bit address in the nTIME range (Genesis only)
          * \param address 16bit address
          * \param data byte
