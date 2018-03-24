@@ -843,8 +843,8 @@ void readWordBlock()
 
     if( latchBankRead )
     {
-        umd.writeByteTimeFull( (uint32_t)0xA130FD, 0x08 ); // map bank 8 to 0x300000 - 0x37FFFF
-        umd.writeByteTimeFull( (uint32_t)0xA130FF, 0x09 ); // map bank 9 to 0x380000 - 0x3FFFFF
+        umd.writeByteTime(0xA130FD, 0x08 ); // map bank 8 to 0x300000 - 0x37FFFF
+        umd.writeByteTime(0xA130FF, 0x09 ); // map bank 9 to 0x380000 - 0x3FFFFF
 
         address = 0x300000 + addrOffset; // TODO: Should start at 0x300000 BUG
 
@@ -857,8 +857,8 @@ void readWordBlock()
             Serial.write((char)(data>>8));
         }
 
-        umd.writeByteTimeFull( (uint32_t)0xA130FD, 0x06 ); // return banks to original state
-        umd.writeByteTimeFull( (uint32_t)0xA130FF, 0x07 ); // return banks to original state
+        umd.writeByteTime(0xA130FD, 0x06 ); // return banks to original state
+        umd.writeByteTime(0xA130FF, 0x07 ); // return banks to original state
     }
 
     digitalWrite(umd.nLED, HIGH);
