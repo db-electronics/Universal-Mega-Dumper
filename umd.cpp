@@ -646,34 +646,14 @@ uint16_t umd::readWord(uint32_t address)
     return readData;
 }
 
+
 /*******************************************************************//**
  * The writeByteTime function strobes a byte into nTIME region
- * 
- * \warning upper 8 address bits (23..16) are not modified
- **********************************************************************/
-void umd::writeByteTime(uint16_t address, uint8_t data)
-{
-    _latchAddress(address);
-    _setDatabusOutput();
-
-    //put byte on bus
-    DATAOUTL = data;
-    
-    // write to the bus
-    digitalWrite(GEN_nTIME, LOW);
-    delayMicroseconds(1);
-    digitalWrite(GEN_nTIME, HIGH);
- 
-    _setDatabusInput();
-}
-
-/*******************************************************************//**
- * The writeByteTimeFull function strobes a byte into nTIME region
  * while enabling the rest of the regular signals
  * 
  * \warning upper 8 address bits (23..16) are not modified
  **********************************************************************/
-void umd::writeByteTimeFull(uint32_t address, uint8_t data)
+void umd::writeByteTime(uint32_t address, uint8_t data)
 {
     _latchAddress(address);
     _setDatabusOutput();
