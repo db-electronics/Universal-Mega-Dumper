@@ -458,6 +458,9 @@ class umd:
                     cmd = "{0} {1} s\r\n".format(readCmd, address)
                 elif( target == "save" ):
                     cmd = "{0} {1} {2} s\r\n".format(readCmd, address, sizeOfRead)
+                # temporary hack for testing SF II on PCE
+                elif( self.cartType == "PCEngine" and endAddress > 0x100000):
+                    cmd = "{0} {1} {2} b\r\n".format(readCmd, address, sizeOfRead)
                 else:
                     cmd = "{0} {1} {2}\r\n".format(readCmd, address, sizeOfRead)
                 
@@ -522,6 +525,9 @@ class umd:
                         cmd = "{0} {1} s\r\n".format(readCmd, address)
                     elif( target == "save" ):
                         cmd = "{0} {1} {2} s\r\n".format(readCmd, address, sizeOfRead)
+                    # temporary hack for testing SF II on PCE
+                    elif( self.cartType == "PCEngine" and endAddress > 0x100000):
+                        cmd = "{0} {1} {2} b\r\n".format(readCmd, address, sizeOfRead)
                     else:
                         cmd = "{0} {1} {2}\r\n".format(readCmd, address, sizeOfRead)
                                                             

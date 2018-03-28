@@ -680,9 +680,10 @@ void readByteBlock()
 {
     char *arg;
     bool sramRead = false;
+    bool bankedPCE = false;
     uint32_t address = 0;
     uint16_t smsAddress, blockSize = 0, i;
-    uint8_t data;
+    uint8_t data, bank = 0;
 
     //get the address in the next argument
     arg = SCmd.next();
@@ -700,6 +701,9 @@ void readByteBlock()
         {
             case 's':
                 sramRead = true;
+                break;
+            case 'b':
+                bankedPCE = true;
                 break;
             default:
                 break;
@@ -735,6 +739,73 @@ void readByteBlock()
             }
 
             break;
+        case umd.PC:
+            if(bankedPCE)
+            {
+                uint32_t currAddress;
+
+                bank = 0;
+                currAddress = address;
+                for( i = 0; i < blockSize; i++ )
+                {
+                    // SFII CE Mapper
+                    // Bank switching occurs in banks 0x40-0x7F
+                    // bank 0x40 ia at 0x80000 in linear ROM space
+                    
+                    if(currAddress < 0x080000)
+                        address = currAddress;
+                    else
+                    if(currAddress < 0x100000)
+                    {
+                        if(bank != 1)
+                        {
+                            umd.writeByte((uint32_t)0x001FF0, 0x00);
+                            bank = 1;
+                        }
+                        address = currAddress;
+                    }
+                    else
+                    if(currAddress < 0x180000)
+                    {
+                        if(bank != 2)
+                        {
+                            umd.writeByte((uint32_t)0x001FF1, 0x01);
+                            bank = 2;
+                        }
+                        address = currAddress - 0x80000;
+                    }
+                    else
+                    if(currAddress < 0x200000)
+                    {
+                        if(bank != 3)
+                        {
+                            umd.writeByte((uint32_t)0x001FF2, 0x01);
+                            bank = 3;
+                        }
+                        address = currAddress - 0x100000;
+                    }
+                    else
+                    if(currAddress < 0x280000)
+                    {
+                        if(bank != 4)
+                        {
+                            umd.writeByte((uint32_t)0x001FF3, 0x01);
+                            bank = 4;
+                        }
+                        address = currAddress - 0x180000;
+                    }
+
+                    data = umd.readByte(address, true);
+                    Serial.write((char)(data));
+                    currAddress ++;
+                } 
+            }
+            else
+            {
+                data = umd.readByte(address++, true);
+                Serial.write((char)(data));
+            }
+            break;     
             
         default:
             for( i = 0; i < blockSize; i++ )
@@ -832,8 +903,8 @@ void readWordBlock()
 
     if( latchBankRead )
     {
-        umd.writeByteTimeFull( (uint32_t)0xA130FD, 0x08 ); // map bank 8 to 0x300000 - 0x37FFFF
-        umd.writeByteTimeFull( (uint32_t)0xA130FF, 0x09 ); // map bank 9 to 0x380000 - 0x3FFFFF
+        umd.writeByteTime(0xA130FD, 0x08 ); // map bank 8 to 0x300000 - 0x37FFFF
+        umd.writeByteTime(0xA130FF, 0x09 ); // map bank 9 to 0x380000 - 0x3FFFFF
 
         address = 0x300000 + addrOffset; // TODO: Should start at 0x300000 BUG
 
@@ -846,8 +917,8 @@ void readWordBlock()
             Serial.write((char)(data>>8));
         }
 
-        umd.writeByteTimeFull( (uint32_t)0xA130FD, 0x06 ); // return banks to original state
-        umd.writeByteTimeFull( (uint32_t)0xA130FF, 0x07 ); // return banks to original state
+        umd.writeByteTime(0xA130FD, 0x06 ); // return banks to original state
+        umd.writeByteTime(0xA130FF, 0x07 ); // return banks to original state
     }
 
     digitalWrite(umd.nLED, HIGH);
