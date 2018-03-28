@@ -287,7 +287,7 @@ class umd
         static const uint8_t nLED = 8;                      ///< LED pin number
         static const uint8_t nPB = 9;                       ///< Pushbutton pin number
 
-        uint8_t flashChipNum 0;
+        uint8_t flashChipNum = 0;
         uint16_t flashID[4];
 
     private:

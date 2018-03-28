@@ -273,7 +273,7 @@ void umd::getFlashID()
             flashID[0] = readData;
             flashChipNum++;
             
-            switch(flashID)
+            switch(flashID[0])
             {
                 // catch all single flash chip boards (mostly 32Mbits)
                 case 0x7E22: //spansion
@@ -365,7 +365,7 @@ void umd::getFlashID()
             writeByte((uint16_t)0x2AAA,0x55);
             writeByte((uint16_t)0x5555,0x90);
             readData = (uint16_t)readByte((uint16_t)0x0000, false);
-            flashID <<= 8;
+            readData <<= 8;
             //get second byte
             readData |= (uint16_t)readByte((uint16_t)0x0001, false);
             

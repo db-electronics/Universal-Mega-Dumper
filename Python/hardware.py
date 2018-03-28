@@ -81,9 +81,6 @@ class umd:
                             
     opTime = ""
     romInfo = {}
-    
-    checksumCalculated = 0
-    checksumCart = 0
 
 ########################################################################    
 ## The Constructor
@@ -148,11 +145,8 @@ class umd:
     def getFlashID(self):
         
         self.serialPort.write(bytes("getid\r\n","utf-8"))
-        readBytes = self.serialPort.read(4)
-        if( self.cartType == "Genesis" ):
-            self.flashID = int.from_bytes(readBytes, byteorder="big")
-        else:
-            self.flashID = int.from_bytes(readBytes, byteorder="little")
+        response = self.serialPort.readline().decode("utf-8")
+        print( response )
                 
 ########################################################################    
 ## getSfFileList
