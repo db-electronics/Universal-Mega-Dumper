@@ -1,8 +1,14 @@
-### Universal Mega Dumper
+# Universal Mega Dumper
 The Universal Mega Dumper (UMD) is a game catridge read/writer project designed around a [Teensy++](https://www.pjrc.com/store/teensypp.html) 
 microcontroller. The universality comes from the UMD's ability to support many different types of catridge connectors by having general 
 purpose 16 bit data and 24 bit address paths along with a dozen control signals - all of which can be customized for each game
 cartridge mode.
+
+## UMD Adapter ID
+Moving forward, each UMD adapter will contain an 8 bit shift register which the UMD firmware can use to identify the currently connected UMD Adapter and cartridge type.
+* 0x01 - [NES](https://github.com/db-electronics/umd-nes-adapter-kicad)
+* 0x02 - [Commodore 64](https://github.com/db-electronics/umd-c64-adapter-kicad)
+* 0x03 - [SNES](https://github.com/db-electronics/umd-snes-adapter-kicad)
 
 # Arduino Setup
 ## Download Teensyduino
