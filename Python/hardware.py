@@ -145,8 +145,7 @@ class umd:
     def getFlashID(self):
         
         self.serialPort.write(bytes("getid\r\n","utf-8"))
-        response = self.serialPort.readline().decode("utf-8")
-        print( response )
+        self.flashID = self.serialPort.readline().decode("utf-8")
                 
 ########################################################################    
 ## getSfFileList
@@ -378,7 +377,7 @@ class umd:
     def eraseChip(self, chip):
         
         startTime = time.time()
-        self.serialPort.write(bytes("erase {0} w\r\n".format(chip),"utf-8"))
+        self.serialPort.write(bytes("erase w\r\n".format(chip),"utf-8"))
         
         response = self.serialPort.read(1).decode("utf-8")
         while( response == "." ):

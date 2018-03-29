@@ -131,7 +131,7 @@ class umd
          * \param chip specify which chip to erase
          * \return time in millis operation took to complete
          **********************************************************************/
-        uint32_t eraseChip(bool wait, uint8_t chip);
+        uint32_t eraseChip(bool wait);
         
         /*******************************************************************//**
          * \brief Erase a sector in the Flash IC

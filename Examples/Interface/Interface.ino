@@ -166,6 +166,7 @@ void _setMode()
             break;
         case 2:
             umd.setMode(umd.MD);
+            umd.getFlashID();
             Serial.println(F("mode = 2")); 
             break;
         case 3:
@@ -483,23 +484,16 @@ void sfListFiles()
 
 /*******************************************************************//**
  *  \brief Erases the contents of the cart
- *  Erases the correspoding Flash IC on the cart.
  *  Requires set mode to be issued prior.
  *  
  *  Usage:
- *  erase 0
- *  erase 1 w
+ *  erase w
  *  
  *  \return Void
  **********************************************************************/
 void eraseChip()
 {
     char *arg;
-    uint8_t chip;
-
-    //get the chip number in the next argument
-    arg = SCmd.next();
-    chip = (uint8_t)strtoul(arg, (char**)0, 0);
 
     arg = SCmd.next();
     if( arg != NULL )
@@ -508,14 +502,14 @@ void eraseChip()
         {
             //wait for operation to complete, measure time
             case 'w':
-                umd.eraseChip(true, chip);
+                umd.eraseChip(true);
                 break;
             default:
                 break;
         }
     }else
     {
-        umd.eraseChip(false, chip);
+        umd.eraseChip(false);
     }
 }
 

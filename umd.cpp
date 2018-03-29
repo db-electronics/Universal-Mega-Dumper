@@ -266,8 +266,7 @@ void umd::getFlashID()
             writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
             writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
             writeWord( (uint32_t)(0x000555 << 1), 0x9000);
-            readData = readWord( (uint16_t)(0x000001 << 1) );
-            
+            readData = readWord( (uint32_t)(0x000001 << 1) );
             //exit software ID
             writeWord( (uint32_t)0x000000, 0xF000);
             flashID[0] = readData;
@@ -386,7 +385,7 @@ void umd::getFlashID()
  * operation has completed. It will return the time in millis the
  * operation required to complete.
  **********************************************************************/
-uint32_t umd::eraseChip(bool wait, uint8_t chip)
+uint32_t umd::eraseChip(bool wait)
 {
     uint32_t startMillis, intervalMillis;
     
@@ -394,22 +393,40 @@ uint32_t umd::eraseChip(bool wait, uint8_t chip)
     {
         //mx29f800 chip erase word mode
         case MD:
-            if (chip == 0)
+            switch(flashID[0])
             {
-                writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
-                writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
-                writeWord( (uint32_t)(0x000555 << 1), 0x8000);
-                writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
-                writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
-                writeWord( (uint32_t)(0x000555 << 1), 0x1000);
-            }else if (chip == 1)
-            {
-                writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
-                writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
-                writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x8000);
-                writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
-                writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
-                writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x1000);                
+                // catch all single flash chip boards (mostly 32Mbits)
+                case 0x7E22: //spansion
+                case 0xA722: //macronix MX29LV320
+                case 0xA822: //macronix MX29LV320
+                case 0x5D23: //microchip SST39VF3201B
+                case 0x5C23: //microchip SST39VF3202B
+                
+                    writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+                    writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+                    writeWord( (uint32_t)(0x000555 << 1), 0x8000);
+                    writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+                    writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+                    writeWord( (uint32_t)(0x000555 << 1), 0x1000);
+                    break;
+                    
+                //could be a dual chip cartridge, erase both at the same time
+                default:
+
+                    writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+                    writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+                    writeWord( (uint32_t)(0x000555 << 1), 0x8000);
+                    writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+                    writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+                    writeWord( (uint32_t)(0x000555 << 1), 0x1000);
+
+                    writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
+                    writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
+                    writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x8000);
+                    writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
+                    writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
+                    writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x1000);
+                break;
             }
             break;
         //mx29f800 chip erase byte mode through SMS mapper
@@ -464,7 +481,7 @@ uint32_t umd::eraseChip(bool wait, uint8_t chip)
         intervalMillis = startMillis;
         
         // wait for 4 consecutive toggle bit success reads before exiting
-        while( toggleBit(4, chip) != 4 )
+        while( toggleBit(4, 0) != 4 )
         {
             if( (millis() - intervalMillis) > 250 )
             {
@@ -673,16 +690,22 @@ uint16_t umd::readWord(uint32_t address)
     _setDatabusInput();
 
     // read the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nRD, LOW);
-  
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nRD, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTRD &= nRD_clrmask;
+    
+    PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow
+    
     //convert to little endian while reading
     readData = (uint16_t)DATAINL;
     readData <<= 8;
     readData |= (uint16_t)(DATAINH & 0x00FF);
   
-    digitalWrite(nCE, HIGH);
-    digitalWrite(nRD, HIGH);
+    //digitalWrite(nCE, HIGH);
+    //digitalWrite(nRD, HIGH);
+    PORTRD |= nRD_setmask;
+    PORTCE |= nCE_setmask;
 
     return readData;
 }
@@ -869,8 +892,9 @@ void umd::writeWord(uint32_t address, uint16_t data)
     
     //digitalWrite(nWR, HIGH);
     //digitalWrite(nCE, HIGH);
-    PORTCE |= nWR_setmask;
-    PORTWR |= nCE_setmask;
+    PORTWR |= nWR_setmask;
+    PORTCE |= nCE_setmask;
+
     
     _setDatabusInput();
 }
@@ -901,8 +925,8 @@ void umd::writeWord(uint16_t address, uint16_t data)
     
     //digitalWrite(nWR, HIGH);
     //digitalWrite(nCE, HIGH);
-    PORTCE |= nWR_setmask;
-    PORTWR |= nCE_setmask;
+    PORTWR |= nWR_setmask;
+    PORTCE |= nCE_setmask;
     
     _setDatabusInput();
 }
@@ -1000,57 +1024,123 @@ void umd::programWord(uint32_t address, uint16_t data, bool wait)
     {
         //MX29F800 program word
         case MD:
-            //Genesis MDCart can have multiple flash ICs
-            if ( address < GEN_CHIP_1_BASE )
+            switch(flashID[0])
             {
-                writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
-                writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
-                writeWord( (uint16_t)(0x000555 << 1), 0xA000);
-                writeWord( (uint32_t)address, data );
-                //use toggle bit to validate end of program cycle
-                if(wait)
-                {
+                // catch all 32Mbit carts
+                case 0x7E22: //spansion S29GL032N
+                case 0xA722: //macronix MX29LV320
+                case 0xA822: //macronix MX29LV320
+                case 0x5D23: //microchip SST39VF3201B
+                case 0x5C23: //microchip SST39VF3202B
+                    //unrolled the program process for faster performance
+                    //without unroll - programmed 8Mbits in 76.833s
+                    //with unroll - programmed 8Mbits in 57.344s
+                    
+                    //databus is output throughout
+                    DATAH_DDR = 0xFF;
+                    DATAL_DDR = 0xFF;
+                    
+                    //writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+                    //_latchAddress((uint32_t)(0x000555 << 1));
+                    DATAOUTH = 0;
+                    DATAOUTL = 0;
+                    PORTALE |= ALE_high_setmask;
+                    PORTALE &= ALE_high_clrmask;
+                    DATAOUTH = 0x0A; // bit shift
+                    DATAOUTL = 0xAA; // bit shift
+                    PORTALE |= ALE_low_setmask;
+                    PORTALE &= ALE_low_clrmask;
+                    
+                    DATAOUTH = 0;
+                    DATAOUTL = 0xAA;
+                    PORTCE &= nCE_clrmask;
+                    PORTWR &= nWR_clrmask;
+                    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+                    PORTWR |= nWR_setmask;
+                    //PORTCE |= nCE_setmask;
+                    
+                    //writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
+                    //_latchAddress((uint16_t)(0x0002AA << 1));
+                    DATAOUTH = 0x05; // bit shift
+                    DATAOUTL = 0x54; // bit shift
+                    PORTALE |= ALE_low_setmask;
+                    PORTALE &= ALE_low_clrmask;
+                    
+                    DATAOUTH = 0;
+                    DATAOUTL = 0x55;
+                    //PORTCE &= nCE_clrmask;
+                    PORTWR &= nWR_clrmask;
+                    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+                    PORTWR |= nWR_setmask;
+                    //PORTCE |= nCE_setmask;
+                    
+                    //writeWord( (uint16_t)(0x000555 << 1), 0xA000);
+                    //_latchAddress((uint16_t)(0x000555 << 1));
+                    DATAOUTH = 0x0A; // bit shift
+                    DATAOUTL = 0xAA; // bit shift
+                    PORTALE |= ALE_low_setmask;
+                    PORTALE &= ALE_low_clrmask;
+                    
+                    DATAOUTH = 0;
+                    DATAOUTL = 0xA0;
+                    //PORTCE &= nCE_clrmask;
+                    PORTWR &= nWR_clrmask;
+                    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+                    PORTWR |= nWR_setmask;
+                    //PORTCE |= nCE_setmask;
+                    
+                    //writeWord( (uint32_t)address, data );
+                    //_latchAddress(address);
+                    DATAOUTL = (uint8_t)(address>>16 & 0xFF);
+                    PORTALE |= ALE_high_setmask;
+                    PORTALE &= ALE_high_clrmask;
+                    DATAOUTH = (uint8_t)(address>>8 & 0xFF);
+                    DATAOUTL = (uint8_t)(address & 0xFF);
+                    PORTALE |= ALE_low_setmask;
+                    PORTALE &= ALE_low_clrmask;
+                    
+                    DATAOUTH = (uint8_t)(data);
+                    DATAOUTL = (uint8_t)(data>>8);
+                    //PORTCE &= nCE_clrmask;
+                    PORTWR &= nWR_clrmask;
+                    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+                    PORTWR |= nWR_setmask;
+                    PORTCE |= nCE_setmask;
+                    
+                    //wait
                     while( toggleBit(2, 0) != 2 );
-                }
-            }else
-            {
-                writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
-                writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
-                writeWord( (uint16_t)(0x000555 << 1), 0xA000);
-                writeWord( (uint32_t)address, data );
-                //use toggle bit to validate end of program cycle
-                if(wait)
-                {
-                    while( toggleBit(2, 1) != 2 );
-                }
+                    
+                    break;
+                default:
+                    //Genesis MDCart can have multiple flash ICs
+                    if ( address < GEN_CHIP_1_BASE )
+                    {
+                        writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+                        writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
+                        writeWord( (uint16_t)(0x000555 << 1), 0xA000);
+                        writeWord( (uint32_t)address, data );
+                        //use toggle bit to validate end of program cycle
+                        if(wait)
+                        {
+                            while( toggleBit(2, 0) != 2 );
+                        }
+                    }else
+                    {
+                        writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
+                        writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
+                        writeWord( (uint16_t)(0x000555 << 1), 0xA000);
+                        writeWord( (uint32_t)address, data );
+                        //use toggle bit to validate end of program cycle
+                        if(wait)
+                        {
+                            while( toggleBit(2, 1) != 2 );
+                        }
+                    }
+                    break;
             }
-            break;
-            
+
         default:
-            //Genesis MDCart can have multiple flash ICs
-            if ( address < GEN_CHIP_1_BASE )
-            {
-                writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
-                writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
-                writeWord( (uint16_t)(0x000555 << 1), 0xA000);
-                writeWord( (uint32_t)address, data );
-                //use toggle bit to validate end of program cycle
-                if(wait)
-                {
-                    while( toggleBit(2, 0) != 2 );
-                }
-            }else
-            {
-                writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
-                writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
-                writeWord( (uint16_t)(0x000555 << 1), 0xA000);
-                writeWord( (uint32_t)address, data );
-                //use toggle bit to validate end of program cycle
-                if(wait)
-                {
-                    while( toggleBit(2, 1) != 2 );
-                }
-            }
+            
             break;
     }
 }
