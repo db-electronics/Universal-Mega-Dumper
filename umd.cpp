@@ -252,10 +252,17 @@ inline void umd::_latchAddress(uint16_t address)
 void umd::getFlashID()
 {
     uint16_t readData = 0;
+    uint8_t i;
     
-    flashChipNum = 0;
-    flashID[0] = 0;
-    flashID[1] = 0;
+    for( i = 0 ; i < FLASH_ID_SIZE ; i++ )
+    {
+        flashInfo.id[i] = 0;
+    }
+    flashInfo.idCount = 0;
+    flashInfo.manufacturer = flashInfo.id[0];
+    flashInfo.device = flashInfo.id[1];
+    flashInfo.size = flashInfo.id[2];
+    flashInfo.boot = flashInfo.id[3];
 
     switch(_mode)
     {
@@ -269,18 +276,35 @@ void umd::getFlashID()
             readData = readWord( (uint32_t)(0x000001 << 1) );
             //exit software ID
             writeWord( (uint32_t)0x000000, 0xF000);
-            flashID[0] = readData;
-            flashChipNum++;
             
-            switch(flashID[0])
+            switch(readData)
             {
                 // catch all single flash chip boards (mostly 32Mbits)
                 case 0x7E22: //spansion
+                    writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+                    writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+                    writeWord( (uint32_t)(0x000555 << 1), 0x9000);
+                    flashInfo.id[0] = readWord( (uint32_t)(0x000000) );
+                    flashInfo.id[1] = readWord( (uint32_t)(0x000001 << 1) );
+                    flashInfo.id[2] = readWord( (uint32_t)(0x00000E << 1) );
+                    flashInfo.id[3] = readWord( (uint32_t)(0x00000F << 1) );
+                    flashInfo.idCount = 4;
+                    writeWord( (uint32_t)0x000000, 0xF000);
+                    
+                    flashInfo.manufacturer = flashInfo.id[0];
+                    flashInfo.device = flashInfo.id[1];
+                    flashInfo.size = flashInfo.id[2];
+                    flashInfo.boot = flashInfo.id[3];
+                    
+                    break;
+                    
                 case 0xA722: //macronix MX29LV320
                 case 0xA822: //macronix MX29LV320
+                
+                
                 case 0x5D23: //microchip SST39VF3201B
                 case 0x5C23: //microchip SST39VF3202B
-                    //_flashID[1] = 0;
+                    
                     break;
                 
                 // else, this may be a 2 chip board
@@ -294,8 +318,8 @@ void umd::getFlashID()
                     
                     //exit software ID
                     writeWord( (uint32_t)0x000000  + GEN_CHIP_1_BASE, 0xF000);
-                    flashID[1] = readData;
-                    flashChipNum++;
+                    flashInfo.id[0] = readData;
+                    flashInfo.idCount++;
             
                     break;                    
             }
@@ -323,8 +347,8 @@ void umd::getFlashID()
             
             //exit software ID
             writeByte((uint16_t)0x0000, 0xF0);
-            flashID[0] = readData;
-            flashChipNum++;
+            flashInfo.id[0] = readData;
+            flashInfo.idCount++;
             
             break;
             
@@ -350,8 +374,8 @@ void umd::getFlashID()
             
             //exit software ID
             writeByte((uint16_t)0x0000,0xF0);
-            flashID[0] = readData;
-            flashChipNum++;
+            flashInfo.id[0] = readData;
+            flashInfo.idCount++;
             
             //disable rom write enable bit
             writeByte((uint16_t)SMS_CONF_REG_ADDR,0x00);
@@ -370,8 +394,8 @@ void umd::getFlashID()
             
             //exit software ID
             writeByte((uint16_t)0x0000,0xF0);
-            flashID[0] = readData;
-            flashChipNum++;
+            flashInfo.id[0] = readData;
+            flashInfo.idCount++;
             break;
             
         default:

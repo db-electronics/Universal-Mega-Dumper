@@ -65,6 +65,7 @@ class umd:
     
     ## serial port object on which the UMD is found
     serialPort = ""
+    flashIDData = {}
     flashID = ""
     sfID = []
     sfFileList = {}
@@ -144,8 +145,37 @@ class umd:
 ########################################################################     
     def getFlashID(self):
         
-        self.serialPort.write(bytes("getid\r\n","utf-8"))
-        self.flashID = self.serialPort.readline().decode("utf-8")
+        if self.cartType == "Genesis":
+            # clear current info
+            self.flashIDData.clear()
+            ## Manufacturer
+            self.serialPort.write(bytes("getid m\r\n","utf-8"))
+            data = int.from_bytes(self.serialPort.read(2), byteorder="big" )
+            self.flashIDData.update({"Manufacturer": hex(data) })
+            ## Device
+            self.serialPort.write(bytes("getid d\r\n","utf-8"))
+            data = int.from_bytes(self.serialPort.read(2), byteorder="big" )
+            self.flashIDData.update({"Device": hex(data) })
+            ## Boot
+            self.serialPort.write(bytes("getid b\r\n","utf-8"))
+            data = int.from_bytes(self.serialPort.read(2), byteorder="big" )
+            self.flashIDData.update({"Boot": hex(data) })
+            ## Size
+            self.serialPort.write(bytes("getid s\r\n","utf-8"))
+            data = int.from_bytes(self.serialPort.read(2), byteorder="big" )
+            self.flashIDData.update({"Size": hex(data) })
+            ## Count
+            self.serialPort.write(bytes("getid c\r\n","utf-8"))
+            count = int.from_bytes(self.serialPort.read(2), byteorder="big" )
+            self.flashIDData.update({"Count": hex(count) })
+            ## Retrieve all data, count is in words
+            self.serialPort.write(bytes("getid a\r\n","utf-8"))
+            data = int.from_bytes(self.serialPort.read(count*2), byteorder="big" )
+            self.flashIDData.update({"Data": hex(data) })
+        else:
+            self.serialPort.write(bytes("getid\r\n","utf-8"))
+            self.flashID = self.serialPort.readline().decode("utf-8").split(",")
+            self.flashID = self.flashID[:-2]
                 
 ########################################################################    
 ## getSfFileList

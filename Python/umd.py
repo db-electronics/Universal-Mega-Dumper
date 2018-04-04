@@ -226,7 +226,8 @@ if __name__ == "__main__":
         elif args.rd == "fid":
             umd = umd(cartType)
             umd.getFlashID()
-            print(umd.flashID, end="")
+            for item in sorted( umd.flashIDData.items() ):
+                print(item)
             
         # read the serial flash id
         elif args.rd == "sfid":

@@ -279,8 +279,19 @@ class umd
         static const uint8_t nLED = 8;                      ///< LED pin number
         static const uint8_t nPB = 9;                       ///< Pushbutton pin number
 
-        uint8_t flashChipNum = 0;
-        uint16_t flashID[4];
+        #define FLASH_ID_SIZE   8
+        struct _flashInfo {
+            uint16_t id[FLASH_ID_SIZE];
+            uint16_t idCount;
+            uint16_t manufacturer;
+            uint16_t device;
+            uint16_t boot;
+            uint16_t size;
+        } flashInfo;
+
+        uint8_t flashIDCount= 0;
+        uint32_t flashSize = 0;
+        uint16_t flashID[8];
 
     private:
         uint8_t _resetPin;

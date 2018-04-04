@@ -527,20 +527,77 @@ void eraseChip()
 void getFlashID()
 {
     uint8_t i;
+    char *arg;
     
-    // read the flash ID
-    umd.getFlashID();
-    
-    // flash ID contained in array, could be one or many chips
-    // PC side listens until end of line
-    
-    for( i = 0 ; i < umd.flashChipNum ; i++ )
+    switch(umd.getMode())
     {
-        Serial.print(umd.flashID[i], HEX);
-    }
+        case umd.MD:
+            //check for next argument, if present
+            arg = SCmd.next();
+            if( arg != NULL )
+            {
+                switch(*arg)
+                {
+                    //manufacturer
+                    case 'm':
+                        Serial.write((char)(umd.flashInfo.manufacturer));
+                        Serial.write((char)(umd.flashInfo.manufacturer>>8));
+                        break;
+                    //device
+                    case 'd':
+                        Serial.write((char)(umd.flashInfo.device));
+                        Serial.write((char)(umd.flashInfo.device>>8));
+                        break;
+                    //boot mode
+                    case 'b':
+                        Serial.write((char)(umd.flashInfo.boot));
+                        Serial.write((char)(umd.flashInfo.boot>>8));
+                        break;
+                    //size
+                    case 's':
+                        Serial.write((char)(umd.flashInfo.size));
+                        Serial.write((char)(umd.flashInfo.size>>8));
+                        break;
+                    //count of data in words, this information is internal to the UMD and is not big endian
+                    case 'c':
+                        Serial.write((char)(umd.flashInfo.idCount>>8));
+                        Serial.write((char)(umd.flashInfo.idCount));
+                    //all bytes
+                    case 'a':
+                        for( i=0 ; i < umd.flashInfo.idCount ; i++ )
+                        {
+                            Serial.write((char)(umd.flashInfo.id[i]));
+                            Serial.write((char)(umd.flashInfo.id[i]>>8));
+                        }
+                    default:
+                    
+                        break;
+                }
+            }
+            
+            break;
+            
+        default:
+            // read the flash ID
+            umd.getFlashID();
     
-    //EOL
-    Serial.println();
+            // flash ID contained in array, could be one or many chips
+            // PC side listens until end of line
+    
+            for( i = 0 ; i < 8; i++ )
+            {
+                if( i != 0 )
+                {
+                    Serial.print(F(","));
+                }
+                Serial.print(umd.flashInfo.id[i]);
+            }
+            
+            //EOL
+            Serial.println();
+            break;
+    }
+
 
 }
 
