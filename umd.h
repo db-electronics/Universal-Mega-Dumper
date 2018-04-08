@@ -273,6 +273,7 @@ class umd
         static const uint16_t SMS_SLOT_0_REG_ADDR = 0xFFFD; ///< SMS Sega Mapper slot 0 register address 0x0000 - 0x3FFF
         static const uint16_t SMS_SLOT_1_REG_ADDR = 0xFFFE; ///< SMS Sega Mapper slot 1 register address 0x4000 - 0x7FFF
         static const uint16_t SMS_SLOT_2_REG_ADDR = 0xFFFF; ///< SMS Sega Mapper slot 2 register address 0x8000 - 0xBFFF
+        uint8_t SMS_SelectedPage = 0xFF;
         /**@}*/
 
         //pin numbers UI

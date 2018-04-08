@@ -162,7 +162,7 @@ class sms:
             print("{} {}".format(data, regionVal))
             self.headerData.update({"Region": self.regionData.get(regionVal) })
 
-            romSizeVal = (data & 0x0F)
-            self.headerData.update({"Size": self.romSizeData.get(romSizeVal)[0] })
+            romSizeVal = self.romSizeData.get((data & 0x0F))[0]
+            self.headerData.update({"Size": [romSizeVal, hex(romSizeVal)] })
         
         return self.headerData
