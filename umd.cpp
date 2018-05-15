@@ -1343,27 +1343,34 @@ uint8_t umd::reverseByte(uint8_t data)
  **********************************************************************/
 uint16_t umd::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
 {
+    uint8_t selectedPage;
     uint16_t virtualAddress;
     
+    selectedPage = (uint8_t)(address >> 14);
     switch( slotNum )
     {
         case 0:
-            writeByte( SMS_SLOT_0_REG_ADDR, (uint8_t)(address >> 14) );
+            if(SMS_SelectedPage != selectedPage )
+                writeByte( SMS_SLOT_0_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_0_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
         case 1:
-            writeByte( SMS_SLOT_1_REG_ADDR, (uint8_t)(address >> 14) );
+            if(SMS_SelectedPage != selectedPage )
+                writeByte( SMS_SLOT_1_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_1_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
         case 2:
-            writeByte( SMS_SLOT_2_REG_ADDR, (uint8_t)(address >> 14) );
+            if(SMS_SelectedPage != selectedPage )
+                writeByte( SMS_SLOT_2_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
         default:
-            writeByte( SMS_SLOT_2_REG_ADDR, (uint8_t)(address >> 14) );
+            if(SMS_SelectedPage != selectedPage )
+                writeByte( SMS_SLOT_2_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
     }
+    SMS_SelectedPage = selectedPage;
     return virtualAddress;
 }
 
