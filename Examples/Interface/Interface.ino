@@ -78,6 +78,7 @@ void setup() {
     //register callbacks for SerialCommand related to the cartridge
     SCmd.addCommand("erase",  eraseChip);
     SCmd.addCommand("getid",  getFlashID);
+    SCmd.addCommand("chksm",  calcChecksum);
     
     //read commands
     SCmd.addCommand("rdbyte", readByte);
@@ -166,7 +167,6 @@ void _setMode()
             break;
         case 2:
             umd.setMode(umd.MD);
-            umd.getFlashID();
             Serial.println(F("mode = 2")); 
             break;
         case 3:
@@ -528,7 +528,7 @@ void getFlashID()
 {
     uint8_t i;
     char *arg;
-    
+
     switch(umd.getMode())
     {
         case umd.MD:
@@ -540,58 +540,37 @@ void getFlashID()
                 {
                     //manufacturer
                     case 'm':
-                        Serial.write((char)(umd.flashInfo.manufacturer));
-                        Serial.write((char)(umd.flashInfo.manufacturer>>8));
+                        Serial.write((char)(umd.flashID.manufacturer));
                         break;
                     //device
                     case 'd':
-                        Serial.write((char)(umd.flashInfo.device));
-                        Serial.write((char)(umd.flashInfo.device>>8));
+                        Serial.write((char)(umd.flashID.device));
                         break;
                     //boot mode
-                    case 'b':
-                        Serial.write((char)(umd.flashInfo.boot));
-                        Serial.write((char)(umd.flashInfo.boot>>8));
+                    case 't':
+                        Serial.write((char)(umd.flashID.type));
                         break;
                     //size
                     case 's':
-                        Serial.write((char)(umd.flashInfo.size));
-                        Serial.write((char)(umd.flashInfo.size>>8));
+                        Serial.write((char)(umd.flashID.size));
+                        Serial.write((char)(umd.flashID.size>>8));
+                        Serial.write((char)(umd.flashID.size>>16));
+                        Serial.write((char)(umd.flashID.size>>24));
                         break;
-                    //count of data in words, this information is internal to the UMD and is not big endian
-                    case 'c':
-                        Serial.write((char)(umd.flashInfo.idCount>>8));
-                        Serial.write((char)(umd.flashInfo.idCount));
-                    //all bytes
-                    case 'a':
-                        for( i=0 ; i < umd.flashInfo.idCount ; i++ )
-                        {
-                            Serial.write((char)(umd.flashInfo.id[i]));
-                            Serial.write((char)(umd.flashInfo.id[i]>>8));
-                        }
                     default:
-                    
                         break;
                 }
+            }else
+            {
+                // query the chip when no paramters are passed
+                umd.getFlashID();
             }
             
             break;
             
         default:
-            // read the flash ID
-            umd.getFlashID();
-    
             // flash ID contained in array, could be one or many chips
             // PC side listens until end of line
-    
-            for( i = 0 ; i < 8; i++ )
-            {
-                if( i != 0 )
-                {
-                    Serial.print(F(","));
-                }
-                Serial.print(umd.flashInfo.id[i]);
-            }
             
             //EOL
             Serial.println();
@@ -599,6 +578,47 @@ void getFlashID()
     }
 
 
+}
+
+/*******************************************************************//**
+ *  \brief Calculate the checksum of the cartridge
+ *  Requires set mode to be issued prior.
+ *  
+ *  
+ *  \return Void
+ **********************************************************************/
+void calcChecksum()
+{
+    uint32_t romSize, address;
+    
+    switch(umd.getMode())
+    {
+        case umd.MD:
+            
+            uint16_t headerSum, calcSum; 
+            
+            headerSum = umd.readWord( 0x00018E );
+            romSize = umd.readWord( 0x0001A4 );
+            romSize <<= 16;
+            romSize |= umd.readWord ( 0x0001A6 );
+            romSize += 1;
+            
+            calcSum = 0;
+            address = 0x100;
+            
+            while( address < romSize )
+            {
+                calcSum += umd.readWord(address);
+                address += 2;
+            }
+            
+            Serial.write((char)(calcSum));
+            Serial.write((char)(calcSum>>8));
+            
+            break;
+        default:
+            break;
+    }
 }
 
 /*******************************************************************//**
@@ -783,9 +803,17 @@ void readByteBlock()
             {
                 for( i = 0; i < blockSize; i++ )
                 {
-                    //calculate effective SMS address in slot 2
-                    data = umd.readByte(umd.setSMSSlotRegister(2, address++), true);
-                    Serial.write((char)(data)); 
+                    //no banking necessary for addresses up to 0x7FFF
+                    if( address < umd.SMS_SLOT_2_ADDR )
+                    {
+                        data = umd.readByte( (uint16_t)address++ , true);
+                        Serial.write((char)(data));
+                    }else
+                    {
+                        //calculate effective SMS address in slot 2
+                        data = umd.readByte(umd.setSMSSlotRegister(2, address++), true);
+                        Serial.write((char)(data)); 
+                    }
                 }
             }
 

@@ -126,6 +126,15 @@ class umd
         void getFlashID();
 
         /*******************************************************************//**
+         * \brief Read the Manufacturer and Product ID in the Flash IC
+         * \param manufacturer the byte specifying the manufacturer
+         * \param device the byte specifying the device
+         * \param info the byte specifying additional info
+         * \return size the size of the flash in bytes
+         **********************************************************************/
+        uint32_t getFlashSizeFromID(uint8_t manufacturer, uint8_t device, uint8_t info);
+
+        /*******************************************************************//**
          * \brief Erase the entire Flash IC
          * \param wait specify whether to wait for the operation to complete before returning
          * \param chip specify which chip to erase
@@ -279,19 +288,12 @@ class umd
         static const uint8_t nLED = 8;                      ///< LED pin number
         static const uint8_t nPB = 9;                       ///< Pushbutton pin number
 
-        #define FLASH_ID_SIZE   8
-        struct _flashInfo {
-            uint16_t id[FLASH_ID_SIZE];
-            uint16_t idCount;
-            uint16_t manufacturer;
-            uint16_t device;
-            uint16_t boot;
-            uint16_t size;
-        } flashInfo;
-
-        uint8_t flashIDCount= 0;
-        uint32_t flashSize = 0;
-        uint16_t flashID[8];
+        struct _flashID {
+            uint8_t manufacturer;
+            uint8_t device;
+            uint8_t type;
+            uint32_t size;
+        } flashID;
 
     private:
         uint8_t _resetPin;

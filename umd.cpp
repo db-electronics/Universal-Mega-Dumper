@@ -245,111 +245,62 @@ inline void umd::_latchAddress(uint16_t address)
 }
 
 /*******************************************************************//**
- * The getFlashID() function returns the manufacturer and product ID from 
- * the Flash IC as a uint16_t. It automatically performs the correct
- * flash ID read sequence based on the currently selected mode.
+ * The getFlashID() function stores the manufacturer, device, type (for
+ * Spansion devices) and size of the flash. Since mostly all cartridges
+ * are 8bits wide the flash IDs are all handled as 8bits.
  **********************************************************************/
 void umd::getFlashID()
 {
     uint16_t readData = 0;
-    uint8_t i;
     
-    for( i = 0 ; i < FLASH_ID_SIZE ; i++ )
-    {
-        flashInfo.id[i] = 0;
-    }
-    flashInfo.idCount = 0;
-    flashInfo.manufacturer = flashInfo.id[0];
-    flashInfo.device = flashInfo.id[1];
-    flashInfo.size = flashInfo.id[2];
-    flashInfo.boot = flashInfo.id[3];
+    // clear all data
+    flashID.manufacturer = 0;
+    flashID.device = 0;
+    flashID.type = 0;
+    flashID.size = 0;
 
     switch(_mode)
-    {
-        //mx29f800 software ID detect word mode
+    {   
+        //software ID detect word mode
         //A1 of Dumper connected to A0 of MX29F800
         //Automatic big endian on word mode
         case MD:
+            // enter software ID mode
             writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
             writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
             writeWord( (uint32_t)(0x000555 << 1), 0x9000);
+            // read manufacturer
+            readData = readWord( (uint32_t)(0x000000) );
+            flashID.manufacturer = (uint8_t)(readData >> 8);
+            // read device
             readData = readWord( (uint32_t)(0x000001 << 1) );
-            //exit software ID
+            flashID.device = (uint8_t)(readData >> 8);
+            // spansion devices have additional data here
+            readData  = readWord( (uint32_t)(0x00000E << 1) );
+            flashID.type = (uint8_t)(readData >> 8);
+            // exit software ID mode
             writeWord( (uint32_t)0x000000, 0xF000);
-            
-            switch(readData)
-            {
-                // catch all single flash chip boards (mostly 32Mbits)
-                case 0x7E22: //spansion
-                    writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
-                    writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
-                    writeWord( (uint32_t)(0x000555 << 1), 0x9000);
-                    flashInfo.id[0] = readWord( (uint32_t)(0x000000) );
-                    flashInfo.id[1] = readWord( (uint32_t)(0x000001 << 1) );
-                    flashInfo.id[2] = readWord( (uint32_t)(0x00000E << 1) );
-                    flashInfo.id[3] = readWord( (uint32_t)(0x00000F << 1) );
-                    flashInfo.idCount = 4;
-                    writeWord( (uint32_t)0x000000, 0xF000);
-                    
-                    flashInfo.manufacturer = flashInfo.id[0];
-                    flashInfo.device = flashInfo.id[1];
-                    flashInfo.size = flashInfo.id[2];
-                    flashInfo.boot = flashInfo.id[3];
-                    
-                    break;
-                    
-                case 0xA722: //macronix MX29LV320
-                case 0xA822: //macronix MX29LV320
-                
-                
-                case 0x5D23: //microchip SST39VF3201B
-                case 0x5C23: //microchip SST39VF3202B
-                    
-                    break;
-                
-                // else, this may be a 2 chip board
-                default:
-                
-                    //try for second chip
-                    writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0xAA00);
-                    writeWord( (uint32_t)(0x0002AA << 1) + GEN_CHIP_1_BASE, 0x5500);
-                    writeWord( (uint32_t)(0x000555 << 1) + GEN_CHIP_1_BASE, 0x9000);
-                    readData = readWord( (0x000001 << 1) + GEN_CHIP_1_BASE );
-                    
-                    //exit software ID
-                    writeWord( (uint32_t)0x000000  + GEN_CHIP_1_BASE, 0xF000);
-                    flashInfo.id[0] = readData;
-                    flashInfo.idCount++;
-            
-                    break;                    
-            }
-            
+            // figure out the size
+            flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, flashID.type );
             break;
+            
         //mx29f800 software ID detect byte mode
         case PC:
         case SN:
         case SNLO:
         case TG:
-            //get first byte of ID
-            writeByte((uint16_t)0x0AAA, 0xAA);
+            // enter software ID mode
+            writeByte((uint32_t)0x0AAA, 0xAA);
             writeByte((uint16_t)0x0555, 0x55);
             writeByte((uint16_t)0x0AAA, 0x90);
-            readData = (uint16_t)readByte((uint16_t)0x0000, false);
-            readData <<= 8;
-            //exit software ID
+            // read manufacturer
+            flashID.manufacturer = readByte((uint32_t)0x0000, false);
+            // read device
+            flashID.device = readByte((uint32_t)0x0001, false);
+            // exit software ID mode
             writeByte((uint16_t)0x0000, 0xF0);
-            
-            //get second part
-            writeByte((uint16_t)0x0AAA, 0xAA);
-            writeByte((uint16_t)0x0555, 0x55);
-            writeByte((uint16_t)0x0AAA, 0x90);
-            readData |= (uint16_t)readByte((uint16_t)0x0001, false);
-            
-            //exit software ID
-            writeByte((uint16_t)0x0000, 0xF0);
-            flashInfo.id[0] = readData;
-            flashInfo.idCount++;
-            
+            // figure out the size
+            flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, 0 );
             break;
             
         //mx29f800 software ID detect byte mode through SMS mapper
@@ -357,27 +308,20 @@ void umd::getFlashID()
             //enable rom write enable bit
             writeByte((uint16_t)SMS_CONF_REG_ADDR,0x80);
             
-            //get first byte of ID
+            // enter software ID mode
             writeByte((uint16_t)0x0AAA, 0xAA);
             writeByte((uint16_t)0x0555, 0x55);
             writeByte((uint16_t)0x0AAA, 0x90);
-            readData = (uint16_t)readByte((uint16_t)0x0000, false);
-            readData <<= 8;
-            //exit software ID
+            // read manufacturer
+            flashID.manufacturer = readByte((uint16_t)0x0000, false);
+            // read device
+            flashID.device = readByte((uint16_t)0x0001, false);
+            // exit software ID mode
             writeByte((uint16_t)0x0000, 0xF0);
+            // figure out the size
+            flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, 0 );
             
-            //get second part
-            writeByte((uint16_t)0x0AAA, 0xAA);
-            writeByte((uint16_t)0x0555, 0x55);
-            writeByte((uint16_t)0x0AAA, 0x90);
-            readData |= (uint16_t)readByte((uint16_t)0x0001, false);
-            
-            //exit software ID
-            writeByte((uint16_t)0x0000,0xF0);
-            flashInfo.id[0] = readData;
-            flashInfo.idCount++;
-            
-            //disable rom write enable bit
+            // disable rom write enable bit
             writeByte((uint16_t)SMS_CONF_REG_ADDR,0x00);
             break;  
             
@@ -387,20 +331,111 @@ void umd::getFlashID()
             writeByte((uint16_t)0x5555,0xAA);
             writeByte((uint16_t)0x2AAA,0x55);
             writeByte((uint16_t)0x5555,0x90);
-            readData = (uint16_t)readByte((uint16_t)0x0000, false);
-            readData <<= 8;
-            //get second byte
-            readData |= (uint16_t)readByte((uint16_t)0x0001, false);
-            
-            //exit software ID
-            writeByte((uint16_t)0x0000,0xF0);
-            flashInfo.id[0] = readData;
-            flashInfo.idCount++;
+            // read manufacturer
+            flashID.manufacturer = readByte((uint16_t)0x0000, false);
+            // read device
+            flashID.device = readByte((uint16_t)0x0001, false);
+            // exit software ID mode
+            writeByte((uint16_t)0x0000, 0xF0);
+            // figure out the size
+            flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, 0 );
             break;
             
         default:
             break;
     }
+}
+
+/*******************************************************************//**
+ * The getFlashSizeFromID() function returns the flash size 
+ **********************************************************************/
+uint32_t umd::getFlashSizeFromID(uint8_t manufacturer, uint8_t device, uint8_t type)
+{
+    uint32_t size = 0;
+    switch( manufacturer )
+    {
+        // spansion
+        case 0x01:
+            switch( type )
+            {
+                case 0x10: // SG29GL064N
+                case 0x0C: // SG29GL064N
+                    size = 0x800000;
+                    break;
+                case 0x1A: // SG29GL032N
+                case 0x1D: // SG29GL032N
+                    size = 0x400000;
+                    break;
+                default:
+                    break;
+            }
+            break;
+        
+        // microchip
+        case 0xBF:
+            switch( device )
+            {
+                case 0x6D: // SST39VF6401B
+                case 0x6C: // SST39VF6402B
+                    size = 0x800000;
+                    break;
+                case 0x5D: // SST39VF3201B
+                case 0x5C: // SST39VF3202B
+                case 0x5B: // SST39VF3201
+                case 0x5A: // SST39VF3202
+                    size = 0x400000;
+                    break;
+                case 0x4F: // SST39VF1601C
+                case 0x4E: // SST39VF1602C
+                case 0x4B: // SST39VF1601
+                case 0x4A: // SST39VF1602
+                    size = 0x200000;
+                    break;
+                default:
+                    break;
+            }
+            break;
+        
+        // macronix
+        case 0xC2:
+            switch( device )
+            {
+                // chips which will be single per board
+                // 3.3V
+                case 0xC9: // MX29LV640ET
+                case 0xCB: // MX29LV640EB
+                    size = 0x800000;
+                    break;
+                case 0xA7: // MX29LV320ET
+                case 0xA8: // MX29LV320EB
+                    size = 0x400000;
+                    break;
+                case 0xC4: // MX29LV160DT
+                case 0x49: // MX29LV160DB
+                    size = 0x400000;
+                    break;    
+                // 5V
+                case 0x58: // MX29F800CT
+                case 0xD6: // MX29F800CB
+                    size = 0x100000;
+                    break;
+                case 0x23: // MX29F400CT
+                case 0xAB: // MX29F400CB
+                    size = 0x80000;
+                    break;
+                case 0x51: // MX29F200CT
+                case 0x57: // MX29F200CB
+                    size = 0x80000;
+                    break;
+                default:
+                    break;
+            }
+            break;
+            
+        default:
+            break;
+    }
+    return size;
 }
 
 /*******************************************************************//**
@@ -417,14 +452,16 @@ uint32_t umd::eraseChip(bool wait)
     {
         //mx29f800 chip erase word mode
         case MD:
-            switch(flashID[0])
+            switch(flashID.device)
             {
                 // catch all single flash chip boards (mostly 32Mbits)
-                case 0x7E22: //spansion
-                case 0xA722: //macronix MX29LV320
-                case 0xA822: //macronix MX29LV320
-                case 0x5D23: //microchip SST39VF3201B
-                case 0x5C23: //microchip SST39VF3202B
+                // if flash ID was 0, try to erase two chips just in case
+                
+                case 0x7E: //spansion
+                case 0xA7: //macronix MX29LV320ET
+                case 0xA8: //macronix MX29LV320EB
+                case 0x5D: //microchip SST39VF3201B
+                case 0x5C: //microchip SST39VF3202B
                 
                     writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
                     writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
@@ -1048,14 +1085,14 @@ void umd::programWord(uint32_t address, uint16_t data, bool wait)
     {
         //MX29F800 program word
         case MD:
-            switch(flashID[0])
+            switch(flashID.device)
             {
                 // catch all 32Mbit carts
-                case 0x7E22: //spansion S29GL032N
-                case 0xA722: //macronix MX29LV320
-                case 0xA822: //macronix MX29LV320
-                case 0x5D23: //microchip SST39VF3201B
-                case 0x5C23: //microchip SST39VF3202B
+                case 0x7E: //spansion S29GL032N
+                case 0xA7: //macronix MX29LV320
+                case 0xA8: //macronix MX29LV320
+                case 0x5D: //microchip SST39VF3201B
+                case 0x5C: //microchip SST39VF3202B
                     //unrolled the program process for faster performance
                     //without unroll - programmed 8Mbits in 76.833s
                     //with unroll - programmed 8Mbits in 57.344s
