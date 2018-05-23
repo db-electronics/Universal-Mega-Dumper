@@ -1,0 +1,106 @@
+/*******************************************************************//**
+ *  \file genesis.cpp
+ *  \author René Richard
+ *  \brief This program allows to read and write to various game cartridges 
+ *         including: Genesis, Coleco, SMS, PCE - with possibility for 
+ *         future expansion.
+ *
+ * \copyright This file is part of Universal Mega Dumper.
+ *
+ *   Universal Mega Dumper is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   Universal Mega Dumper is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with Universal Mega Dumper.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include "Arduino.h"
+#include "umdbase.h"
+#include "genesis.h"
+
+/*******************************************************************//**
+ * The constructor
+ **********************************************************************/
+genesis::genesis() 
+{
+    
+    pinMode(GEN_SL1, INPUT);
+    pinMode(GEN_SR1, INPUT);
+    pinMode(GEN_nDTACK, OUTPUT);
+    digitalWrite(GEN_nDTACK, HIGH);
+    pinMode(GEN_nCAS2, OUTPUT);
+    digitalWrite(GEN_nCAS2, HIGH);
+    pinMode(GEN_nVRES, OUTPUT);
+    digitalWrite(GEN_nVRES, HIGH);
+    pinMode(GEN_nLWR, OUTPUT);
+    digitalWrite(GEN_nLWR, HIGH);
+    pinMode(GEN_nUWR, OUTPUT);
+    digitalWrite(GEN_nUWR, HIGH);
+    pinMode(GEN_nTIME, OUTPUT);
+    digitalWrite(GEN_nTIME, HIGH);
+
+}
+/*******************************************************************//**
+ * The constructor sets the ports for Genesis mode
+ **********************************************************************/
+genesis::genesis() 
+{
+    pinMode(GEN_SL1, INPUT);
+    pinMode(GEN_SR1, INPUT);
+    pinMode(GEN_nDTACK, OUTPUT);
+    digitalWrite(GEN_nDTACK, HIGH);
+    pinMode(GEN_nCAS2, OUTPUT);
+    digitalWrite(GEN_nCAS2, HIGH);
+    pinMode(GEN_nVRES, OUTPUT);
+    digitalWrite(GEN_nVRES, HIGH);
+    pinMode(GEN_nLWR, OUTPUT);
+    digitalWrite(GEN_nLWR, HIGH);
+    pinMode(GEN_nUWR, OUTPUT);
+    digitalWrite(GEN_nUWR, HIGH);
+    pinMode(GEN_nTIME, OUTPUT);
+    digitalWrite(GEN_nTIME, HIGH);
+
+    _resetPin = GEN_nVRES;
+    resetCart();
+}
+
+/*******************************************************************//**
+ * The getFlashID() function stores the manufacturer, device, type (for
+ * Spansion devices) and size of the flash. Genesis needs to do this 
+ * in word mode.
+ **********************************************************************/
+virtual void genesis::getFlashID()
+{
+    uint16_t readData = 0;
+    
+    // clear all data
+    flashID.manufacturer = 0;
+    flashID.device = 0;
+    flashID.type = 0;
+    flashID.size = 0;
+
+    // enter software ID mode
+    writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+    writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+    writeWord( (uint32_t)(0x000555 << 1), 0x9000);
+    // read manufacturer
+    readData = readWord( (uint32_t)(0x000000) );
+    flashID.manufacturer = (uint8_t)(readData >> 8);
+    // read device
+    readData = readWord( (uint32_t)(0x000001 << 1) );
+    flashID.device = (uint8_t)(readData >> 8);
+    // spansion devices have additional data here
+    readData  = readWord( (uint32_t)(0x00000E << 1) );
+    flashID.type = (uint8_t)(readData >> 8);
+    // exit software ID mode
+    writeWord( (uint32_t)0x000000, 0xF000);
+    // figure out the size
+    flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, flashID.type );
+}
