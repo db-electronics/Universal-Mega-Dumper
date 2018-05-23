@@ -58,8 +58,7 @@ inline void umd::_setDatabusOutput()
 /*******************************************************************//**
  * The resetCart() function issues a 250ms active-low reset pulse to
  * the pin specified by the variable _resetPin.
- * 
-  **********************************************************************/
+ **********************************************************************/
 void umd::resetCart()
 {
     digitalWrite(_resetPin, LOW);

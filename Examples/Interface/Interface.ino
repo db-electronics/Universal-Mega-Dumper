@@ -78,7 +78,7 @@ void setup() {
     //register callbacks for SerialCommand related to the cartridge
     SCmd.addCommand("erase",  eraseChip);
     SCmd.addCommand("getid",  getFlashID);
-    SCmd.addCommand("chksm",  calcChecksum);
+    SCmd.addCommand("chksum", calcChecksum);
     
     //read commands
     SCmd.addCommand("rdbyte", readByte);

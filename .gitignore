@@ -5,6 +5,9 @@ Python/roms/*
 html/
 Python/html
 
+# Geany project files
+*.geany
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
