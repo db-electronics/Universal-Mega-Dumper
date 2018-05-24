@@ -37,6 +37,8 @@ class genesis: public umdbase
          **********************************************************************/
         genesis();
         
+        virtual void setup();
+        
         /*******************************************************************//**
          * \brief Read the Manufacturer and Product ID in the Flash IC
          * \param alg The algorithm to use, SST 5V devices are different
@@ -45,6 +47,6 @@ class genesis: public umdbase
         virtual void getFlashID(uint8_t alg);
         
     private:
-}
+};
 
 #endif

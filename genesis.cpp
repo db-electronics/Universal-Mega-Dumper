@@ -30,27 +30,12 @@
  **********************************************************************/
 genesis::genesis() 
 {
-    
-    pinMode(GEN_SL1, INPUT);
-    pinMode(GEN_SR1, INPUT);
-    pinMode(GEN_nDTACK, OUTPUT);
-    digitalWrite(GEN_nDTACK, HIGH);
-    pinMode(GEN_nCAS2, OUTPUT);
-    digitalWrite(GEN_nCAS2, HIGH);
-    pinMode(GEN_nVRES, OUTPUT);
-    digitalWrite(GEN_nVRES, HIGH);
-    pinMode(GEN_nLWR, OUTPUT);
-    digitalWrite(GEN_nLWR, HIGH);
-    pinMode(GEN_nUWR, OUTPUT);
-    digitalWrite(GEN_nUWR, HIGH);
-    pinMode(GEN_nTIME, OUTPUT);
-    digitalWrite(GEN_nTIME, HIGH);
-
 }
+
 /*******************************************************************//**
- * The constructor sets the ports for Genesis mode
+ * Setup the ports for Genesis mode
  **********************************************************************/
-genesis::genesis() 
+void genesis::setup()
 {
     pinMode(GEN_SL1, INPUT);
     pinMode(GEN_SR1, INPUT);
@@ -68,7 +53,7 @@ genesis::genesis()
     digitalWrite(GEN_nTIME, HIGH);
 
     _resetPin = GEN_nVRES;
-    resetCart();
+    //resetCart();   
 }
 
 /*******************************************************************//**
@@ -76,7 +61,7 @@ genesis::genesis()
  * Spansion devices) and size of the flash. Genesis needs to do this 
  * in word mode.
  **********************************************************************/
-virtual void genesis::getFlashID()
+void genesis::getFlashID(uint8_t alg)
 {
     uint16_t readData = 0;
     

@@ -65,6 +65,21 @@ umdbase::umdbase()
 }
 
 /*******************************************************************//**
+ * The setup function should be ovewritten by the derived class
+ **********************************************************************/
+void umdbase::setup()
+{
+    pinMode(CTRL0, INPUT);
+    pinMode(CTRL1, INPUT);
+    pinMode(CTRL2, INPUT);
+    pinMode(CTRL3, INPUT);
+    pinMode(CTRL4, INPUT);
+    pinMode(CTRL5, INPUT);
+    pinMode(CTRL6, INPUT);
+    pinMode(CTRL7, INPUT);
+}
+
+/*******************************************************************//**
  * The _setDatabusInput function sets the databus to inputs and 
  * deactivates the built-in pullup resistors
  **********************************************************************/
@@ -88,22 +103,11 @@ inline void umdbase::_setDatabusOutput()
 }
 
 /*******************************************************************//**
- * The resetCart() function issues a 100ms active-low reset pulse to
- * the pin specified by the variable _resetPin.
- **********************************************************************/
-virtual void umdbase::resetCart()
-{
-    digitalWrite(_resetPin, LOW);
-    delay(100);
-    digitalWrite(_resetPin, HIGH);
-}
-
-/*******************************************************************//**
  * The getFlashID() function stores the manufacturer, device, type (for
  * Spansion devices) and size of the flash. Since mostly all cartridges
  * are 8bits wide the flash IDs are all handled as 8bits.
  **********************************************************************/
-virtual void umdbase::getFlashID(uint8_t alg)
+void umdbase::getFlashID(uint8_t alg)
 {
     
     // clear all data
@@ -120,9 +124,9 @@ virtual void umdbase::getFlashID(uint8_t alg)
         writeByte((uint16_t)0x0555, 0x55);
         writeByte((uint16_t)0x0AAA, 0x90);
         // read manufacturer
-        flashID.manufacturer = readByte((uint32_t)0x0000, false);
+        flashID.manufacturer = readByte((uint32_t)0x0000);
         // read device
-        flashID.device = readByte((uint32_t)0x0001, false);
+        flashID.device = readByte((uint32_t)0x0001);
         // exit software ID mode
         writeByte((uint16_t)0x0000, 0xF0);
         // figure out the size
@@ -135,9 +139,9 @@ virtual void umdbase::getFlashID(uint8_t alg)
         writeByte((uint16_t)0x2AAA,0x55);
         writeByte((uint16_t)0x5555,0x90);
         // read manufacturer
-        flashID.manufacturer = readByte((uint16_t)0x0000, false);
+        flashID.manufacturer = readByte((uint16_t)0x0000);
         // read device
-        flashID.device = readByte((uint16_t)0x0001, false);
+        flashID.device = readByte((uint16_t)0x0001);
         // exit software ID mode
         writeByte((uint16_t)0x0000, 0xF0);
         // figure out the size
@@ -213,12 +217,50 @@ inline void umdbase::_latchAddress(uint16_t address)
 }
 
 /*******************************************************************//**
+ * The readByte(uint16_t) function returns a byte read from 
+ * a 16bit address.
+ **********************************************************************/
+uint8_t umdbase::readByte(uint16_t address)
+{
+    uint8_t readData;
+
+    _latchAddress(address);
+    _setDatabusInput();
+    digitalWrite(nCE, LOW);
+    digitalWrite(nRD, LOW);
+    readData = DATAINL;
+    digitalWrite(nCE, HIGH);
+    digitalWrite(nRD, HIGH);
+  
+    return readData;
+}
+
+/*******************************************************************//**
+ * The readByte(uint32_t) function returns a byte read from 
+ * a 24bit address.
+ **********************************************************************/
+uint8_t umdbase::readByte(uint32_t address)
+{
+    uint8_t readData;
+
+    _latchAddress(address);
+    _setDatabusInput();
+    digitalWrite(nCE, LOW);
+    digitalWrite(nRD, LOW);
+    readData = DATAINL;
+    digitalWrite(nCE, HIGH);
+    digitalWrite(nRD, HIGH);
+  
+    return readData;
+}
+
+/*******************************************************************//**
  * The readWord(uint32_t) function returns a word read from 
  * a 24bit address.
  * 
  * \warning converts to little endian
  **********************************************************************/
-virtual uint16_t umdbase::readWord(uint32_t address)
+uint16_t umdbase::readWord(uint32_t address)
 {
     uint16_t readData;
 
@@ -275,4 +317,140 @@ void umdbase::writeWord(uint32_t address, uint16_t data)
     PORTCE |= nCE_setmask;
 
     _setDatabusInput();
+}
+
+/*******************************************************************//**
+ * The writeByte function strobes a byte into the cartridge at a 16bit
+ * address. The upper 8 address bits (23..16) are not modified
+ * by this function so this can be used to perform quicker successive
+ * writes within a 64k boundary.
+ * 
+ * \warning upper 8 address bits (23..16) are not modified
+ **********************************************************************/
+void umdbase::writeByte(uint16_t address, uint8_t data)
+{
+
+    _latchAddress(address);
+    _setDatabusOutput();
+    DATAOUTL = data;
+    // write to the bus
+    digitalWrite(nCE, LOW);
+    digitalWrite(nWR, LOW);
+    delayMicroseconds(1);
+    digitalWrite(nWR, HIGH);
+    digitalWrite(nCE, HIGH);
+    _setDatabusInput();
+    
+}
+
+/*******************************************************************//**
+ * The writeByte function strobes a byte into the cartridge at a 24bit
+ * address.
+ **********************************************************************/
+void umdbase::writeByte(uint32_t address, uint8_t data)
+{
+
+    _latchAddress(address);
+    _setDatabusOutput();
+    DATAOUTL = data;
+    // write to the bus
+    digitalWrite(nCE, LOW);
+    digitalWrite(nWR, LOW);
+    delayMicroseconds(1);
+    digitalWrite(nWR, HIGH);
+    digitalWrite(nCE, HIGH);
+    _setDatabusInput();
+    
+}
+
+/*******************************************************************//**
+ * The getFlashSizeFromID() function returns the flash size 
+ **********************************************************************/
+uint32_t umdbase::getFlashSizeFromID(uint8_t manufacturer, uint8_t device, uint8_t type)
+{
+    uint32_t size = 0;
+    switch( manufacturer )
+    {
+        // spansion
+        case 0x01:
+            switch( type )
+            {
+                case 0x10: // SG29GL064N
+                case 0x0C: // SG29GL064N
+                    size = 0x800000;
+                    break;
+                case 0x1A: // SG29GL032N
+                case 0x1D: // SG29GL032N
+                    size = 0x400000;
+                    break;
+                default:
+                    break;
+            }
+            break;
+        
+        // microchip
+        case 0xBF:
+            switch( device )
+            {
+                case 0x6D: // SST39VF6401B
+                case 0x6C: // SST39VF6402B
+                    size = 0x800000;
+                    break;
+                case 0x5D: // SST39VF3201B
+                case 0x5C: // SST39VF3202B
+                case 0x5B: // SST39VF3201
+                case 0x5A: // SST39VF3202
+                    size = 0x400000;
+                    break;
+                case 0x4F: // SST39VF1601C
+                case 0x4E: // SST39VF1602C
+                case 0x4B: // SST39VF1601
+                case 0x4A: // SST39VF1602
+                    size = 0x200000;
+                    break;
+                default:
+                    break;
+            }
+            break;
+        
+        // macronix
+        case 0xC2:
+            switch( device )
+            {
+                // chips which will be single per board
+                // 3.3V
+                case 0xC9: // MX29LV640ET
+                case 0xCB: // MX29LV640EB
+                    size = 0x800000;
+                    break;
+                case 0xA7: // MX29LV320ET
+                case 0xA8: // MX29LV320EB
+                    size = 0x400000;
+                    break;
+                case 0xC4: // MX29LV160DT
+                case 0x49: // MX29LV160DB
+                    size = 0x400000;
+                    break;    
+                // 5V
+                case 0x58: // MX29F800CT
+                case 0xD6: // MX29F800CB
+                    size = 0x100000;
+                    break;
+                case 0x23: // MX29F400CT
+                case 0xAB: // MX29F400CB
+                    size = 0x80000;
+                    break;
+                case 0x51: // MX29F200CT
+                case 0x57: // MX29F200CB
+                    size = 0x80000;
+                    break;
+                default:
+                    break;
+            }
+            break;
+            
+        default:
+            break;
+    }
+    return size;
 }
