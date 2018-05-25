@@ -65,10 +65,35 @@ umdbase::umdbase()
 }
 
 /*******************************************************************//**
- * The setup function should be ovewritten by the derived class
+ * The setup function sets all of the Teensy pins
  **********************************************************************/
 void umdbase::setup()
 {
+    _setDatabusInput();
+    
+    //74HC373 latch enable input is active high, default to low
+    pinMode(ALE_low, OUTPUT);
+    digitalWrite(ALE_low, LOW);
+    pinMode(ALE_high, OUTPUT);
+    digitalWrite(ALE_high, LOW);
+    
+    //global outputs signal default to high
+    pinMode(nWR, OUTPUT);
+    digitalWrite(nWR, HIGH);
+    pinMode(nRD, OUTPUT);
+    digitalWrite(nRD, HIGH);
+    pinMode(nCE, OUTPUT);
+    digitalWrite(nRD, HIGH)
+    
+    //cartridge detect
+    pinMode(nCART, INPUT_PULLUP);
+
+    //LED and pushbutton
+    pinMode(nLED, OUTPUT);
+    digitalWrite(nLED, HIGH);
+    pinMode(nPB, INPUT);
+
+    //All control signals default to input, you know, for safety
     pinMode(CTRL0, INPUT);
     pinMode(CTRL1, INPUT);
     pinMode(CTRL2, INPUT);
@@ -226,11 +251,20 @@ uint8_t umdbase::readByte(uint16_t address)
 
     _latchAddress(address);
     _setDatabusInput();
-    digitalWrite(nCE, LOW);
-    digitalWrite(nRD, LOW);
+    
+    // read the bus
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nRD, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTRD &= nRD_clrmask;
+    PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow;
+    
     readData = DATAINL;
-    digitalWrite(nCE, HIGH);
-    digitalWrite(nRD, HIGH);
+    
+    //digitalWrite(nCE, HIGH);
+    //digitalWrite(nRD, HIGH);
+    PORTRD |= nRD_setmask;
+    PORTCE |= nCE_setmask;
   
     return readData;
 }
@@ -245,11 +279,20 @@ uint8_t umdbase::readByte(uint32_t address)
 
     _latchAddress(address);
     _setDatabusInput();
-    digitalWrite(nCE, LOW);
-    digitalWrite(nRD, LOW);
+    
+    // read the bus
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nRD, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTRD &= nRD_clrmask;
+    PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow;
+    
     readData = DATAINL;
-    digitalWrite(nCE, HIGH);
-    digitalWrite(nRD, HIGH);
+    
+    //digitalWrite(nCE, HIGH);
+    //digitalWrite(nRD, HIGH);
+    PORTRD |= nRD_setmask;
+    PORTCE |= nCE_setmask;
   
     return readData;
 }
@@ -272,7 +315,6 @@ uint16_t umdbase::readWord(uint32_t address)
     //digitalWrite(nRD, LOW);
     PORTCE &= nCE_clrmask;
     PORTRD &= nRD_clrmask;
-    
     PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow
     
     //convert to little endian while reading
@@ -333,12 +375,20 @@ void umdbase::writeByte(uint16_t address, uint8_t data)
     _latchAddress(address);
     _setDatabusOutput();
     DATAOUTL = data;
+    
     // write to the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nWR, LOW);
-    delayMicroseconds(1);
-    digitalWrite(nWR, HIGH);
-    digitalWrite(nCE, HIGH);
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nWR, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTWR &= nWR_clrmask;
+    
+    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    
+    //digitalWrite(nWR, HIGH);
+    //digitalWrite(nCE, HIGH);
+    PORTWR |= nWR_setmask;
+    PORTCE |= nCE_setmask;
+    
     _setDatabusInput();
     
 }
@@ -353,12 +403,20 @@ void umdbase::writeByte(uint32_t address, uint8_t data)
     _latchAddress(address);
     _setDatabusOutput();
     DATAOUTL = data;
+    
     // write to the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nWR, LOW);
-    delayMicroseconds(1);
-    digitalWrite(nWR, HIGH);
-    digitalWrite(nCE, HIGH);
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nWR, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTWR &= nWR_clrmask;
+    
+    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    
+    //digitalWrite(nWR, HIGH);
+    //digitalWrite(nCE, HIGH);
+    PORTWR |= nWR_setmask;
+    PORTCE |= nCE_setmask;
+    
     _setDatabusInput();
     
 }

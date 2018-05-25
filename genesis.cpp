@@ -59,7 +59,7 @@ void genesis::setup()
 /*******************************************************************//**
  * The getFlashID() function stores the manufacturer, device, type (for
  * Spansion devices) and size of the flash. Genesis needs to do this 
- * in word mode.
+ * in word mode therefore we override the virtual base function.
  **********************************************************************/
 void genesis::getFlashID(uint8_t alg)
 {

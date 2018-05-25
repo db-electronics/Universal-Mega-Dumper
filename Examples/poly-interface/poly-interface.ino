@@ -30,8 +30,8 @@
 #define DATA_BUFFER_SIZE            2048    ///< Size of serial receive data buffer
 
 SerialCommand SCmd;                         ///< Receive and parse serial commands
-umdbase *cart;                             ///< Universal Mega Dumper declaration
-genesis genCart;
+umdbase *cart;                              ///< Pointer to all cartridge classes
+genesis genCart;                            ///< Genesis cartridge type
 
 const int FlashChipSelect = 20;             ///< Digital pin for flash chip CS pin
 SerialFlashFile flashFile;                  ///< Serial flash file object
@@ -143,7 +143,6 @@ void _setMode()
         case 2:
             cart = &genCart;
             cart->setup();
-            
             Serial.println(F("mode = 2")); 
             break;
         //Master System
