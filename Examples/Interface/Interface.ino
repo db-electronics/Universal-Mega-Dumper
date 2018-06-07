@@ -853,10 +853,13 @@ void readByteBlock()
             }
             else
             {
-                data = umd.readByte(address++, true);
-                Serial.write((char)(data));
+                for( i = 0; i < blockSize; i++ )
+                {
+                    data = umd.readByte(address++, true);
+                    Serial.write((char)(data));
+                }
             }
-            break;     
+            break;
             
         default:
             for( i = 0; i < blockSize; i++ )
