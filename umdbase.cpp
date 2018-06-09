@@ -83,7 +83,7 @@ void umdbase::setup()
     pinMode(nRD, OUTPUT);
     digitalWrite(nRD, HIGH);
     pinMode(nCE, OUTPUT);
-    digitalWrite(nRD, HIGH)
+    digitalWrite(nRD, HIGH);
     
     //cartridge detect
     pinMode(nCART, INPUT_PULLUP);
