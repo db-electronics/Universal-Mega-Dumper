@@ -89,9 +89,9 @@ class umd:
 #
 #  Windows/Linux agnostic, searches for the UMD
 ########################################################################
-    def __init__(self, mode):        
+    def __init__(self, mode, port):        
         self.cartType = mode
-        self.connectUMD(mode)
+        self.connectUMD(mode, port)
 
 ########################################################################    
 ## connectUMD
@@ -100,20 +100,24 @@ class umd:
 #  
 #  Retrieve the ROM's manufacturer flash ID
 ########################################################################
-    def connectUMD(self, mode):
+    def connectUMD(self, mode, port):
 
         #print("mode set value = {0}".format(self.modes.get(mode)))
         
         dbPort = ""
-        # enumerate ports
-        if sys.platform.startswith("win"):
-            ports = ["COM%s" % (i + 1) for i in range(256)]
-        elif sys.platform.startswith ("linux"):
-            ports = glob.glob("/dev/tty[A-Za-z]*")
-        elif sys.platform.startswith ("darwin"):
-            ports = glob.glob("/dev/cu*")
+        
+        if port is None:
+            # enumerate ports
+            if sys.platform.startswith("win"):
+                ports = ["COM%s" % (i + 1) for i in range(256)]
+            elif sys.platform.startswith ("linux"):
+                ports = glob.glob("/dev/tty[A-Za-z]*")
+            elif sys.platform.startswith ("darwin"):
+                ports = glob.glob("/dev/cu*")
+            else:
+                raise EnvironmentError("Unsupported platform")
         else:
-            raise EnvironmentError("Unsupported platform")
+            ports = [port]
 
         # test for dumper on port
         for serialport in ports:
