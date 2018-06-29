@@ -46,6 +46,14 @@ class genesis: public umdbase
          **********************************************************************/
         virtual void getFlashID(uint8_t alg);
         
+        /*******************************************************************//**
+         * \brief Write a byte to the nTIME region on genesis
+         * \param address 32bit address
+         * \param data byte
+         * \return void
+         **********************************************************************/
+        void writeByteTime(uint32_t address, uint8_t data);
+        
     private:
 };
 

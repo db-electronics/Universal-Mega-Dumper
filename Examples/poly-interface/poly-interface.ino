@@ -78,6 +78,12 @@ void setup() {
     //register callbacks for SerialCommand related to the cartridge
     SCmd.addCommand("getid",  getFlashID);
     
+    //read commands
+    //SCmd.addCommand("rdbyte", readByte);
+    //SCmd.addCommand("rdbblk", readByteBlock);
+    //SCmd.addCommand("rdword", readWord);
+    SCmd.addCommand("rdwblk", readWordBlock);
+    
     SCmd.addDefaultHandler(_unknownCMD);
     SCmd.clearBuffer();
 }
@@ -220,9 +226,113 @@ void getFlashID()
         }
     }else
     {
-        // query the chip when no paramters are passed
+        // query the chip when no parameters are passed
         cart->getFlashID(0);
     }
             
 }
 
+/*******************************************************************//**
+ *  \brief Read a block of words from the cartridge
+ *  
+ *  Usage:
+ *  rdwblk 0x0000 128
+ *    - returns 128 unformated words
+ *  
+ *  \return Void
+ **********************************************************************/
+void readWordBlock()
+{
+    char *arg;
+    bool sramRead = false;
+    bool latchBankRead = false;
+    uint32_t address = 0, addrOffset = 0;
+    uint16_t blockSize = 0, i, restBlockSize = 0;
+    uint16_t data;
+
+    //get the address in the next argument
+    arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the size in the next argument
+    arg = SCmd.next(); 
+    blockSize = strtoul(arg, (char**)0, 0);
+    
+    //check for next argument, if present, for type of read
+    arg = SCmd.next();
+    if( arg != NULL )
+    {
+        switch(*arg)
+        {
+            case 's':
+                sramRead = true;
+                break;
+            default:
+                break;
+        }
+    }
+
+    if( address + blockSize >= 0x400000)
+    {
+        latchBankRead = true;
+        restBlockSize = blockSize;
+        if(address < 0x400000)
+        {
+            blockSize = 0x400000 - address;
+            restBlockSize -= blockSize;
+        }
+        else
+        {
+            addrOffset = address - 0x400000;
+            blockSize = 0;
+        }
+    }
+    
+    digitalWrite(cart->nLED, LOW);
+    
+    if( sramRead )
+    {
+        genCart.writeByteTime(0,3);
+        //read words from block, output converts to little endian
+        for( i = 0; i < blockSize; i += 2 )
+        {
+            data = cart->readWord(address);
+            address += 2;
+            Serial.write((char)(data));
+            Serial.write((char)(data>>8));
+        }
+        genCart.writeByteTime((uint32_t)0,0);
+    }else
+    {
+        //read words from block, output is little endian
+        for( i = 0; i < blockSize; i += 2 )
+        {
+            data = cart->readWord(address);
+            address += 2;
+            Serial.write((char)(data));
+            Serial.write((char)(data>>8));
+        }
+    }
+
+    if( latchBankRead )
+    {
+        genCart.writeByteTime(0xA130FD, 0x08 ); // map bank 8 to 0x300000 - 0x37FFFF
+        genCart.writeByteTime(0xA130FF, 0x09 ); // map bank 9 to 0x380000 - 0x3FFFFF
+
+        address = 0x300000 + addrOffset; // TODO: Should start at 0x300000 BUG
+
+        //read the rest of the words from bank switched block, output is little endian
+        for( i = 0; i < restBlockSize; i += 2 )
+        {
+            data = cart->readWord(address);
+            address += 2;
+            Serial.write((char)(data));
+            Serial.write((char)(data>>8));
+        }
+
+        genCart.writeByteTime(0xA130FD, 0x06 ); // return banks to original state
+        genCart.writeByteTime(0xA130FF, 0x07 ); // return banks to original state
+    }
+
+    digitalWrite(cart->nLED, HIGH);
+}

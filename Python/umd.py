@@ -374,7 +374,7 @@ if __name__ == "__main__":
     elif args.byteswap:
         startTime = time.time()
         genesis = genesis()
-        gensis.byteSwap(args.byteswap[0], args.file)
+        genesis.byteSwap(args.byteswap[0], args.file)
         opTime = time.time() - startTime
         del genesis
     else:

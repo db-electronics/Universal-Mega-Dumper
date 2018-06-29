@@ -35,6 +35,18 @@
 #define DATAH_DDR       DDRD      /**< DDRD data direction for high byte of databus */
 #define DATAL_DDR       DDRC      /**< DDRC data direction for low byte of databus */
 
+#define set_databus_inputs() 	\
+	DATAH_DDR = 0x00;			\
+	DATAL_DDR = 0x00;			\
+	DATAOUTH = 0x00;			\
+	DATAOUTL = 0x00;			\
+
+#define set_databus_outputs() 	\
+	DATAH_DDR = 0x00;			\
+	DATAL_DDR = 0x00;			\
+	DATAOUTH = 0x00;			\
+	DATAOUTL = 0x00;			\
+	
 /*******************************************************************//** 
  * \class umdbase
  * \brief Teensy umd class to read and write db Flash Carts
@@ -130,9 +142,11 @@ class umdbase
          **********************************************************************/
         virtual void writeWord(uint32_t address, uint16_t data);
         
+        
         /**@}*/
+        
+	protected:
 
-    protected:
         //pin numbers address control
 
         //globally affected pins
@@ -191,29 +205,29 @@ class umdbase
     
         uint8_t _resetPin;
     
-        /*******************************************************************//**
+    	/*******************************************************************//**
          * \brief latch a 16bit address
          * \return void
          **********************************************************************/
-        inline void _latchAddress(uint16_t address);
+        void latchAddress(uint16_t address);
         
         /*******************************************************************//**
          * \brief latch a 24bit address
          * \return void
          **********************************************************************/
-        inline void _latchAddress(uint32_t address);
+        void latchAddress(uint32_t address);
         
         /*******************************************************************//**
          * \brief set the databus port as input
          * \return void
          **********************************************************************/
-        inline void _setDatabusInput();
+        void setDatabusInput();
         
         /*******************************************************************//**
          * \brief set the databus port as output
          * \return void
          **********************************************************************/
-        inline void _setDatabusOutput();
+        void setDatabusOutput();
         
         /*******************************************************************//**
          * \brief Read the Manufacturer and Product ID in the Flash IC
@@ -223,7 +237,8 @@ class umdbase
          * \return size the size of the flash in bytes
          **********************************************************************/
         uint32_t getFlashSizeFromID(uint8_t manufacturer, uint8_t device, uint8_t info);
-        
+    
+    
     private:
         
 };

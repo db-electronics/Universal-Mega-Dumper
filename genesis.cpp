@@ -89,3 +89,26 @@ void genesis::getFlashID(uint8_t alg)
     // figure out the size
     flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, flashID.type );
 }
+
+/*******************************************************************//**
+ * The writeByteTime function strobes a byte into nTIME region
+ * while enabling the rest of the regular signals
+ * 
+ **********************************************************************/
+void genesis::writeByteTime(uint32_t address, uint8_t data)
+{
+    
+    latchAddress(address);
+    setDatabusOutput();
+
+    //put byte on bus
+    DATAOUTL = data;
+    
+    // write to the bus
+    digitalWrite(GEN_nLWR, LOW);
+    digitalWrite(GEN_nTIME, LOW);
+    digitalWrite(GEN_nTIME, HIGH);
+    digitalWrite(GEN_nLWR, HIGH);
+ 
+    setDatabusInput();
+}

@@ -29,7 +29,7 @@
  **********************************************************************/
 umdbase::umdbase() 
 {
-    _setDatabusInput();
+    setDatabusInput();
 
     //74HC373 latch enable input is active high, default to low
     pinMode(ALE_low, OUTPUT);
@@ -69,7 +69,7 @@ umdbase::umdbase()
  **********************************************************************/
 void umdbase::setup()
 {
-    _setDatabusInput();
+    setDatabusInput();
     
     //74HC373 latch enable input is active high, default to low
     pinMode(ALE_low, OUTPUT);
@@ -83,7 +83,7 @@ void umdbase::setup()
     pinMode(nRD, OUTPUT);
     digitalWrite(nRD, HIGH);
     pinMode(nCE, OUTPUT);
-    digitalWrite(nRD, HIGH)
+    digitalWrite(nRD, HIGH);
     
     //cartridge detect
     pinMode(nCART, INPUT_PULLUP);
@@ -108,7 +108,7 @@ void umdbase::setup()
  * The _setDatabusInput function sets the databus to inputs and 
  * deactivates the built-in pullup resistors
  **********************************************************************/
-inline void umdbase::_setDatabusInput()
+void umdbase::setDatabusInput()
 {
     //set data to inputs
     DATAH_DDR = 0x00;
@@ -120,7 +120,7 @@ inline void umdbase::_setDatabusInput()
 /*******************************************************************//**
  * The _setDatabusOutput function sets the databus to outputs
  **********************************************************************/
-inline void umdbase::_setDatabusOutput()
+void umdbase::setDatabusOutput()
 {
     //set data to outputs
     DATAH_DDR = 0xFF;
@@ -178,7 +178,7 @@ void umdbase::getFlashID(uint8_t alg)
  * The _latchAddress function latches a 24bit address to the cartridge
  * \warning contains direct port manipulation
  **********************************************************************/
-inline void umdbase::_latchAddress(uint32_t address)
+void umdbase::latchAddress(uint32_t address)
 {
     uint8_t addrh,addrm,addrl;
     
@@ -187,7 +187,7 @@ inline void umdbase::_latchAddress(uint32_t address)
     addrm = (uint8_t)(address>>8 & 0xFF);
     addrh = (uint8_t)(address>>16 & 0xFF);
 
-    _setDatabusOutput();
+    setDatabusOutput();
 
     //put low and mid address on bus and latch it
     DATAOUTH = addrm;
@@ -210,8 +210,9 @@ inline void umdbase::_latchAddress(uint32_t address)
     //without this additional 0x00 write reads to undefined regions would
     //return the last value written to DATAOUTL
     DATAOUTL = 0x00; 
-    _setDatabusInput(); 
-
+    
+    //setDatabusInput(); 
+	set_databus_inputs();
 }
 
 /*******************************************************************//**
@@ -219,7 +220,7 @@ inline void umdbase::_latchAddress(uint32_t address)
  * 
  * \warning upper 8 address bits (23..16) are not modified
  **********************************************************************/
-inline void umdbase::_latchAddress(uint16_t address)
+void umdbase::latchAddress(uint16_t address)
 {
     uint8_t addrm,addrl;
     
@@ -227,7 +228,7 @@ inline void umdbase::_latchAddress(uint16_t address)
     addrl = (uint8_t)(address & 0xFF);
     addrm = (uint8_t)(address>>8 & 0xFF);
 
-    _setDatabusOutput();
+    setDatabusOutput();
 
     //put low and mid address on bus and latch it
     DATAOUTH = addrm;
@@ -238,7 +239,8 @@ inline void umdbase::_latchAddress(uint16_t address)
     //digitalWrite(ALE_low, LOW);
     PORTALE &= ALE_low_clrmask;
     
-    _setDatabusInput();
+    //setDatabusInput();
+    set_databus_inputs();
 }
 
 /*******************************************************************//**
@@ -249,8 +251,8 @@ uint8_t umdbase::readByte(uint16_t address)
 {
     uint8_t readData;
 
-    _latchAddress(address);
-    _setDatabusInput();
+    latchAddress(address);
+    setDatabusInput();
     
     // read the bus
     //digitalWrite(nCE, LOW);
@@ -277,8 +279,8 @@ uint8_t umdbase::readByte(uint32_t address)
 {
     uint8_t readData;
 
-    _latchAddress(address);
-    _setDatabusInput();
+    latchAddress(address);
+    setDatabusInput();
     
     // read the bus
     //digitalWrite(nCE, LOW);
@@ -307,8 +309,9 @@ uint16_t umdbase::readWord(uint32_t address)
 {
     uint16_t readData;
 
-    _latchAddress(address);
-    _setDatabusInput();
+    latchAddress(address);
+    //setDatabusInput();
+    set_databus_inputs();
 
     // read the bus
     //digitalWrite(nCE, LOW);
@@ -338,8 +341,8 @@ uint16_t umdbase::readWord(uint32_t address)
  **********************************************************************/
 void umdbase::writeWord(uint32_t address, uint16_t data)
 {
-    _latchAddress(address);
-    _setDatabusOutput();
+    latchAddress(address);
+    setDatabusOutput();
 
     //put word on bus
     DATAOUTH = (uint8_t)(data);
@@ -358,7 +361,7 @@ void umdbase::writeWord(uint32_t address, uint16_t data)
     PORTWR |= nWR_setmask;
     PORTCE |= nCE_setmask;
 
-    _setDatabusInput();
+    setDatabusInput();
 }
 
 /*******************************************************************//**
@@ -372,8 +375,8 @@ void umdbase::writeWord(uint32_t address, uint16_t data)
 void umdbase::writeByte(uint16_t address, uint8_t data)
 {
 
-    _latchAddress(address);
-    _setDatabusOutput();
+    latchAddress(address);
+    setDatabusOutput();
     DATAOUTL = data;
     
     // write to the bus
@@ -389,7 +392,7 @@ void umdbase::writeByte(uint16_t address, uint8_t data)
     PORTWR |= nWR_setmask;
     PORTCE |= nCE_setmask;
     
-    _setDatabusInput();
+    setDatabusInput();
     
 }
 
@@ -400,8 +403,8 @@ void umdbase::writeByte(uint16_t address, uint8_t data)
 void umdbase::writeByte(uint32_t address, uint8_t data)
 {
 
-    _latchAddress(address);
-    _setDatabusOutput();
+    latchAddress(address);
+    setDatabusOutput();
     DATAOUTL = data;
     
     // write to the bus
@@ -417,7 +420,7 @@ void umdbase::writeByte(uint32_t address, uint8_t data)
     PORTWR |= nWR_setmask;
     PORTCE |= nCE_setmask;
     
-    _setDatabusInput();
+    setDatabusInput();
     
 }
 
