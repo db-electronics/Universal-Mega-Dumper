@@ -35,13 +35,13 @@
 #define DATAH_DDR       DDRD      /**< DDRD data direction for high byte of databus */
 #define DATAL_DDR       DDRC      /**< DDRC data direction for low byte of databus */
 
-#define set_databus_inputs() 	\
+#define SET_DATABUS_TO_INPUT() 	\
 	DATAH_DDR = 0x00;			\
 	DATAL_DDR = 0x00;			\
 	DATAOUTH = 0x00;			\
 	DATAOUTL = 0x00;			\
 
-#define set_databus_outputs() 	\
+#define SET_DATABUS_TO_OUTPUT()	\
 	DATAH_DDR = 0x00;			\
 	DATAL_DDR = 0x00;			\
 	DATAOUTH = 0x00;			\
@@ -59,11 +59,32 @@ class umdbase
         static const uint8_t nLED = 8;                      ///< LED pin number
         static const uint8_t nPB = 9;                       ///< Pushbutton pin number
     
-        struct _flashID {
+		/*******************************************************************//**
+         * \brief e_carttype
+         * eMode is used by umd to keep track of which mode is currently set
+         **********************************************************************/
+        enum e_carttype
+        { 
+            undefined,				/**< Undefined mode */
+            COLECOVISION,			/**< ColecoVision mode */
+            GENESIS,         		/**< Genesis Megadrive mode */
+            TG,         			/**< TG-16 mode */
+            PC,         			/**< PC Engine mode */
+            MS,         			/**< Master System mode */
+            SN,         			/**< Super Nintendo mode */
+            SNLO        			/**< Super Nintendo LoROM mode */
+        } carttype;
+    
+		/*******************************************************************//**
+         * \brief s_flashID
+         * flashID stores important data about the flash chip on the cartridge
+         **********************************************************************/
+        struct s_flashID {
             uint8_t manufacturer;
             uint8_t device;
             uint8_t type;
             uint32_t size;
+            uint8_t alg;
         } flashID;
     
         /*******************************************************************//**
@@ -78,11 +99,32 @@ class umdbase
         virtual void setup();
         
         /*******************************************************************//**
+         * \name Cartridge Flash Functions
+         * This group of functions is specific to the catridge flash
+         **********************************************************************/
+        /**@{*/
+        /*******************************************************************//**
          * \brief Read the Manufacturer and Product ID in the Flash IC
          * \param alg The algorithm to use, SST 5V devices are different
          * \return void
          **********************************************************************/
         virtual void getFlashID(uint8_t alg);
+        
+        /*******************************************************************//**
+         * \brief Erase the entire Flash IC
+         * \param wait specify whether to wait for the operation to complete before returning
+         * \return void
+         **********************************************************************/
+        virtual void eraseChip(bool wait);
+        
+        /*******************************************************************//**
+         * \brief Perform toggle bit algorithm
+         * \param attempts how many toggle bits to attempt
+         * \return the number of times the bit successfully toggled
+         **********************************************************************/
+        virtual uint8_t toggleBit(uint8_t attempts);
+
+        /**@}*/
         
         /*******************************************************************//**
          * \name Read Functions
@@ -216,19 +258,7 @@ class umdbase
          * \return void
          **********************************************************************/
         void latchAddress(uint32_t address);
-        
-        /*******************************************************************//**
-         * \brief set the databus port as input
-         * \return void
-         **********************************************************************/
-        void setDatabusInput();
-        
-        /*******************************************************************//**
-         * \brief set the databus port as output
-         * \return void
-         **********************************************************************/
-        void setDatabusOutput();
-        
+                
         /*******************************************************************//**
          * \brief Read the Manufacturer and Product ID in the Flash IC
          * \param manufacturer the byte specifying the manufacturer

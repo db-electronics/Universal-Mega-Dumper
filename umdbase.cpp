@@ -29,7 +29,7 @@
  **********************************************************************/
 umdbase::umdbase() 
 {
-    setDatabusInput();
+    SET_DATABUS_TO_INPUT();
 
     //74HC373 latch enable input is active high, default to low
     pinMode(ALE_low, OUTPUT);
@@ -69,7 +69,7 @@ umdbase::umdbase()
  **********************************************************************/
 void umdbase::setup()
 {
-    setDatabusInput();
+    SET_DATABUS_TO_INPUT();
     
     //74HC373 latch enable input is active high, default to low
     pinMode(ALE_low, OUTPUT);
@@ -105,26 +105,70 @@ void umdbase::setup()
 }
 
 /*******************************************************************//**
- * The _setDatabusInput function sets the databus to inputs and 
- * deactivates the built-in pullup resistors
+ * The _latchAddress function latches a 24bit address to the cartridge
+ * \warning contains direct port manipulation
  **********************************************************************/
-void umdbase::setDatabusInput()
+void umdbase::latchAddress(uint32_t address)
 {
-    //set data to inputs
-    DATAH_DDR = 0x00;
-    DATAL_DDR = 0x00;
+    uint8_t addrh,addrm,addrl;
+    
+    //separate address into 3 bytes for address latches
+    addrl = (uint8_t)(address & 0xFF);
+    addrm = (uint8_t)(address>>8 & 0xFF);
+    addrh = (uint8_t)(address>>16 & 0xFF);
+
+    SET_DATABUS_TO_OUTPUT();
+
+    //put low and mid address on bus and latch it
+    DATAOUTH = addrm;
+    DATAOUTL = addrl;
+    
+    //digitalWrite(ALE_low, HIGH);
+    PORTALE |= ALE_low_setmask;
+    //digitalWrite(ALE_low, LOW);
+    PORTALE &= ALE_low_clrmask;
+
+    //put high address on bus and latch it
     DATAOUTH = 0x00;
-    DATAOUTL = 0x00;
+    DATAOUTL = addrh;
+    
+    //digitalWrite(ALE_low, HIGH);
+    PORTALE |= ALE_high_setmask;
+    //digitalWrite(ALE_low, LOW);
+    PORTALE &= ALE_high_clrmask;
+    
+    //without this additional 0x00 write reads to undefined regions would
+    //return the last value written to DATAOUTL
+    DATAOUTL = 0x00; 
+    
+    SET_DATABUS_TO_INPUT(); 
 }
 
 /*******************************************************************//**
- * The _setDatabusOutput function sets the databus to outputs
+ * The _latchAddress(uint16_t) function latches a 16bit address to the cartridge.
+ * 
+ * \warning upper 8 address bits (23..16) are not modified
  **********************************************************************/
-void umdbase::setDatabusOutput()
+void umdbase::latchAddress(uint16_t address)
 {
-    //set data to outputs
-    DATAH_DDR = 0xFF;
-    DATAL_DDR = 0xFF;
+    uint8_t addrm,addrl;
+    
+    //separate address into 2 bytes for address latches
+    addrl = (uint8_t)(address & 0xFF);
+    addrm = (uint8_t)(address>>8 & 0xFF);
+
+    SET_DATABUS_TO_OUTPUT();
+
+    //put low and mid address on bus and latch it
+    DATAOUTH = addrm;
+    DATAOUTL = addrl;
+    
+    //digitalWrite(ALE_low, HIGH);
+    PORTALE |= ALE_low_setmask;
+    //digitalWrite(ALE_low, LOW);
+    PORTALE &= ALE_low_clrmask;
+
+    SET_DATABUS_TO_INPUT();
 }
 
 /*******************************************************************//**
@@ -140,6 +184,7 @@ void umdbase::getFlashID(uint8_t alg)
     flashID.device = 0;
     flashID.type = 0;
     flashID.size = 0;
+    flashID.alg = alg;
     
     if( alg == 0 )
     {        
@@ -175,72 +220,84 @@ void umdbase::getFlashID(uint8_t alg)
 }
 
 /*******************************************************************//**
- * The _latchAddress function latches a 24bit address to the cartridge
- * \warning contains direct port manipulation
+ * The eraseChip() function erases the entire flash. If the wait parameter
+ * is true the function will block with toggle bit until the erase 
+ * operation has completed. It will return the time in millis the
+ * operation required to complete.
  **********************************************************************/
-void umdbase::latchAddress(uint32_t address)
+void umdbase::eraseChip(bool wait)
 {
-    uint8_t addrh,addrm,addrl;
-    
-    //separate address into 3 bytes for address latches
-    addrl = (uint8_t)(address & 0xFF);
-    addrm = (uint8_t)(address>>8 & 0xFF);
-    addrh = (uint8_t)(address>>16 & 0xFF);
-
-    setDatabusOutput();
-
-    //put low and mid address on bus and latch it
-    DATAOUTH = addrm;
-    DATAOUTL = addrl;
-    
-    //digitalWrite(ALE_low, HIGH);
-    PORTALE |= ALE_low_setmask;
-    //digitalWrite(ALE_low, LOW);
-    PORTALE &= ALE_low_clrmask;
-
-    //put high address on bus and latch it
-    DATAOUTH = 0x00;
-    DATAOUTL = addrh;
-    
-    //digitalWrite(ALE_low, HIGH);
-    PORTALE |= ALE_high_setmask;
-    //digitalWrite(ALE_low, LOW);
-    PORTALE &= ALE_high_clrmask;
-    
-    //without this additional 0x00 write reads to undefined regions would
-    //return the last value written to DATAOUTL
-    DATAOUTL = 0x00; 
-    
-    //setDatabusInput(); 
-	set_databus_inputs();
+	// which algorithm to use, 0 is most common alg used
+	if( flashID.alg == 0 )
+	{
+		//mx29f800 chip erase byte mode
+		writeByte((uint16_t)0x0AAA, 0xAA);
+		writeByte((uint16_t)0x0555, 0x55);
+		writeByte((uint16_t)0x0AAA, 0x80);
+		writeByte((uint16_t)0x0AAA, 0xAA);
+		writeByte((uint16_t)0x0555, 0x55);
+		writeByte((uint16_t)0x0AAA, 0x10);
+	}else
+	{
+		//SST39SF0x0 chip erase
+		writeByte((uint16_t)0x5555, 0xAA);
+		writeByte((uint16_t)0x2AAA, 0x55);
+		writeByte((uint16_t)0x5555, 0x80);
+		writeByte((uint16_t)0x5555, 0xAA);
+		writeByte((uint16_t)0x2AAA, 0x55);
+		writeByte((uint16_t)0x5555, 0x10);
+	}
+	
+	// if wait parameter was specified, do toggle until operation is complete
+	if( wait )
+	{
+		// start a timer
+		uint32_t intervalMillis;
+        intervalMillis = millis();
+        
+        // wait for 4 consecutive toggle bit success reads before exiting
+        while( toggleBit(4) != 4 )
+        {
+            if( (millis() - intervalMillis) > 250 )
+            {
+                //PC side app expects a "." before timeout
+                intervalMillis = millis();
+                Serial.print(".");
+            }
+        }
+        //Send something other than a "." to indicate we are done
+        Serial.print("!");
+	}
 }
 
 /*******************************************************************//**
- * The _latchAddress(uint16_t) function latches a 16bit address to the cartridge.
- * 
- * \warning upper 8 address bits (23..16) are not modified
+ * The toggleBit uses the toggle bit flash algorithm to determine if
+ * the current program operation has completed
  **********************************************************************/
-void umdbase::latchAddress(uint16_t address)
+uint8_t umdbase::toggleBit(uint8_t attempts)
 {
-    uint8_t addrm,addrl;
+    uint8_t retValue = 0;
+    uint8_t readValue, oldValue;
+    uint8_t i;
     
-    //separate address into 2 bytes for address latches
-    addrl = (uint8_t)(address & 0xFF);
-    addrm = (uint8_t)(address>>8 & 0xFF);
-
-    setDatabusOutput();
-
-    //put low and mid address on bus and latch it
-    DATAOUTH = addrm;
-    DATAOUTL = addrl;
+    //first read should always be a 1 according to datasheet
+	oldValue = readByte((uint16_t)0x0000) & 0x40;
+	
+	for( i=0; i<attempts; i++ )
+	{
+		//successive reads compare this read to the previous one for toggle bit
+		readValue = readByte((uint16_t)0x0000) & 0x40;
+		if( oldValue == readValue )
+		{
+			retValue += 1;
+		}else
+		{
+			retValue = 0;
+		}
+		oldValue = readValue;
+	}
     
-    //digitalWrite(ALE_low, HIGH);
-    PORTALE |= ALE_low_setmask;
-    //digitalWrite(ALE_low, LOW);
-    PORTALE &= ALE_low_clrmask;
-    
-    //setDatabusInput();
-    set_databus_inputs();
+    return retValue;
 }
 
 /*******************************************************************//**
@@ -252,7 +309,7 @@ uint8_t umdbase::readByte(uint16_t address)
     uint8_t readData;
 
     latchAddress(address);
-    setDatabusInput();
+    SET_DATABUS_TO_INPUT();
     
     // read the bus
     //digitalWrite(nCE, LOW);
@@ -280,7 +337,7 @@ uint8_t umdbase::readByte(uint32_t address)
     uint8_t readData;
 
     latchAddress(address);
-    setDatabusInput();
+    SET_DATABUS_TO_INPUT();
     
     // read the bus
     //digitalWrite(nCE, LOW);
@@ -310,8 +367,7 @@ uint16_t umdbase::readWord(uint32_t address)
     uint16_t readData;
 
     latchAddress(address);
-    //setDatabusInput();
-    set_databus_inputs();
+    SET_DATABUS_TO_INPUT();
 
     // read the bus
     //digitalWrite(nCE, LOW);
@@ -342,7 +398,7 @@ uint16_t umdbase::readWord(uint32_t address)
 void umdbase::writeWord(uint32_t address, uint16_t data)
 {
     latchAddress(address);
-    setDatabusOutput();
+    SET_DATABUS_TO_OUTPUT();
 
     //put word on bus
     DATAOUTH = (uint8_t)(data);
@@ -361,7 +417,7 @@ void umdbase::writeWord(uint32_t address, uint16_t data)
     PORTWR |= nWR_setmask;
     PORTCE |= nCE_setmask;
 
-    setDatabusInput();
+    SET_DATABUS_TO_INPUT();
 }
 
 /*******************************************************************//**
@@ -376,7 +432,7 @@ void umdbase::writeByte(uint16_t address, uint8_t data)
 {
 
     latchAddress(address);
-    setDatabusOutput();
+    SET_DATABUS_TO_OUTPUT();
     DATAOUTL = data;
     
     // write to the bus
@@ -392,7 +448,7 @@ void umdbase::writeByte(uint16_t address, uint8_t data)
     PORTWR |= nWR_setmask;
     PORTCE |= nCE_setmask;
     
-    setDatabusInput();
+    SET_DATABUS_TO_INPUT();
     
 }
 
@@ -404,7 +460,7 @@ void umdbase::writeByte(uint32_t address, uint8_t data)
 {
 
     latchAddress(address);
-    setDatabusOutput();
+    SET_DATABUS_TO_OUTPUT();
     DATAOUTL = data;
     
     // write to the bus
@@ -420,7 +476,7 @@ void umdbase::writeByte(uint32_t address, uint8_t data)
     PORTWR |= nWR_setmask;
     PORTCE |= nCE_setmask;
     
-    setDatabusInput();
+    SET_DATABUS_TO_INPUT();
     
 }
 

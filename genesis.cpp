@@ -52,6 +52,8 @@ void genesis::setup()
     pinMode(GEN_nTIME, OUTPUT);
     digitalWrite(GEN_nTIME, HIGH);
 
+    carttype = GENESIS;
+
     _resetPin = GEN_nVRES;
     //resetCart();   
 }
@@ -70,6 +72,7 @@ void genesis::getFlashID(uint8_t alg)
     flashID.device = 0;
     flashID.type = 0;
     flashID.size = 0;
+    flashID.alg = alg;
 
     // enter software ID mode
     writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
@@ -91,6 +94,73 @@ void genesis::getFlashID(uint8_t alg)
 }
 
 /*******************************************************************//**
+ * The eraseChip() function erases the entire flash. If the wait parameter
+ * is true the function will block with toggle bit until the erase 
+ * operation has completed. It will return the time in millis the
+ * operation required to complete.
+ **********************************************************************/
+void genesis::eraseChip(bool wait)
+{
+	writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+    writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+    writeWord( (uint32_t)(0x000555 << 1), 0x8000);
+    writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+    writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+    writeWord( (uint32_t)(0x000555 << 1), 0x1000);
+	
+	// if wait parameter was specified, do toggle until operation is complete
+	if( wait )
+	{
+		// start a timer
+		uint32_t intervalMillis;
+        intervalMillis = millis();
+        
+        // wait for 4 consecutive toggle bit success reads before exiting
+        while( toggleBit(4) != 4 )
+        {
+            if( (millis() - intervalMillis) > 250 )
+            {
+                //PC side app expects a "." before timeout
+                intervalMillis = millis();
+                Serial.print(".");
+            }
+        }
+        //Send something other than a "." to indicate we are done
+        Serial.print("!");
+	}
+}
+
+/*******************************************************************//**
+ * The toggleBit uses the toggle bit flash algorithm to determine if
+ * the current program operation has completed
+ **********************************************************************/
+uint8_t genesis::toggleBit(uint8_t attempts)
+{
+    uint8_t retValue = 0;
+    uint16_t readValue, oldValue;
+    uint8_t i;
+    
+    //first read of bit 6 - big endian
+    oldValue = readWord((uint32_t)0x0000) & 0x4000;
+
+    for( i=0; i<attempts; i++ )
+    {
+        //successive reads compare this read to the previous one for toggle bit
+        readValue = readWord((uint32_t)0x0000) & 0x4000;
+        if( oldValue == readValue )
+        {
+            retValue += 1;
+        }else
+        {
+            retValue = 0;
+        }
+        oldValue = readValue;
+    }
+    
+    return retValue;
+}
+
+/*******************************************************************//**
  * The writeByteTime function strobes a byte into nTIME region
  * while enabling the rest of the regular signals
  * 
@@ -99,7 +169,7 @@ void genesis::writeByteTime(uint32_t address, uint8_t data)
 {
     
     latchAddress(address);
-    setDatabusOutput();
+    SET_DATABUS_TO_OUTPUT();
 
     //put byte on bus
     DATAOUTL = data;
@@ -110,5 +180,5 @@ void genesis::writeByteTime(uint32_t address, uint8_t data)
     digitalWrite(GEN_nTIME, HIGH);
     digitalWrite(GEN_nLWR, HIGH);
  
-    setDatabusInput();
+    SET_DATABUS_TO_INPUT();
 }

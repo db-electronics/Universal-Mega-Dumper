@@ -76,6 +76,7 @@ void setup() {
     SCmd.addCommand("setmode",_setMode);
     
     //register callbacks for SerialCommand related to the cartridge
+    SCmd.addCommand("erase",  eraseChip);
     SCmd.addCommand("getid",  getFlashID);
     
     //read commands
@@ -180,6 +181,37 @@ void _setMode()
             Serial.println(F("mode = undefined")); 
             break;
     }  
+}
+
+/*******************************************************************//**
+ *  \brief Erases the contents of the cart
+ *  Requires set mode to be issued prior.
+ *  
+ *  Usage:
+ *  erase w
+ *  
+ *  \return Void
+ **********************************************************************/
+void eraseChip()
+{
+    char *arg;
+
+    arg = SCmd.next();
+    if( arg != NULL )
+    {
+        switch(*arg)
+        {
+            //wait for operation to complete, measure time
+            case 'w':
+                cart->eraseChip(true);
+                break;
+            default:
+                break;
+        }
+    }else
+    {
+        cart->eraseChip(false);
+    }
 }
 
 /*******************************************************************//**

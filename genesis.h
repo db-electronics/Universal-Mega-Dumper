@@ -47,6 +47,20 @@ class genesis: public umdbase
         virtual void getFlashID(uint8_t alg);
         
         /*******************************************************************//**
+         * \brief Erase the entire Flash IC
+         * \param wait specify whether to wait for the operation to complete before returning
+         * \return void
+         **********************************************************************/
+        virtual void eraseChip(bool wait);
+        
+        /*******************************************************************//**
+         * \brief Perform toggle bit algorithm
+         * \param attempts how many toggle bits to attempt
+         * \return the number of times the bit successfully toggled
+         **********************************************************************/
+        virtual uint8_t toggleBit(uint8_t attempts);
+        
+        /*******************************************************************//**
          * \brief Write a byte to the nTIME region on genesis
          * \param address 32bit address
          * \param data byte
