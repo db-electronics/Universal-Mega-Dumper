@@ -96,8 +96,7 @@ void genesis::getFlashID(uint8_t alg)
 /*******************************************************************//**
  * The eraseChip() function erases the entire flash. If the wait parameter
  * is true the function will block with toggle bit until the erase 
- * operation has completed. It will return the time in millis the
- * operation required to complete.
+ * operation has completed.
  **********************************************************************/
 void genesis::eraseChip(bool wait)
 {
@@ -116,7 +115,7 @@ void genesis::eraseChip(bool wait)
         intervalMillis = millis();
         
         // wait for 4 consecutive toggle bit success reads before exiting
-        while( toggleBit(4) != 4 )
+        while( toggleBit8(4) != 4 )
         {
             if( (millis() - intervalMillis) > 250 )
             {
@@ -128,36 +127,6 @@ void genesis::eraseChip(bool wait)
         //Send something other than a "." to indicate we are done
         Serial.print("!");
 	}
-}
-
-/*******************************************************************//**
- * The toggleBit uses the toggle bit flash algorithm to determine if
- * the current program operation has completed
- **********************************************************************/
-uint8_t genesis::toggleBit(uint8_t attempts)
-{
-    uint8_t retValue = 0;
-    uint16_t readValue, oldValue;
-    uint8_t i;
-    
-    //first read of bit 6 - big endian
-    oldValue = readWord((uint32_t)0x0000) & 0x4000;
-
-    for( i=0; i<attempts; i++ )
-    {
-        //successive reads compare this read to the previous one for toggle bit
-        readValue = readWord((uint32_t)0x0000) & 0x4000;
-        if( oldValue == readValue )
-        {
-            retValue += 1;
-        }else
-        {
-            retValue = 0;
-        }
-        oldValue = readValue;
-    }
-    
-    return retValue;
 }
 
 /*******************************************************************//**

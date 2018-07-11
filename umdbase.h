@@ -42,10 +42,8 @@
 	DATAOUTL = 0x00;			\
 
 #define SET_DATABUS_TO_OUTPUT()	\
-	DATAH_DDR = 0x00;			\
-	DATAL_DDR = 0x00;			\
-	DATAOUTH = 0x00;			\
-	DATAOUTL = 0x00;			\
+	DATAH_DDR = 0xFF;			\
+    DATAL_DDR = 0xFF;			\
 	
 /*******************************************************************//** 
  * \class umdbase
@@ -118,11 +116,18 @@ class umdbase
         virtual void eraseChip(bool wait);
         
         /*******************************************************************//**
-         * \brief Perform toggle bit algorithm
+         * \brief Perform toggle bit algorithm byte mode
          * \param attempts how many toggle bits to attempt
          * \return the number of times the bit successfully toggled
          **********************************************************************/
-        virtual uint8_t toggleBit(uint8_t attempts);
+        uint8_t toggleBit8(uint8_t attempts);
+
+		/*******************************************************************//**
+         * \brief Perform toggle bit algorithm word mode
+         * \param attempts how many toggle bits to attempt
+         * \return the number of times the bit successfully toggled
+         **********************************************************************/
+        uint8_t toggleBit16(uint8_t attempts);
 
         /**@}*/
         
@@ -185,6 +190,31 @@ class umdbase
         virtual void writeWord(uint32_t address, uint16_t data);
         
         
+        /**@}*/
+        
+        /*******************************************************************//** 
+         * \name Program Functions
+         * This group of functions perform various write operations
+         **********************************************************************/
+        /**@{*/
+        /*******************************************************************//**
+         * \brief Program a byte in the Flash IC
+         * \param address 24bit address
+         * \param data byte
+         * \param wait Wait for completion using toggle bit to return from function
+         * \return void
+         **********************************************************************/
+        virtual void programByte(uint32_t address, uint8_t data, bool wait);
+        
+        /*******************************************************************//**
+         * \brief Program a word in the Flash IC
+         * \param address 24bit address
+         * \param data word
+         * \param wait Wait for completion using toggle bit to return from function
+         * \return void
+         **********************************************************************/
+        virtual void programWord(uint32_t address, uint16_t data, bool wait);
+    
         /**@}*/
         
 	protected:

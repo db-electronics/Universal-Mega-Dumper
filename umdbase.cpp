@@ -105,6 +105,98 @@ void umdbase::setup()
 }
 
 /*******************************************************************//**
+ * The getFlashSizeFromID() function returns the flash size 
+ **********************************************************************/
+uint32_t umdbase::getFlashSizeFromID(uint8_t manufacturer, uint8_t device, uint8_t type)
+{
+    uint32_t size = 0;
+    switch( manufacturer )
+    {
+        // spansion
+        case 0x01:
+            switch( type )
+            {
+                case 0x10: // SG29GL064N
+                case 0x0C: // SG29GL064N
+                    size = 0x800000;
+                    break;
+                case 0x1A: // SG29GL032N
+                case 0x1D: // SG29GL032N
+                    size = 0x400000;
+                    break;
+                default:
+                    break;
+            }
+            break;
+        
+        // microchip
+        case 0xBF:
+            switch( device )
+            {
+                case 0x6D: // SST39VF6401B
+                case 0x6C: // SST39VF6402B
+                    size = 0x800000;
+                    break;
+                case 0x5D: // SST39VF3201B
+                case 0x5C: // SST39VF3202B
+                case 0x5B: // SST39VF3201
+                case 0x5A: // SST39VF3202
+                    size = 0x400000;
+                    break;
+                case 0x4F: // SST39VF1601C
+                case 0x4E: // SST39VF1602C
+                case 0x4B: // SST39VF1601
+                case 0x4A: // SST39VF1602
+                    size = 0x200000;
+                    break;
+                default:
+                    break;
+            }
+            break;
+        
+        // macronix
+        case 0xC2:
+            switch( device )
+            {
+                // chips which will be single per board
+                // 3.3V
+                case 0xC9: // MX29LV640ET
+                case 0xCB: // MX29LV640EB
+                    size = 0x800000;
+                    break;
+                case 0xA7: // MX29LV320ET
+                case 0xA8: // MX29LV320EB
+                    size = 0x400000;
+                    break;
+                case 0xC4: // MX29LV160DT
+                case 0x49: // MX29LV160DB
+                    size = 0x400000;
+                    break;    
+                // 5V
+                case 0x58: // MX29F800CT
+                case 0xD6: // MX29F800CB
+                    size = 0x100000;
+                    break;
+                case 0x23: // MX29F400CT
+                case 0xAB: // MX29F400CB
+                    size = 0x80000;
+                    break;
+                case 0x51: // MX29F200CT
+                case 0x57: // MX29F200CB
+                    size = 0x80000;
+                    break;
+                default:
+                    break;
+            }
+            break;
+            
+        default:
+            break;
+    }
+    return size;
+}
+
+/*******************************************************************//**
  * The _latchAddress function latches a 24bit address to the cartridge
  * \warning contains direct port manipulation
  **********************************************************************/
@@ -222,8 +314,7 @@ void umdbase::getFlashID(uint8_t alg)
 /*******************************************************************//**
  * The eraseChip() function erases the entire flash. If the wait parameter
  * is true the function will block with toggle bit until the erase 
- * operation has completed. It will return the time in millis the
- * operation required to complete.
+ * operation has completed.
  **********************************************************************/
 void umdbase::eraseChip(bool wait)
 {
@@ -256,7 +347,7 @@ void umdbase::eraseChip(bool wait)
         intervalMillis = millis();
         
         // wait for 4 consecutive toggle bit success reads before exiting
-        while( toggleBit(4) != 4 )
+        while( toggleBit8(4) != 4 )
         {
             if( (millis() - intervalMillis) > 250 )
             {
@@ -274,7 +365,7 @@ void umdbase::eraseChip(bool wait)
  * The toggleBit uses the toggle bit flash algorithm to determine if
  * the current program operation has completed
  **********************************************************************/
-uint8_t umdbase::toggleBit(uint8_t attempts)
+uint8_t umdbase::toggleBit8(uint8_t attempts)
 {
     uint8_t retValue = 0;
     uint8_t readValue, oldValue;
@@ -296,6 +387,36 @@ uint8_t umdbase::toggleBit(uint8_t attempts)
 		}
 		oldValue = readValue;
 	}
+    
+    return retValue;
+}
+
+/*******************************************************************//**
+ * The toggleBit uses the toggle bit flash algorithm to determine if
+ * the current program operation has completed
+ **********************************************************************/
+uint8_t umdbase::toggleBit16(uint8_t attempts)
+{
+    uint8_t retValue = 0;
+    uint16_t readValue, oldValue;
+    uint8_t i;
+    
+    //first read of bit 6 - big endian
+    oldValue = readWord((uint32_t)0x0000) & 0x4000;
+
+    for( i=0; i<attempts; i++ )
+    {
+        //successive reads compare this read to the previous one for toggle bit
+        readValue = readWord((uint32_t)0x0000) & 0x4000;
+        if( oldValue == readValue )
+        {
+            retValue += 1;
+        }else
+        {
+            retValue = 0;
+        }
+        oldValue = readValue;
+    }
     
     return retValue;
 }
@@ -481,93 +602,62 @@ void umdbase::writeByte(uint32_t address, uint8_t data)
 }
 
 /*******************************************************************//**
- * The getFlashSizeFromID() function returns the flash size 
+ * The programByte function programs a byte into the flash array at a
+ * 24bit address. If the wait parameter is true the function will wait 
+ * for the program operation to complete using data polling before 
+ * returning.
+ * 
+ * \warning Sector or entire IC must be erased prior to programming
  **********************************************************************/
-uint32_t umdbase::getFlashSizeFromID(uint8_t manufacturer, uint8_t device, uint8_t type)
+void umdbase::programByte(uint32_t address, uint8_t data, bool wait)
 {
-    uint32_t size = 0;
-    switch( manufacturer )
-    {
-        // spansion
-        case 0x01:
-            switch( type )
-            {
-                case 0x10: // SG29GL064N
-                case 0x0C: // SG29GL064N
-                    size = 0x800000;
-                    break;
-                case 0x1A: // SG29GL032N
-                case 0x1D: // SG29GL032N
-                    size = 0x400000;
-                    break;
-                default:
-                    break;
-            }
-            break;
-        
-        // microchip
-        case 0xBF:
-            switch( device )
-            {
-                case 0x6D: // SST39VF6401B
-                case 0x6C: // SST39VF6402B
-                    size = 0x800000;
-                    break;
-                case 0x5D: // SST39VF3201B
-                case 0x5C: // SST39VF3202B
-                case 0x5B: // SST39VF3201
-                case 0x5A: // SST39VF3202
-                    size = 0x400000;
-                    break;
-                case 0x4F: // SST39VF1601C
-                case 0x4E: // SST39VF1602C
-                case 0x4B: // SST39VF1601
-                case 0x4A: // SST39VF1602
-                    size = 0x200000;
-                    break;
-                default:
-                    break;
-            }
-            break;
-        
-        // macronix
-        case 0xC2:
-            switch( device )
-            {
-                // chips which will be single per board
-                // 3.3V
-                case 0xC9: // MX29LV640ET
-                case 0xCB: // MX29LV640EB
-                    size = 0x800000;
-                    break;
-                case 0xA7: // MX29LV320ET
-                case 0xA8: // MX29LV320EB
-                    size = 0x400000;
-                    break;
-                case 0xC4: // MX29LV160DT
-                case 0x49: // MX29LV160DB
-                    size = 0x400000;
-                    break;    
-                // 5V
-                case 0x58: // MX29F800CT
-                case 0xD6: // MX29F800CB
-                    size = 0x100000;
-                    break;
-                case 0x23: // MX29F400CT
-                case 0xAB: // MX29F400CB
-                    size = 0x80000;
-                    break;
-                case 0x51: // MX29F200CT
-                case 0x57: // MX29F200CB
-                    size = 0x80000;
-                    break;
-                default:
-                    break;
-            }
-            break;
-            
-        default:
-            break;
-    }
-    return size;
+	
+	// which algorithm to use, 0 is most common alg used
+	if( flashID.alg == 0 )
+	{
+		//mx29f800 program byte mode
+		writeByte((uint16_t)0x0AAA, 0xAA);
+		writeByte((uint16_t)0x0555, 0x55);
+		writeByte((uint16_t)0x0AAA, 0xA0);
+	}else
+	{
+		//SST39SF0x0 program
+		writeByte((uint16_t)0x5555, 0xAA);
+		writeByte((uint16_t)0x2AAA, 0x55);
+		writeByte((uint16_t)0x5555, 0xA0);
+	}
+	
+	//write the data
+	writeByte(address, data);
+	
+	//use data polling to validate end of program cycle
+	if(wait)
+	{
+		while( toggleBit8(2) != 2 );
+	}
+	
+}
+
+/*******************************************************************//**
+ * The programByte function programs a word into the flash array at a
+ * 24bit address. If the wait parameter is true the function will wait 
+ * for the program operation to complete using data polling before 
+ * returning.
+ * 
+ * \warning Sector or entire IC must be erased prior to programming
+ **********************************************************************/
+void umdbase::programWord(uint32_t address, uint16_t data, bool wait)
+{
+    writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+	writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
+    writeWord( (uint16_t)(0x000555 << 1), 0xA000);
+    
+    //write the data
+    writeWord( (uint32_t)address, data );
+    
+    //use data polling to validate end of program cycle
+	if(wait)
+	{
+		while( toggleBit16(2) != 2 );
+	}
 }

@@ -150,6 +150,7 @@ void _setMode()
         case 2:
             cart = &genCart;
             cart->setup();
+            cart->carttype = genCart.GENESIS;
             Serial.println(F("mode = 2")); 
             break;
         //Master System
