@@ -63,6 +63,16 @@ def extractHeader(start, size, ifile, ofile):
 ## Main
 ####################################################################################
 if __name__ == "__main__":
+    # Some Windows codepages cause an exception in print
+    # This re-opens stdout to use a replacing IO encoder
+    # An alternative is to define env variable 
+    #   PYTHONIOENCODING=:replace
+    if sys.platform.startswith('win'):
+        old_stdout = sys.stdout
+        fd = os.dup(sys.stdout.fileno())
+        sys.stdout = open(fd, mode='w', errors='replace')
+        old_stdout.close()
+
     
     ## UMD Modes, names on the right must match values inside the classumd.py dicts
     carts = {"none" : "none",
