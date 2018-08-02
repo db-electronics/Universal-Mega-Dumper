@@ -71,7 +71,12 @@ class umdbase
             MS,         			/**< Master System mode */
             SN,         			/**< Super Nintendo mode */
             SNLO        			/**< Super Nintendo LoROM mode */
-        } carttype;
+        };
+    
+		struct s_info {
+			uint8_t busSize;
+			e_carttype cartType;	
+		} info;
     
 		/*******************************************************************//**
          * \brief s_flashID
@@ -84,6 +89,16 @@ class umdbase
             uint32_t size;
             uint8_t alg;
         } flashID;
+    
+		/*******************************************************************//**
+         * \brief s_checksum
+         * checksum stores checksum data
+         **********************************************************************/
+		struct s_checksum {
+			uint16_t expected;
+			uint16_t calculated;
+			uint32_t romsize;
+		} checksum;
     
         /*******************************************************************//**
          * \brief Constructor
@@ -128,6 +143,27 @@ class umdbase
          * \return the number of times the bit successfully toggled
          **********************************************************************/
         uint8_t toggleBit16(uint8_t attempts);
+
+
+		/*******************************************************************//**
+         * \brief Perform checksum on the cartridge
+         * \return the calculated value
+         **********************************************************************/
+		virtual void calcChecksum()=0;
+
+		/*******************************************************************//**
+         * \brief enable SRAM memory access
+         * \param param any paramaters to pass, not used by all cartridges
+         * \return void
+         **********************************************************************/
+		virtual void enableSram(uint8_t param)=0;
+		
+		/*******************************************************************//**
+         * \brief disable SRAM memory access
+         * \param param any paramaters to pass, not used by all cartridges
+         * \return void
+         **********************************************************************/
+		virtual void disableSram(uint8_t param)=0;
 
         /**@}*/
         
