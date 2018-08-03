@@ -71,7 +71,7 @@ class umd:
     sfFileList = {}
     sfSize = 0
     
-    progressBarSize = 64
+    progressBarSize = 60 # 60 columns fits nicely in an 80 col terminal
     dispBytesPerLine = 16
     readChunkSize = 4096
     burnChunkSize = 128
@@ -638,12 +638,12 @@ class umd:
             percent = float( progress / 100 )
             hashes = "#" * int( round( percent * barLength ) )
             spaces = ' ' * (barLength - len(hashes))
-            print("\rPercent: [{0}] {1:.3f}%".format(hashes + spaces, progress), end="", flush=True)
+            print("\rPercent: [{0}] {1:7.3f}%".format(hashes + spaces, progress), end="", flush=True)
             #sys.stdout.write("\rPercent: [{0}] {1:.3f}%".format(hashes + spaces, progress))
             #sys.stdout.flush()
         else:
             hashes = "#" * barLength
-            print("\rPercent: [{0}] {1:.3f}%\r\n".format(hashes, progress), end="", flush=True)
+            print("\rPercent: [{0}] {1:7.3f}%\r\n".format(hashes, progress), end="", flush=True)
             #sys.stdout.write("\rPercent: [{0}] {1:.3f}%\r\n".format(hashes, progress))
             #sys.stdout.flush()
 

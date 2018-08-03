@@ -32,6 +32,9 @@ import serial
 import getopt
 import argparse
 import struct
+import hashlib
+import shutil
+from xml.etree.ElementTree import iterparse
 from hardware import umd
 from genesis import genesis
 from sms import sms
@@ -63,6 +66,16 @@ def extractHeader(start, size, ifile, ofile):
 ## Main
 ####################################################################################
 if __name__ == "__main__":
+    # Some Windows codepages cause an exception in print
+    # This re-opens stdout to use a replacing IO encoder
+    # An alternative is to define env variable 
+    #   PYTHONIOENCODING=:replace
+    if sys.platform.startswith('win'):
+        old_stdout = sys.stdout
+        fd = os.dup(sys.stdout.fileno())
+        sys.stdout = open(fd, mode='w', errors='replace')
+        old_stdout.close()
+
     
     ## UMD Modes, names on the right must match values inside the classumd.py dicts
     carts = {"none" : "none",
@@ -75,6 +88,7 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(prog="umd 0.1.0.0")
     parser.add_argument("--mode", help="Set the cartridge type", choices=["cv", "gen", "sms", "pce", "tg", "snes"], type=str, default="none")
+    parser.add_argument("--dat", nargs=1,help="The name of a 'ROM Management Datafile' XML file.  If a match is found in the dat, the output file will be renamed accordingly (or copied when --file is specified).", type=str)
     
     readWriteArgs = parser.add_mutually_exclusive_group()
     readWriteArgs.add_argument("--checksum", help="Calculate ROM checksum", action="store_true")
@@ -243,8 +257,35 @@ if __name__ == "__main__":
         else:
             umd = umd(cartType, args.port)
             print("reading {0} bytes starting at address 0x{1:X} from {2} {3}".format(byteCount, address, cartType, args.rd))
-            umd.read(address, byteCount, args.rd, args.file)
+            ofile = args.file
+            if args.file == "console" and args.dat:
+                ofile = "_temp.bin"
+            umd.read(address, byteCount, args.rd, ofile)
             print("read {0} bytes completed in {1:.3f} s".format(byteCount, umd.opTime))
+            if args.dat:
+                matched_name = ""
+                with open(ofile, 'rb') as in_file:
+                    romdata = in_file.read()
+                    sha1sum = hashlib.sha1(romdata).hexdigest().upper()
+                    for _, elem in iterparse(args.dat[0]):
+                        if elem.tag == 'rom':
+                            if elem.attrib['sha1'] and elem.attrib['sha1'] == sha1sum:
+                                print("Found match in dat: " + elem.attrib['name'])
+                                matched_name = elem.attrib['name']
+                                break
+                        elem.clear()
+                if matched_name is not "":
+                    try:
+                        os.remove(matched_name)
+                    except OSError:
+                        pass
+                    if args.file == "console":
+                        os.rename(ofile, matched_name)
+                    else:
+                        shutil.copyfile(ofile, matched_name)
+                else:
+                    print(f"Unable to find a match in {args.dat}.  File left in {ofile}")
+
 
     # clear operations - erase various memories
     elif args.clr:
@@ -356,7 +397,7 @@ if __name__ == "__main__":
                 #  read rom size from header
                 umd = umd(cartType, args.port)
                 umd.read(sms.headerAddress, sms.headerSize, args.rd, "_header.bin")
-                romSize = sms.formatHeader("_header.bin").get("Size")
+                romSize = sms.formatHeader("_header.bin").get("Size")[0]
                 print("Found ROM size = {} bytes in cartridge header, reading in...".format(romSize))
                 #  read rom into local file
                 umd.read(0, romSize, args.rd, "_temp.bin")
