@@ -111,7 +111,7 @@ class genesis:
                 data = f.read(sizeOfRead)
                 
                 i = 0
-                while i < sizeOfRead:
+                while i < sizeOfRead and i+1 < sizeOfRead:
                     thisWord = data[i],data[i + 1]
                     intVal = int.from_bytes(thisWord, byteorder="big")
                     self.checksumCalc = (self.checksumCalc + intVal) & 0xFFFF
