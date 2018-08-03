@@ -806,7 +806,7 @@ void readByteBlock()
                 for( i = 0; i < blockSize; i++ )
                 {
                     // It was thought that no banking is necessary for addresses
-                    // up to 0x7FFF, but only doing the bank switching below that
+                    // up to 0x7FFF, but only trying to do the bank switching above that
                     // broke 8Mb carts (e.g. Street Fighter II)
                    
                     //calculate effective SMS address in slot 2
