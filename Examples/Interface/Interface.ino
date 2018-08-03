@@ -86,11 +86,13 @@ void setup() {
     SCmd.addCommand("rdword", readWord);
     SCmd.addCommand("rdwblk", readWordBlock);
     
+    //write commands
     SCmd.addCommand("wrbyte", writeByte);
     SCmd.addCommand("wrsblk", writeSRAMByteBlock);
     SCmd.addCommand("wrbrblk",writeBRAMByteBlock);
     SCmd.addCommand("wrword", writeWord);
     
+    //program commands
     SCmd.addCommand("prgbyte",programByte);
     SCmd.addCommand("prgbblk",programByteBlock);
     SCmd.addCommand("prgword",programWord);

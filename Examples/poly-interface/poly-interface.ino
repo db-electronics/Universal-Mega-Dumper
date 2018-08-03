@@ -78,12 +78,31 @@ void setup() {
     //register callbacks for SerialCommand related to the cartridge
     SCmd.addCommand("erase",  eraseChip);
     SCmd.addCommand("getid",  getFlashID);
+    SCmd.addCommand("checksum", calcChecksum);
     
     //read commands
     //SCmd.addCommand("rdbyte", readByte);
     //SCmd.addCommand("rdbblk", readByteBlock);
     //SCmd.addCommand("rdword", readWord);
     SCmd.addCommand("rdwblk", readWordBlock);
+    
+    //write commands
+    //SCmd.addCommand("wrbyte", writeByte);
+    SCmd.addCommand("wrsblk", writeSRAMByteBlock);
+    //SCmd.addCommand("wrbrblk",writeBRAMByteBlock);
+    //SCmd.addCommand("wrword", writeWord);
+    
+    //program commands
+    SCmd.addCommand("prgwblk",programWordBlock);
+    
+    //register callbacks for SerialCommand related to the onboard serial flash
+    SCmd.addCommand("sfgetid",sfGetID);
+    SCmd.addCommand("sfsize", sfGetSize);
+    SCmd.addCommand("sferase",sfEraseAll);
+    SCmd.addCommand("sfwrite",sfWriteFile);
+    SCmd.addCommand("sflist", sfListFiles);
+    SCmd.addCommand("sfread", sfReadFile);
+    SCmd.addCommand("sfburn", sfBurnCart);
     
     SCmd.addDefaultHandler(_unknownCMD);
     SCmd.clearBuffer();
@@ -150,7 +169,6 @@ void _setMode()
         case 2:
             cart = &genCart;
             cart->setup();
-            cart->carttype = genCart.GENESIS;
             Serial.println(F("mode = 2")); 
             break;
         //Master System
@@ -266,6 +284,25 @@ void getFlashID()
 }
 
 /*******************************************************************//**
+ *  \brief Calculate the cartridge specific checksum
+ *  
+ *  Usage:
+ *  checksum
+ *    - returns a uint16_t value
+ *  
+ *  \return Void
+ **********************************************************************/
+void calcChecksum()
+{
+	cart->calcChecksum();
+	
+	Serial.write((char)(cart->checksum.calculated));
+	Serial.write((char)(cart->checksum.calculated>>8));
+	Serial.write((char)(cart->checksum.expected));
+	Serial.write((char)(cart->checksum.expected>>8));
+}
+
+/*******************************************************************//**
  *  \brief Read a block of words from the cartridge
  *  
  *  Usage:
@@ -325,16 +362,17 @@ void readWordBlock()
     
     if( sramRead )
     {
-        genCart.writeByteTime(0,3);
-        //read words from block, output converts to little endian
-        for( i = 0; i < blockSize; i += 2 )
-        {
-            data = cart->readWord(address);
-            address += 2;
-            Serial.write((char)(data));
-            Serial.write((char)(data>>8));
-        }
-        genCart.writeByteTime((uint32_t)0,0);
+		cart->enableSram(0);
+		//read words from block, output converts to little endian
+		for( i = 0; i < blockSize; i += 2 )
+		{
+			data = cart->readWord(address);
+			address += 2;
+			Serial.write((char)(data));
+			Serial.write((char)(data>>8));
+		}
+		cart->disableSram(0);
+		
     }else
     {
         //read words from block, output is little endian
@@ -349,8 +387,8 @@ void readWordBlock()
 
     if( latchBankRead )
     {
-        genCart.writeByteTime(0xA130FD, 0x08 ); // map bank 8 to 0x300000 - 0x37FFFF
-        genCart.writeByteTime(0xA130FF, 0x09 ); // map bank 9 to 0x380000 - 0x3FFFFF
+        genCart.writeByteTime(0xA130FD, 0x08); // map bank 8 to 0x300000 - 0x37FFFF
+        genCart.writeByteTime(0xA130FF, 0x09); // map bank 9 to 0x380000 - 0x3FFFFF
 
         address = 0x300000 + addrOffset; // TODO: Should start at 0x300000 BUG
 
@@ -363,9 +401,410 @@ void readWordBlock()
             Serial.write((char)(data>>8));
         }
 
-        genCart.writeByteTime(0xA130FD, 0x06 ); // return banks to original state
-        genCart.writeByteTime(0xA130FF, 0x07 ); // return banks to original state
+        genCart.writeByteTime(0xA130FD, 0x06); // return banks to original state
+        genCart.writeByteTime(0xA130FF, 0x07); // return banks to original state
     }
 
+    digitalWrite(cart->nLED, HIGH);
+}
+
+/*******************************************************************//**
+ * \brief
+ * Usage:
+ 
+ * \return Void
+ **********************************************************************/
+void writeSRAMByteBlock()
+{
+    char *arg;
+    uint32_t address=0;
+    uint16_t blockSize, count=0;
+            
+    //get the address in the next argument
+    arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the size in the next argument
+    arg = SCmd.next();
+    blockSize = strtoul(arg, (char**)0, 0);
+    
+    digitalWrite(cart->nLED, LOW);
+    
+    //receive size bytes
+    Serial.read(); //there's an extra byte here for some reason - discard
+    
+    while( count < blockSize )
+    {
+        if( Serial.available() )
+        {
+            dataBuffer.byte[count++] = Serial.read();
+        }
+    }
+    
+    SCmd.clearBuffer();
+    count = 0;
+    
+    cart->enableSram(0);
+    
+    if( cart->info.busSize == 16 )
+    {
+		for( count=1; count < blockSize ; count += 2 )
+		{
+			cart->writeByte( address, dataBuffer.byte[count]);
+			address += 2;
+		}
+	}else
+	{
+		for( count=0; count < blockSize ; count++ )
+		{
+			cart->writeByte( address++, dataBuffer.byte[count]);
+		}
+	}
+    
+    cart->disableSram(0);
+    
+    Serial.println(F("done"));
+    digitalWrite(cart->nLED, HIGH);
+}
+
+/*******************************************************************//**
+ *  \brief Program a word block in the cartridge
+ *  Program a word in the cartridge. Prior to progamming,
+ *  the sector or entire chip must be erased. The function
+ *  returns immediately without checking if the operation
+ *  has completed (i.e. toggle bit)
+ *  
+ *  Usage:
+ *  progword 0x0000 0x12
+ *    - programs 0x12 into address 0x0000
+ *  progword 412 12
+ *    - programs decimal 12 into address decimal 412
+ *  
+ *  \return Void
+ **********************************************************************/
+void programWordBlock()
+{
+    char *arg;
+    uint32_t address=0;
+    uint16_t blockSize, count=0;
+            
+    //get the address in the next argument
+    arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the size in the next argument
+    arg = SCmd.next();
+    blockSize = strtoul(arg, (char**)0, 0);
+    
+    digitalWrite(cart->nLED, LOW);
+    
+    //receive size bytes
+    Serial.read(); //there's an extra byte here for some reason - discard
+    
+    while( count < blockSize )
+    {
+        if( Serial.available() )
+        {
+            dataBuffer.byte[count++] = Serial.read();
+        }
+    }
+    
+    SCmd.clearBuffer();
+    
+    //program size/2 words
+    count = 0;
+    while( count < ( blockSize >> 1) )
+    {
+        cart->programWord(address, dataBuffer.word[count++], true);
+        address += 2;
+    }
+    
+    Serial.println(F("done"));
+    
+    digitalWrite(cart->nLED, HIGH);
+}
+
+
+/*******************************************************************//**
+ *  \brief Read the onboard serial flash ID
+ *  \return Void
+ **********************************************************************/
+void sfGetID()
+{
+    //W25Q128FVSIG
+    Serial.write(sfID[0]);
+    Serial.write(sfID[1]);
+    Serial.write(sfID[2]);
+    Serial.write(sfID[3]);
+    Serial.write(sfID[4]);
+}
+
+
+/*******************************************************************//**
+ *  \brief Get the size of the onboard serial flash
+ *  \return Void
+ **********************************************************************/
+void sfGetSize()
+{
+    //W25Q128FVSIG
+    Serial.println(sfSize,DEC);
+}
+
+/*******************************************************************//**
+ *  \brief Erase the serial flash
+ *  \return Void
+ **********************************************************************/
+void sfEraseAll()
+{
+    char *arg;
+
+    arg = SCmd.next();
+    if( arg != NULL )
+    {
+        switch(*arg)
+        {
+            //wait for operation to complete, measure time
+            case 'w':
+                SerialFlash.eraseAll();
+                while (SerialFlash.ready() == false) {
+                    // wait, 30 seconds to 2 minutes for most chips
+                    digitalWrite(cart->nLED, LOW);
+                    delay(250);
+                    digitalWrite(cart->nLED, HIGH);
+                    delay(250);
+                    Serial.print(".");
+                }
+                Serial.print("!");
+                break;
+            default:
+                break;
+        }
+    }else
+    {
+        SerialFlash.eraseAll();
+    }
+}
+
+/*******************************************************************//**
+ *  \brief Burn a file from the serial flash to the cartridge
+ *  
+ *  Usage:
+ *  sflburn rom.bin
+ *  
+ *  \return Void
+ **********************************************************************/
+void sfBurnCart()
+{
+    char *arg;
+    uint16_t blockSize, i;
+    uint32_t fileSize, address=0, pos=0;
+    char fileName[13];      //Max filename length (8.3 plus a null char terminator)
+    
+    //get the file name
+    arg = SCmd.next();
+    i = 0;
+    while( (*arg != 0) && ( i < 12) )
+    {
+        fileName[i++] = *(arg++);
+    }
+    fileName[i] = 0; //null char terminator
+    
+        //get the read block size
+    arg = SCmd.next();
+    blockSize = strtoul(arg, (char**)0, 0);
+    
+    digitalWrite(cart->nLED, LOW);
+    
+    flashFile = SerialFlash.open(fileName);
+    if (flashFile)
+    {
+        Serial.println(F("found"));
+        fileSize = flashFile.size();
+        Serial.println(fileSize,DEC);
+        
+        while( pos < fileSize )
+        {
+            flashFile.read(dataBuffer.byte, blockSize);
+            
+            if( cart->info.busSize == 16 )
+            {
+				for( i=0 ; i < ( blockSize >> 1) ; i++ )
+				{
+					cart->programWord(address, dataBuffer.word[i], true);
+					address += 2;
+				}
+			}else
+			{
+				for( i=0 ; i < blockSize ; i++ )
+				{
+					cart->programByte(address, dataBuffer.byte[i], true);
+					address++;
+				}
+            }
+            pos += blockSize;
+            Serial.println(pos, DEC);
+        }
+        Serial.println(F("done"));
+    }else
+    {
+        Serial.println(F("error"));
+    }
+    
+    flashFile.close();
+    digitalWrite(cart->nLED, HIGH);
+}
+
+/*******************************************************************//**
+ *  \brief Read a file from the serial flash
+ *  
+ *  Usage:
+ *  sflread file.bin
+ *  
+ *  \return Void
+ **********************************************************************/
+void sfReadFile()
+{
+    char *arg;
+    uint16_t blockSize, i;
+    uint32_t fileSize, pos=0;
+    char fileName[13];      //Max filename length (8.3 plus a null char terminator)
+    
+    //get the file name
+    arg = SCmd.next();
+    i = 0;
+    while( (*arg != 0) && ( i < 12) )
+    {
+        fileName[i++] = *(arg++);
+    }
+    fileName[i] = 0; //null char terminator
+    
+    //get the read block size
+    arg = SCmd.next();
+    blockSize = strtoul(arg, (char**)0, 0);
+    
+    digitalWrite(cart->nLED, LOW);
+    
+    flashFile = SerialFlash.open(fileName);
+    if (flashFile)
+    {
+        Serial.println(F("found"));
+        fileSize = flashFile.size();
+        Serial.println(fileSize,DEC);
+        
+        while( pos < fileSize )
+        {
+            flashFile.read(dataBuffer.byte, blockSize);
+            //wait for PC side to be ready to receive
+            //Serial.read();
+            
+            delay(1);
+            for( i = 0; i < blockSize; i++ )
+            {
+                Serial.write((char)dataBuffer.byte[i]);
+            }
+            
+            pos += blockSize;
+        }
+
+    }else
+    {
+        Serial.println(F("error"));
+    }
+    flashFile.close();
+    
+    digitalWrite(cart->nLED, HIGH);
+}
+
+/*******************************************************************//**
+ *  \brief Write a file to the serial flash
+ *  
+ *  Usage:
+ *  sflwrite rom.bin 4096 2048 xx[0] xx[1] ... xx[2047] /wait/ ... xx[4095] 
+ *  Filename must be 12 chars or less (8.3)
+ * 
+ *  \return Void
+ **********************************************************************/
+void sfWriteFile()
+{
+    char *arg;
+    uint16_t i, count, blockSize;
+    uint32_t fileSize, pos=0;
+    char fileName[13];      //Max filename length (8.3 plus a null char terminator)
+
+    //get the file name
+    arg = SCmd.next();
+    i = 0;
+    while( (*arg != 0) && ( i < 12) )
+    {
+        fileName[i++] = *(arg++);
+    }
+    fileName[i] = 0; //null char terminator
+
+    //get the size in the next argument
+    arg = SCmd.next();
+    fileSize = strtoul(arg, (char**)0, 0);
+    
+    //get the blockSize in the next argument
+    arg = SCmd.next();
+    blockSize = strtoul(arg, (char**)0, 0);
+    
+    digitalWrite(cart->nLED, LOW);
+    
+    Serial.read(); //there's an extra byte here for some reason - discard
+
+    SerialFlash.create(fileName, fileSize);
+    flashFile = SerialFlash.open(fileName);
+    while( pos < fileSize )
+    {
+        // fill buffer from USB
+        count = 0;
+        while( count < blockSize )
+        {
+            if( Serial.available() )
+            {
+                dataBuffer.byte[count++] = Serial.read();
+            }
+        }
+        // write buffer to serial flash file
+        flashFile.write(dataBuffer.byte, blockSize);
+        pos += blockSize;
+        Serial.println(F("rdy"));
+    }
+    flashFile.close();
+    
+    digitalWrite(cart->nLED, HIGH);
+}
+
+/*******************************************************************//**
+ *  \brief List Files in the Serial Flash
+ *  
+ *  Usage:
+ *  sfllist
+ *  
+ *  \return Void
+ **********************************************************************/
+void sfListFiles()
+{
+    //W25Q128FVSIG
+    char fileName[64];
+    uint32_t fileSize;
+    
+    digitalWrite(cart->nLED, LOW);
+    
+    SerialFlash.opendir();
+    while (1) {
+        if (SerialFlash.readdir(fileName, sizeof(fileName), fileSize))
+        {
+          Serial.print(fileName);
+          Serial.print(";");
+          Serial.print(fileSize, DEC);
+          Serial.print(",");
+        }else 
+        {
+            Serial.println();
+            break; // no more files
+        }
+    }
+    
     digitalWrite(cart->nLED, HIGH);
 }

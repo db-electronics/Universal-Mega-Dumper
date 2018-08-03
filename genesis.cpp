@@ -52,7 +52,8 @@ void genesis::setup()
     pinMode(GEN_nTIME, OUTPUT);
     digitalWrite(GEN_nTIME, HIGH);
 
-    carttype = GENESIS;
+    info.cartType = GENESIS;
+    info.busSize = 16;
 
     _resetPin = GEN_nVRES;
     //resetCart();   
@@ -94,6 +95,30 @@ void genesis::getFlashID(uint8_t alg)
 }
 
 /*******************************************************************//**
+ * The calcChecksum() function calculates the word sum of all words
+ * in the Genesis cartridge
+ **********************************************************************/
+void genesis::calcChecksum()
+{
+    uint32_t address;
+    
+    checksum.expected = readWord( 0x00018E );
+    checksum.romsize = readWord( 0x0001A4 );
+    checksum.romsize <<= 16;
+    checksum.romsize |= readWord( 0x0001A6 );
+    checksum.romsize += 1;
+    
+    checksum.calculated = 0;
+    address = 0x100;
+    
+    while( address < checksum.romsize )
+    {
+        checksum.calculated += readWord(address);
+        address += 2;
+    }
+}
+
+/*******************************************************************//**
  * The eraseChip() function erases the entire flash. If the wait parameter
  * is true the function will block with toggle bit until the erase 
  * operation has completed.
@@ -129,10 +154,20 @@ void genesis::eraseChip(bool wait)
 	}
 }
 
+
+void genesis::enableSram(uint8_t param)
+{
+    writeByteTime(0,3);
+}
+
+void genesis::disableSram(uint8_t param)
+{
+    writeByteTime((uint32_t)0,0);
+}
+
 /*******************************************************************//**
  * The writeByteTime function strobes a byte into nTIME region
  * while enabling the rest of the regular signals
- * 
  **********************************************************************/
 void genesis::writeByteTime(uint32_t address, uint8_t data)
 {

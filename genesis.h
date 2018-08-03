@@ -47,11 +47,20 @@ class genesis: public umdbase
         virtual void getFlashID(uint8_t alg);
         
         /*******************************************************************//**
+         * \brief Perform checksum operations on the cartridge
+         * \return void
+         **********************************************************************/
+		virtual void calcChecksum();
+        
+        /*******************************************************************//**
          * \brief Erase the entire Flash IC
          * \param wait specify whether to wait for the operation to complete before returning
          * \return void
          **********************************************************************/
         virtual void eraseChip(bool wait);
+        
+        virtual void enableSram(uint8_t param);
+        virtual void disableSram(uint8_t param);
         
         /*******************************************************************//**
          * \brief Write a byte to the nTIME region on genesis
