@@ -1,9 +1,9 @@
 /*******************************************************************//**
  *  \file umdbase.h
  *  \author René Richard
- *  \brief This program allows to read and write to various game cartridges 
- *         including: Genesis, Coleco, SMS, PCE - with possibility for 
- *         future expansion.
+ *  \brief This program allows to read and write to various game cartridges. 
+ *         The UMD base class handles all generic cartridge operations, console
+ *         specific operations are handled in derived classes.
  *
  * \copyright This file is part of Universal Mega Dumper.
  *
@@ -68,7 +68,7 @@ class umdbase
             GENESIS,         		/**< Genesis Megadrive mode */
             TG,         			/**< TG-16 mode */
             PC,         			/**< PC Engine mode */
-            MS,         			/**< Master System mode */
+            SMS,         			/**< Master System mode */
             SN,         			/**< Super Nintendo mode */
             SNLO        			/**< Super Nintendo LoROM mode */
         };
@@ -177,14 +177,15 @@ class umdbase
          * \param address 16bit address
          * \return byte from cartridge
          **********************************************************************/
-        uint8_t readByte(uint16_t address);
+        virtual uint8_t readByte(uint16_t address);
         
         /*******************************************************************//**
          * \brief Read a byte from a 24bit address
          * \param address 24bit address
          * \return byte from cartridge
          **********************************************************************/
-        uint8_t readByte(uint32_t address);
+        virtual uint8_t readByte(uint32_t address);
+        
         /*******************************************************************//**
          * \brief Read a word from a 24bit address
          * \param address 24bit address
@@ -207,7 +208,7 @@ class umdbase
          * \param data byte
          * \return void
          **********************************************************************/
-        void writeByte(uint16_t address, uint8_t data);
+        virtual void writeByte(uint16_t address, uint8_t data);
         
         /*******************************************************************//**
          * \brief Write a byte to a 24bit address
@@ -215,7 +216,7 @@ class umdbase
          * \param data byte
          * \return void
          **********************************************************************/
-        void writeByte(uint32_t address, uint8_t data);
+        virtual void writeByte(uint32_t address, uint8_t data);
         
         /*******************************************************************//**
          * \brief Write a word to a 24bit address
@@ -291,19 +292,6 @@ class umdbase
 
         //Super Nintendo pin functions
         static const uint8_t SN_nRST = 45;
-
-        //Master System pin functions
-        static const uint8_t SMS_nRST = 42;
-        
-        //Genesis pin functions
-        static const uint8_t GEN_SL1 = 38;
-        static const uint8_t GEN_SR1 = 39;
-        static const uint8_t GEN_nDTACK = 40;
-        static const uint8_t GEN_nCAS2 = 41;
-        static const uint8_t GEN_nVRES = 42;
-        static const uint8_t GEN_nLWR = 43;
-        static const uint8_t GEN_nUWR = 44;
-        static const uint8_t GEN_nTIME = 45;
         
         //SPI pins
         static const uint8_t MISOp = 23;

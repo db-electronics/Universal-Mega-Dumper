@@ -294,10 +294,14 @@ void getFlashID()
  **********************************************************************/
 void calcChecksum()
 {
+    //call cart's checksum command
 	cart->calcChecksum();
 	
+    //return calculated checksum
 	Serial.write((char)(cart->checksum.calculated));
 	Serial.write((char)(cart->checksum.calculated>>8));
+    
+    //return cart's header checksum, if not available just discard this data
 	Serial.write((char)(cart->checksum.expected));
 	Serial.write((char)(cart->checksum.expected>>8));
 }
@@ -442,17 +446,22 @@ void writeSRAMByteBlock()
     }
     
     SCmd.clearBuffer();
-    count = 0;
     
+    //enable the sram
     cart->enableSram(0);
     
+    //sram writes different for 8bit and 16bit busses
     if( cart->info.busSize == 16 )
     {
-		for( count=1; count < blockSize ; count += 2 )
-		{
-			cart->writeByte( address, dataBuffer.byte[count]);
-			address += 2;
-		}
+        //Genesis SRAM only on odd bytes
+        if( cart->info.cartType == umdbase::e_carttype::GENESIS )
+        {
+            for( count=1; count < blockSize ; count += 2 )
+            {
+                cart->writeByte( address, dataBuffer.byte[count]);
+                address += 2;
+            }
+        }
 	}else
 	{
 		for( count=0; count < blockSize ; count++ )

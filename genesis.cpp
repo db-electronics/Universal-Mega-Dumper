@@ -1,9 +1,7 @@
 /*******************************************************************//**
  *  \file genesis.cpp
  *  \author René Richard
- *  \brief This program allows to read and write to various game cartridges 
- *         including: Genesis, Coleco, SMS, PCE - with possibility for 
- *         future expansion.
+ *  \brief This program contains specific functions for the genesis cartridge
  *
  * \copyright This file is part of Universal Mega Dumper.
  *
@@ -154,15 +152,32 @@ void genesis::eraseChip(bool wait)
 	}
 }
 
-
-void genesis::enableSram(uint8_t param)
+/*******************************************************************//**
+ * The writeByte function strobes a byte into the cartridge at a 24bit
+ * address onto the odd byte.
+ **********************************************************************/
+void genesis::writeByte(uint32_t address, uint8_t data)
 {
-    writeByteTime(0,3);
-}
 
-void genesis::disableSram(uint8_t param)
-{
-    writeByteTime((uint32_t)0,0);
+    latchAddress(address);
+    SET_DATABUS_TO_OUTPUT();
+    DATAOUTH = data;
+    
+    // write to the bus
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nWR, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTWR &= nWR_clrmask;
+    
+    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    
+    //digitalWrite(nWR, HIGH);
+    //digitalWrite(nCE, HIGH);
+    PORTWR |= nWR_setmask;
+    PORTCE |= nCE_setmask;
+    
+    SET_DATABUS_TO_INPUT();
+    
 }
 
 /*******************************************************************//**
@@ -185,4 +200,22 @@ void genesis::writeByteTime(uint32_t address, uint8_t data)
     digitalWrite(GEN_nLWR, HIGH);
  
     SET_DATABUS_TO_INPUT();
+}
+
+/*******************************************************************//**
+ * The enableSram() function writes to the time register to enable
+ * the SRAM latch
+ **********************************************************************/
+void genesis::enableSram(uint8_t param)
+{
+    writeByteTime(0,3);
+}
+
+/*******************************************************************//**
+ * The enableSram() function writes to the time register to disable
+ * the SRAM latch
+ **********************************************************************/
+void genesis::disableSram(uint8_t param)
+{
+    writeByteTime((uint32_t)0,0);
 }

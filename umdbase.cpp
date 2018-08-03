@@ -1,9 +1,9 @@
 /*******************************************************************//**
  *  \file umdbase.cpp
  *  \author René Richard
- *  \brief This program allows to read and write to various game cartridges 
- *         including: Genesis, Coleco, SMS, PCE - with possibility for 
- *         future expansion.
+ *  \brief This program allows to read and write to various game cartridges. 
+ *         The UMD base class handles all generic cartridge operations, console
+ *         specific operations are handled in derived classes.
  *
  * \copyright This file is part of Universal Mega Dumper.
  *
@@ -319,6 +319,7 @@ void umdbase::getFlashID(uint8_t alg)
 void umdbase::eraseChip(bool wait)
 {
 	// which algorithm to use, 0 is most common alg used
+    // 1 is mostly used by Microchip 8bit SST flash only
 	if( flashID.alg == 0 )
 	{
 		//mx29f800 chip erase byte mode
