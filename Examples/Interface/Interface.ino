@@ -805,17 +805,14 @@ void readByteBlock()
             {
                 for( i = 0; i < blockSize; i++ )
                 {
-                    //no banking necessary for addresses up to 0x7FFF
-                    if( address < umd.SMS_SLOT_2_ADDR )
-                    {
-                        data = umd.readByte( (uint16_t)address++ , true);
-                        Serial.write((char)(data));
-                    }else
-                    {
-                        //calculate effective SMS address in slot 2
-                        data = umd.readByte(umd.setSMSSlotRegister(2, address++), true);
-                        Serial.write((char)(data)); 
-                    }
+                    // It was thought that no banking is necessary for addresses
+                    // up to 0x7FFF, but only trying to do the bank switching above that
+                    // broke 8Mb carts (e.g. Street Fighter II)
+                   
+                    //calculate effective SMS address in slot 2
+                    data = umd.readByte(umd.setSMSSlotRegister(2, address++), true);
+                    Serial.write((char)(data)); 
+                    
                 }
             }
 
