@@ -284,7 +284,7 @@ if __name__ == "__main__":
                     else:
                         shutil.copyfile(ofile, matched_name)
                 else:
-                    print(f"Unable to find a match in {args.dat}.  File left in {ofile}")
+                    print("Unable to find a match in {0}.  File left in {1}".format(args.dat[0],ofile))
 
 
     # clear operations - erase various memories
