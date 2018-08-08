@@ -101,10 +101,11 @@ void setup() {
     SCmd.addCommand("sfgetid",sfGetID);
     SCmd.addCommand("sfsize", sfGetSize);
     SCmd.addCommand("sferase",sfEraseAll);
+    SCmd.addCommand("sfburn", sfBurnCart);
+    SCmd.addCommand("sfread", sfReadFile);
     SCmd.addCommand("sfwrite",sfWriteFile);
     SCmd.addCommand("sflist", sfListFiles);
-    SCmd.addCommand("sfread", sfReadFile);
-    SCmd.addCommand("sfburn", sfBurnCart);
+    SCmd.addCommand("sfverify", sfVerify);
     
     SCmd.addDefaultHandler(_unknownCMD);
     SCmd.clearBuffer();
@@ -877,6 +878,94 @@ void sfListFiles()
             break; // no more files
         }
     }
+    
+    digitalWrite(cart->nLED, HIGH);
+}
+
+/*******************************************************************//**
+ *  \brief Verify cartridge against a serial flash file
+ *  
+ *  Usage:
+ *  sfverify file.bin
+ *  
+ *  \return Void
+ **********************************************************************/
+void sfVerify()
+{
+    char *arg;
+    uint8_t readByte;
+    uint16_t i=0, readWord;
+    uint32_t fileSize, pos=0;
+    char fileName[13];      //Max filename length (8.3 plus a null char terminator)
+    
+    //get the file name
+    arg = SCmd.next();
+    i = 0;
+    while( (*arg != 0) && ( i < 12) )
+    {
+        fileName[i++] = *(arg++);
+    }
+    fileName[i] = 0; //null char terminator
+    
+    digitalWrite(cart->nLED, LOW);
+    
+    flashFile = SerialFlash.open(fileName);
+    if (flashFile)
+    {
+        Serial.println(F("found"));
+        fileSize = flashFile.size();
+        Serial.println(fileSize,DEC);
+        
+        while( pos < fileSize )
+        {
+            flashFile.read(dataBuffer.byte, DATA_BUFFER_SIZE);
+            
+            if( cart->info.busSize == 16 )
+            {
+                for( i = 0; i < DATA_BUFFER_SIZE/2 ; i++ )
+                {
+                    readWord = cart->readWord(pos);
+                    if( dataBuffer.word[i] != readWord )
+                    {
+                        //throw some error
+                        Serial.print("$");
+                        Serial.println(pos, DEC);
+                        Serial.println(dataBuffer.word[i], DEC);
+                        Serial.println(readWord, DEC);
+                    }
+                    pos += 2;
+                }
+            }else
+            {
+                for( i = 0; i < DATA_BUFFER_SIZE; i++ )
+                {
+                    readByte = cart->readByte(pos);
+                    if( dataBuffer.byte[i] != readByte )
+                    {
+                        //throw some error
+                        Serial.print("$");
+                        Serial.println(pos, DEC);
+                        Serial.println(dataBuffer.byte[i], DEC);
+                        Serial.println(readByte, DEC);
+                    }
+                    pos++;
+                }
+                
+            }
+            
+            //PC side app expects a "." before timeout
+            Serial.print(".");
+        }
+
+    }else
+    {
+        Serial.println(F("error"));
+    }
+    
+    flashFile.close();
+    
+    //Send something other than a "." to indicate we are done
+    Serial.print("!");
     
     digitalWrite(cart->nLED, HIGH);
 }

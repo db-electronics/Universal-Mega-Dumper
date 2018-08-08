@@ -660,6 +660,50 @@ class umd:
 
 
 ########################################################################    
+## verify(self):
+#  \param self self
+#
+########################################################################
+    def verify(self, sfFilename):
+        
+        if ( len(sfFilename) > 12 ):
+            print("{0} is longer than the maximum (8.3) 12 characters".format(sfFilename))
+            return
+        
+        startTime = time.time()
+        
+        cmd = "sfverify {0} {1}\r\n".format(sfFilename, self.sfReadChunkSize)
+        self.serialPort.write(bytes(cmd,"utf-8"))
+        
+        # check if file exists
+        response = self.serialPort.readline().decode("utf-8")
+        if (response == "found\r\n"):
+            response = self.serialPort.readline().decode("utf-8")
+            fileSize = int(response)
+            print("verifying {0} bytes against {1}".format(fileSize, sfFilename))
+
+            done = 0
+            while( done == 0 ):
+                response = self.serialPort.read(1).decode("utf-8")
+                if( response == "$" ):
+                    response = self.serialPort.readline().decode("utf-8")
+                    address = int(response)
+                    response = self.serialPort.readline().decode("utf-8")
+                    expected = int(response)
+                    response = self.serialPort.readline().decode("utf-8")
+                    error = int(response)
+                    print("error at 0x{0:X} expected 0x{1:X} read 0x{2:X}".format(address, expected, error))
+                elif( response == "." ):
+                    done = 0
+                    #print(response, end="", flush=True)
+                elif( response == "!" ):
+                    done = 1
+        else:
+            print("file {0} not found in serial flash".format(sfFilename))
+
+        self.opTime = time.time() - startTime
+
+########################################################################    
 ## printProgress
 #  \param self self
 #  \param progress the normalized progress 
