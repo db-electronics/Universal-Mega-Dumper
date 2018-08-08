@@ -74,6 +74,13 @@ class genesis: public umdbase
         void writeByteTime(uint32_t address, uint8_t data);
         
         /*******************************************************************//**
+         * \brief Read a word without converting to littel endian
+         * \param address 32bit address
+         * \return word big endian word
+         **********************************************************************/
+        uint16_t readBigWord(uint32_t address);
+        
+        /*******************************************************************//**
          * \brief Enable reading and writing to the SRAM
          * \param param none for Genesis
          * \return void

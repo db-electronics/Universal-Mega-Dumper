@@ -294,16 +294,28 @@ void getFlashID()
  **********************************************************************/
 void calcChecksum()
 {
+    uint32_t romsize;
+    
+    
+    romsize = genCart.readBigWord( 0x000001A4 );
+    romsize <<= 16;
+    romsize |= genCart.readBigWord( 0x000001A6 );
+    //romsize += 1;
+    
+    Serial.println(romsize,DEC);
+    
     //call cart's checksum command
 	cart->calcChecksum();
 	
     //return calculated checksum
-	Serial.write((char)(cart->checksum.calculated));
-	Serial.write((char)(cart->checksum.calculated>>8));
+    Serial.println(cart->checksum.calculated,DEC);
+	//Serial.write((char)(cart->checksum.calculated));
+	//Serial.write((char)(cart->checksum.calculated>>8));
     
     //return cart's header checksum, if not available just discard this data
-	Serial.write((char)(cart->checksum.expected));
-	Serial.write((char)(cart->checksum.expected>>8));
+    Serial.println(cart->checksum.expected,DEC);
+	//Serial.write((char)(cart->checksum.expected));
+	//Serial.write((char)(cart->checksum.expected>>8));
 }
 
 /*******************************************************************//**

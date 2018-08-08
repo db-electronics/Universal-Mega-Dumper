@@ -99,21 +99,32 @@ void genesis::getFlashID(uint8_t alg)
 void genesis::calcChecksum()
 {
     uint32_t address;
+    uint16_t timeOut = 0;
     
-    checksum.expected = readWord( 0x00018E );
-    checksum.romsize = readWord( 0x0001A4 );
+    checksum.expected = readBigWord( 0x00018E );
+    checksum.romsize = readBigWord( 0x0001A4 );
     checksum.romsize <<= 16;
-    checksum.romsize |= readWord( 0x0001A6 );
+    checksum.romsize |= readBigWord( 0x0001A6 );
     checksum.romsize += 1;
     
     checksum.calculated = 0;
-    address = 0x100;
+    address = 0x200;
     
     while( address < checksum.romsize )
     {
-        checksum.calculated += readWord(address);
+        checksum.calculated += readBigWord(address);
         address += 2;
+        
+        //PC side app expects a "." before timeout
+        if( timeOut++ > 0x2FFF )
+        {
+            timeOut = 0;
+            Serial.print(".");
+        }
     }
+    
+    //Send something other than a "." to indicate we are done
+    Serial.print("!");
 }
 
 /*******************************************************************//**
@@ -200,6 +211,37 @@ void genesis::writeByteTime(uint32_t address, uint8_t data)
     digitalWrite(GEN_nLWR, HIGH);
  
     SET_DATABUS_TO_INPUT();
+}
+
+/*******************************************************************//**
+ * The readWord(uint32_t) function returns a big endian word read from 
+ * a 24bit address.
+ **********************************************************************/
+uint16_t genesis::readBigWord(uint32_t address)
+{
+    uint16_t readData;
+
+    latchAddress(address);
+    SET_DATABUS_TO_INPUT();
+
+    // read the bus
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nRD, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTRD &= nRD_clrmask;
+    PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow
+    
+    //convert to big endian while reading
+    readData = (uint16_t)DATAINH;
+    readData <<= 8;
+    readData |= (uint16_t)(DATAINL & 0x00FF);
+  
+    //digitalWrite(nCE, HIGH);
+    //digitalWrite(nRD, HIGH);
+    PORTRD |= nRD_setmask;
+    PORTCE |= nCE_setmask;
+
+    return readData;
 }
 
 /*******************************************************************//**

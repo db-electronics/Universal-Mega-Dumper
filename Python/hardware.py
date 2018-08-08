@@ -79,7 +79,10 @@ class umd:
     sfWriteChunkSize = 512
     sfBurnChunkSize = 256
     sramWriteChunkSize = 128
-                            
+    
+    checksumRom = 0
+    checksumCalc = 0
+                   
     opTime = ""
     romInfo = {}
 
@@ -622,6 +625,38 @@ class umd:
                 self.printProgress( (pos/fileSize) , self.progressBarSize )
             
         self.opTime = time.time() - startTime
+
+
+########################################################################    
+## checksumUMD(self):
+#  \param self self
+#
+########################################################################
+    def checksum(self):
+        
+        # Instruct the UMD to caculate the checksum of the ROM
+        startTime = time.time()
+        cmd = "checksum\r\n"
+        self.serialPort.write(bytes(cmd,"utf-8"))
+        
+        response = self.serialPort.readline().decode("utf-8")
+        romsize = int(response)
+        print("checksum on 0x{0:X} bytes".format(romsize))
+        
+        response = self.serialPort.read(1).decode("utf-8")
+        while( response == "." ):
+            print(response, end="", flush=True)
+            response = self.serialPort.read(1).decode("utf-8")
+        
+        
+        response = self.serialPort.readline().decode("utf-8")
+        self.checksumCalc = int(response)
+        
+        response = self.serialPort.readline().decode("utf-8")
+        self.checksumRom = int(response)
+        
+        self.opTime = time.time() - startTime
+        print("")
 
 
 ########################################################################    
