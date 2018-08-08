@@ -97,7 +97,7 @@ class umdbase
 		struct s_checksum {
 			uint16_t expected;
 			uint16_t calculated;
-			uint32_t romsize;
+			uint32_t romSize;
 		} checksum;
     
         /*******************************************************************//**
@@ -150,6 +150,12 @@ class umdbase
          * \return the calculated value
          **********************************************************************/
 		virtual void calcChecksum()=0;
+        
+        /*******************************************************************//**
+         * \brief Get the ROM's size
+         * \return the ROM's size
+         **********************************************************************/
+		virtual uint32_t getRomSize()=0;
 
 		/*******************************************************************//**
          * \brief enable SRAM memory access

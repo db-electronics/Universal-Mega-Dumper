@@ -102,21 +102,18 @@ void genesis::calcChecksum()
     uint16_t timeOut = 0;
     
     checksum.expected = readBigWord( 0x00018E );
-    checksum.romsize = readBigWord( 0x0001A4 );
-    checksum.romsize <<= 16;
-    checksum.romsize |= readBigWord( 0x0001A6 );
-    checksum.romsize += 1;
+    checksum.romSize = getRomSize();
     
     checksum.calculated = 0;
     address = 0x200;
     
-    while( address < checksum.romsize )
+    while( address < checksum.romSize )
     {
         checksum.calculated += readBigWord(address);
         address += 2;
         
         //PC side app expects a "." before timeout
-        if( timeOut++ > 0x2FFF )
+        if( timeOut++ > 0x3FFF )
         {
             timeOut = 0;
             Serial.print(".");
@@ -125,6 +122,22 @@ void genesis::calcChecksum()
     
     //Send something other than a "." to indicate we are done
     Serial.print("!");
+}
+
+/*******************************************************************//**
+ * The getRomSize() function retrieves the romSize parameter form the
+ * ROM's header
+ **********************************************************************/
+uint32_t genesis::getRomSize()
+{
+    uint32_t romSize;
+    
+    romSize = readBigWord( 0x0001A4 );
+    romSize <<= 16;
+    romSize |= readBigWord( 0x0001A6 );
+    romSize += 1;
+    
+    return romSize;
 }
 
 /*******************************************************************//**

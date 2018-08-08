@@ -26,12 +26,14 @@
 #include <SPI.h>
 #include <umdbase.h>
 #include <genesis.h>
+#include <sms.h>
 
 #define DATA_BUFFER_SIZE            2048    ///< Size of serial receive data buffer
 
 SerialCommand SCmd;                         ///< Receive and parse serial commands
 umdbase *cart;                              ///< Pointer to all cartridge classes
 genesis genCart;                            ///< Genesis cartridge type
+sms smsCart;                                ///< SMS cartridge type
 
 const int FlashChipSelect = 20;             ///< Digital pin for flash chip CS pin
 SerialFlashFile flashFile;                  ///< Serial flash file object
@@ -82,7 +84,7 @@ void setup() {
     
     //read commands
     //SCmd.addCommand("rdbyte", readByte);
-    //SCmd.addCommand("rdbblk", readByteBlock);
+    SCmd.addCommand("rdbblk", readByteBlock);
     //SCmd.addCommand("rdword", readWord);
     SCmd.addCommand("rdwblk", readWordBlock);
     
@@ -173,7 +175,8 @@ void _setMode()
             break;
         //Master System
         case 3:
-            
+            cart = &smsCart;
+            cart->setup();
             Serial.println(F("mode = 3")); 
             break;
         //PC Engine
@@ -294,28 +297,76 @@ void getFlashID()
  **********************************************************************/
 void calcChecksum()
 {
-    uint32_t romsize;
     
-    
-    romsize = genCart.readBigWord( 0x000001A4 );
-    romsize <<= 16;
-    romsize |= genCart.readBigWord( 0x000001A6 );
-    //romsize += 1;
-    
-    Serial.println(romsize,DEC);
+    //give rom size to PC
+    Serial.println(cart->getRomSize(),DEC);
     
     //call cart's checksum command
-	cart->calcChecksum();
-	
+    cart->calcChecksum();
+    
     //return calculated checksum
     Serial.println(cart->checksum.calculated,DEC);
-	//Serial.write((char)(cart->checksum.calculated));
-	//Serial.write((char)(cart->checksum.calculated>>8));
-    
+
     //return cart's header checksum, if not available just discard this data
     Serial.println(cart->checksum.expected,DEC);
-	//Serial.write((char)(cart->checksum.expected));
-	//Serial.write((char)(cart->checksum.expected>>8));
+
+}
+
+/*******************************************************************//**
+ *  \brief Read a block of bytes from the cartridge
+ *  Read an 8bit byte block from the cartridge. In Coleco mode
+ *  the address is forced to uint16_t.
+ *  
+ *  Usage:
+ *  rdbblk 0x0000 128
+ *    - returns 128 bytes starting at address 0x0000
+ *  
+ *  \return Void
+ **********************************************************************/
+void readByteBlock()
+{
+    char *arg;
+    bool sramRead = false;
+    bool bankedPCE = false;
+    uint32_t address = 0;
+    uint16_t blockSize = 0, i;
+    uint8_t data, bank = 0;
+
+    //get the address in the next argument
+    arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the size in the next argument
+    arg = SCmd.next(); 
+    blockSize = strtoul(arg, (char**)0, 0);
+    
+    //check for next argument, if present, for type of read
+    arg = SCmd.next();
+    if( arg != NULL )
+    {
+        switch(*arg)
+        {
+            case 's':
+                sramRead = true;
+                break;
+            case 'b':
+                bankedPCE = true;
+                break;
+            default:
+                break;
+        }
+    }
+    
+    digitalWrite(cart->nLED, LOW);
+    
+
+    for( i = 0; i < blockSize; i++ )
+    {
+        data = cart->readByte(address++);
+        Serial.write((char)(data));
+    }
+    
+    digitalWrite(cart->nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -378,17 +429,17 @@ void readWordBlock()
     
     if( sramRead )
     {
-		cart->enableSram(0);
-		//read words from block, output converts to little endian
-		for( i = 0; i < blockSize; i += 2 )
-		{
-			data = cart->readWord(address);
-			address += 2;
-			Serial.write((char)(data));
-			Serial.write((char)(data>>8));
-		}
-		cart->disableSram(0);
-		
+        cart->enableSram(0);
+        //read words from block, output converts to little endian
+        for( i = 0; i < blockSize; i += 2 )
+        {
+            data = cart->readWord(address);
+            address += 2;
+            Serial.write((char)(data));
+            Serial.write((char)(data>>8));
+        }
+        cart->disableSram(0);
+        
     }else
     {
         //read words from block, output is little endian
@@ -474,13 +525,13 @@ void writeSRAMByteBlock()
                 address += 2;
             }
         }
-	}else
-	{
-		for( count=0; count < blockSize ; count++ )
-		{
-			cart->writeByte( address++, dataBuffer.byte[count]);
-		}
-	}
+    }else
+    {
+        for( count=0; count < blockSize ; count++ )
+        {
+            cart->writeByte( address++, dataBuffer.byte[count]);
+        }
+    }
     
     cart->disableSram(0);
     
@@ -649,18 +700,18 @@ void sfBurnCart()
             
             if( cart->info.busSize == 16 )
             {
-				for( i=0 ; i < ( blockSize >> 1) ; i++ )
-				{
-					cart->programWord(address, dataBuffer.word[i], true);
-					address += 2;
-				}
-			}else
-			{
-				for( i=0 ; i < blockSize ; i++ )
-				{
-					cart->programByte(address, dataBuffer.byte[i], true);
-					address++;
-				}
+                for( i=0 ; i < ( blockSize >> 1) ; i++ )
+                {
+                    cart->programWord(address, dataBuffer.word[i], true);
+                    address += 2;
+                }
+            }else
+            {
+                for( i=0 ; i < blockSize ; i++ )
+                {
+                    cart->programByte(address, dataBuffer.byte[i], true);
+                    address++;
+                }
             }
             pos += blockSize;
             Serial.println(pos, DEC);

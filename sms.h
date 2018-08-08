@@ -19,12 +19,12 @@
  *   along with Universal Mega Dumper.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef genesis_h
-#define genesis_h
+#ifndef sms_h
+#define sms_h
 
 /*******************************************************************//** 
- * \class genesis
- * \brief Genesis specific methods
+ * \class sms
+ * \brief sms specific methods
  **********************************************************************/
 class sms: public umdbase
 {
@@ -49,6 +49,12 @@ class sms: public umdbase
          * \return void
          **********************************************************************/
 		virtual void calcChecksum();
+        
+        /*******************************************************************//**
+         * \brief Get the ROM's size
+         * \return the ROM's size
+         **********************************************************************/
+		virtual uint32_t getRomSize();
         
         /*******************************************************************//**
          * \brief Read a byte from a 24bit address using mapper
@@ -91,6 +97,8 @@ class sms: public umdbase
         static const uint16_t SMS_SLOT_2_REG_ADDR = 0xFFFF; ///< SMS Sega Mapper slot 2 register address 0x8000 - 0xBFFF
         
         uint8_t SMS_SelectedPage = 0xFF;
+    
+        uint32_t skipChecksumStart, skipChecksumEnd;
     
         //Master System pin functions
         static const uint8_t SMS_nRST = 42;

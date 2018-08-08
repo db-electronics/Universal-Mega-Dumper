@@ -51,6 +51,12 @@ class genesis: public umdbase
 		virtual void calcChecksum();
         
         /*******************************************************************//**
+         * \brief Get the ROM's size
+         * \return the ROM's size
+         **********************************************************************/
+		virtual uint32_t getRomSize();
+        
+        /*******************************************************************//**
          * \brief Erase the entire Flash IC
          * \param wait specify whether to wait for the operation to complete
          * \return void

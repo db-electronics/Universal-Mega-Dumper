@@ -119,24 +119,59 @@ void sms::getFlashID(uint8_t alg)
  **********************************************************************/
 void sms::calcChecksum()
 {
+    uint32_t address;
+    uint16_t timeOut = 0;
     
+    checksum.expected = (uint16_t)readByte((uint16_t)0x7FFB);
+    checksum.expected <<= 8;
+    checksum.expected |= (uint16_t)readByte((uint16_t)0x7FFA);
+    checksum.romSize = getRomSize();
+    
+    checksum.calculated = 0;
+    address = 0;
+    
+    while( address <= skipChecksumStart )
+    {
+        checksum.calculated += (uint16_t)readByte(address++);
+        
+        //PC side app expects a "." before timeout
+        if( timeOut++ > 0x3FFF )
+        {
+            timeOut = 0;
+            Serial.print(".");
+        }
+    }
+    
+    //jump to end of header
+    
+    address = skipChecksumEnd;
+    while( address < checksum.romSize )
+    {
+        checksum.calculated += (uint16_t)readByte(address++);
+        
+        //PC side app expects a "." before timeout
+        if( timeOut++ > 0x3FFF )
+        {
+            timeOut = 0;
+            Serial.print(".");
+        }
+    }
+    
+    //Send something other than a "." to indicate we are done
+    Serial.print("!");
+
+}
+
+/*******************************************************************//**
+ * The getRomSize() function retrieves the romSize parameter form the
+ * ROM's header
+ **********************************************************************/
+uint32_t sms::getRomSize()
+{
     uint8_t romSizeCode;
-    uint32_t romSize, skipChecksumStart, skipChecksumEnd;
+    uint32_t romSize;
     
-    //# sizecode : (romSize, skipChecksumStart, skipChecksumEnd)
-    //romSizeData = {
-        //10 : (8192,    0x1FEF, 0x2000),
-        //11 : (16384,   0x3FEF, 0x4000),
-        //12 : (32768,   0x7FEF, 0x8000),
-        //13 : (49152,   0xBFEF, 0xC000),
-        //14 : (65536,   0x7FEF, 0x8000),
-        //15 : (131072,  0x7FEF, 0x8000),
-        //0  : (262144,  0x7FEF, 0x8000),
-        //1  : (525288,  0x7FEF, 0x8000),
-        //2  : (1048576, 0x7FEF, 0x8000), 
-    //}
-    
-    //get size code in 0x7FFF : TODO - fancy search for 'SEGA' string
+    //get size code in 0x7FFF : TODO - fancy search for 'TMR SEGA' string
     romSizeCode = readByte( (uint16_t)0x7FFF ) & 0x0F;
     
     switch(romSizeCode)
@@ -193,6 +228,7 @@ void sms::calcChecksum()
             break;
     }
     
+    return romSize;
 }
 
 /*******************************************************************//**
@@ -204,15 +240,8 @@ uint8_t sms::readByte(uint32_t address)
 
     uint8_t readData;
 
-    //no banking necessary for addresses up to 0x7FFF
-    if( address < SMS_SLOT_2_ADDR )
-    {
-        latchAddress((uint16_t)address);
-
-    }else
-    {
-        latchAddress(setSMSSlotRegister(2, address));
-    }
+    //latch the address and set slot 2
+    latchAddress(setSMSSlotRegister(2, address));
 
     SET_DATABUS_TO_INPUT();
     
