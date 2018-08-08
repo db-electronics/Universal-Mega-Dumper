@@ -105,3 +105,20 @@ libraries/Universal-Mega-Dumper
   4. Press the button on the teensy
      A teensy window should open showing that it's programming and rebooting.  If not, click the upload button.
 
+# GUI front-end "Basic Option Builder" for umd.py
+
+There's a very basic GUI program if you'd like to use it.
+
+To run the GUI, you'll need appJar installed.
+
+```
+python3 -m pip install appJar
+```
+
+You may also need to install tk.
+
+Then, run the gui from the same directory as umd.py
+
+```
+python3 gui.py
+```
