@@ -23,8 +23,8 @@
 #define sms_h
 
 /*******************************************************************//** 
- * \class genesis
- * \brief Genesis specific methods
+ * \class sms
+ * \brief sms specific methods
  **********************************************************************/
 class sms: public umdbase
 {
@@ -51,14 +51,18 @@ class sms: public umdbase
 		virtual void calcChecksum();
         
         /*******************************************************************//**
+         * \brief Get the ROM's size
+         * \return the ROM's size
+         **********************************************************************/
+		virtual uint32_t getRomSize();
+        
+        /*******************************************************************//**
          * \brief Read a byte from a 24bit address using mapper
          * \param address 24bit address
          * \return byte from cartridge
          **********************************************************************/
         virtual uint8_t readByte(uint32_t address);
 
-	virtual uint16_t readWord(uint32_t address);
-        
         /*******************************************************************//**
          * \brief set the SMS slot register value
          * \param slotNum the slot number
@@ -93,6 +97,8 @@ class sms: public umdbase
         static const uint16_t SMS_SLOT_2_REG_ADDR = 0xFFFF; ///< SMS Sega Mapper slot 2 register address 0x8000 - 0xBFFF
         
         uint8_t SMS_SelectedPage = 0xFF;
+    
+        uint32_t skipChecksumStart, skipChecksumEnd;
     
         //Master System pin functions
         static const uint8_t SMS_nRST = 42;

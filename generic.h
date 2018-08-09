@@ -34,6 +34,8 @@ class generic : public umdbase
     virtual void enableSram(uint8_t param);
 
     virtual void disableSram(uint8_t param);
+
+    virtual uint32_t getRomSize();
 };
 
 #endif

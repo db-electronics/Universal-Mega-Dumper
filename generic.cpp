@@ -12,3 +12,7 @@ void generic::disableSram(uint8_t param)
 {
 }
 
+uint32_t generic::getRomSize()
+{
+    return 0;
+}

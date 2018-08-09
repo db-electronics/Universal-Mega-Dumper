@@ -208,6 +208,8 @@ class noopcart : public umdbase
          * \return size the size of the flash in bytes
          **********************************************************************/
         uint32_t getFlashSizeFromID(uint8_t manufacturer, uint8_t device, uint8_t info){return 0;}
+
+	virtual uint32_t getRomSize(){}
 };
 
 #endif

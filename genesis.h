@@ -51,6 +51,12 @@ class genesis: public umdbase
 		virtual void calcChecksum();
         
         /*******************************************************************//**
+         * \brief Get the ROM's size
+         * \return the ROM's size
+         **********************************************************************/
+		virtual uint32_t getRomSize();
+        
+        /*******************************************************************//**
          * \brief Erase the entire Flash IC
          * \param wait specify whether to wait for the operation to complete
          * \return void
@@ -72,6 +78,13 @@ class genesis: public umdbase
          * \return void
          **********************************************************************/
         void writeByteTime(uint32_t address, uint8_t data);
+        
+        /*******************************************************************//**
+         * \brief Read a word without converting to littel endian
+         * \param address 32bit address
+         * \return word big endian word
+         **********************************************************************/
+        uint16_t readBigWord(uint32_t address);
         
         /*******************************************************************//**
          * \brief Enable reading and writing to the SRAM

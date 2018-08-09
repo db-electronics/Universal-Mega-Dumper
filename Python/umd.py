@@ -86,14 +86,31 @@ if __name__ == "__main__":
             "tg" : "Turbografx-16",
             "snes" : "Super Nintendo" }
     
-    parser = argparse.ArgumentParser(prog="umd 0.1.0.0")
-    parser.add_argument("--mode", help="Set the cartridge type", choices=["cv", "gen", "sms", "pce", "tg", "snes"], type=str, default="none")
-    parser.add_argument("--dat", nargs=1,help="The name of a 'ROM Management Datafile' XML file.  If a match is found in the dat, the output file will be renamed accordingly (or copied when --file is specified).", type=str)
+    parser = argparse.ArgumentParser(prog="umd 0.1.0.1")
+    parser.add_argument("--mode", 
+                        help="Set the cartridge type", 
+                        choices=["cv", "gen", "sms", "pce", "tg", "snes"], 
+                        type=str, 
+                        default="none")
+    parser.add_argument("--dat", 
+                        nargs=1,
+                        help="The name of a 'ROM Management Datafile' XML file.  If a match is found in the dat, the output file will be renamed accordingly (or copied when --file is specified).", 
+                        type=str)
     
     readWriteArgs = parser.add_mutually_exclusive_group()
-    readWriteArgs.add_argument("--checksum", help="Calculate ROM checksum", action="store_true")
+    readWriteArgs.add_argument("--checksum", 
+                                help="Calculate ROM checksum", 
+                                action="store_true")
 
-    readWriteArgs.add_argument("--byteswap", nargs=1, help="Reverse the endianness of a file", type=str, metavar=('file to byte swap'))
+    readWriteArgs.add_argument("--byteswap", 
+                                nargs=1, 
+                                help="Reverse the endianness of a file", 
+                                type=str, 
+                                metavar=('file to byte swap'))
+    
+    readWriteArgs.add_argument("--verify",  
+                                help="Verify cartridge against a file in the serial flash", 
+                                action="store_true")
     
     readWriteArgs.add_argument("--rd", 
                                 help="Read from UMD", 
@@ -187,7 +204,7 @@ if __name__ == "__main__":
                 print("must specify a local --FILE to write the serial flash file's contents into")
             else:
                 umd = umd(cartType, args.port)
-                umd.sfReadFile(args.sffile, args.file)
+                umd.sfReadFile(args.sfile, args.file)
                 print("read {0} from serial flash to {1} in {2:.3f} s".format(args.sfile, args.file, umd.opTime))
         
         # read the ROM header of the cartridge, output formatted in the console
@@ -353,69 +370,53 @@ if __name__ == "__main__":
     # checksum operations
     elif args.checksum:
         
-        # Genesis Checksum
-        if args.mode == "gen":
+        
+        # check if local file checksum or connected cartridge
+        if args.file != "console":
             startTime = time.time()
-            genesis = genesis()
             
-            # checksum of local file or of cartridge on UMD?
-            if args.file != "console":
+            # Genesis Checksum
+            if args.mode == "gen":
+                genesis = genesis()
                 genesis.checksum(args.file)
-                
-            else:
-                #  read rom size from header
-                umd = umd(cartType, args.port)
-                umd.read(genesis.headerAddress, genesis.headerSize, args.rd, "_header.bin")
-                romSize = genesis.formatHeader("_header.bin").get("ROM End")[0] + 1
-                print("Found ROM size = {} bytes in cartridge header, reading in...".format(romSize))
-                #  read rom into local file
-                umd.read(0, romSize, args.rd, "_temp.bin")
-                #  pass that file to checksum
-                genesis.checksum("_temp.bin")
-                #  delete local files
-                try:
-                    os.remove("_header.bin")
-                    os.remove("_temp.bin")
-                except OSError:
-                    pass
-
-            opTime = time.time() - startTime
-            print("checksum completed in {0:.3f} s, calculated 0x{1:X}, value in header is 0x{2:X}".format(opTime, genesis.checksumCalc, genesis.checksumRom)) 
-            # cleanup
-            del genesis    
+                checksumCalc = genesis.checksumCalc
+                checksumRom = genesis.checksumRom
+                del genesis  
             
-        # Master System Checksum
-        if args.mode == "sms":
-            startTime = time.time()
-            sms = sms()
-            
-            # checksum of local file or of cartridge on UMD?
-            if args.file != "console":
+            # SMS Checksum
+            elif args.mode == "sms":
+                sms = sms()
                 sms.checksum(args.file)
+                checksumCalc = sms.checksumCalc
+                checksumRom = sms.checksumRom
+                del sms
                 
-            else:
-                #  read rom size from header
-                umd = umd(cartType, args.port)
-                umd.read(sms.headerAddress, sms.headerSize, args.rd, "_header.bin")
-                romSize = sms.formatHeader("_header.bin").get("Size")[0]
-                print("Found ROM size = {} bytes in cartridge header, reading in...".format(romSize))
-                #  read rom into local file
-                umd.read(0, romSize, args.rd, "_temp.bin")
-                #  pass that file to checksum
-                sms.checksum("_temp.bin")
-                #  delete local files
-                try:
-                    os.remove("_header.bin")
-                    os.remove("_temp.bin")
-                except OSError:
-                    pass
-            
             opTime = time.time() - startTime
-            print("checksum completed in {0:.3f} s, calculated 0x{1:X}, value in header is 0x{2:X}".format(opTime, sms.checksumCalc, sms.checksumRom)) 
-            # cleanup
-            del sms
+            
+        # else, UMD knows how to calculate checksum for each cartridge type
+        else:
+            umd = umd(cartType, args.port)
+            umd.checksum()
+            checksumCalc = umd.checksumCalc
+            checksumRom = umd.checksumRom
+            opTime = umd.opTime
+        
+        print("checksum completed in {0:.3f} s, calculated 0x{1:X}, value in header is 0x{2:X}".format(opTime, checksumCalc, checksumRom))
+        
+    # Verify operations
+    elif args.verify:
+        # declare UMD
+        umd = umd(cartType, args.port)
+        
+        # read a file from the UMD's serial flash - the file is read in its entirety and output to a local file
+        if args.sfile:
+            umd.verify(args.sfile)
+        else:
+            print("must specify a remote --SFILE to verify against the cartridge, run --rd sflist")
 
-
+        print("verify completed in {0:.3f} s".format(umd.opTime))
+    
+    # swap endianess of file    
     elif args.byteswap:
         startTime = time.time()
         genesis = genesis()

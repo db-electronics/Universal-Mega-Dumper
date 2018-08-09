@@ -24,15 +24,14 @@
 #include <SerialCommand.h>                  // https://github.com/db-electronics/ArduinoSerialCommand
 #include <SerialFlash.h>                    // https://github.com/PaulStoffregen/SerialFlash
 #include <SPI.h>
+
 #include "umdbase.h"
 #include "cartfactory.h"
-
 
 #define DATA_BUFFER_SIZE            2048    ///< Size of serial receive data buffer
 
 SerialCommand SCmd;                         ///< Receive and parse serial commands
 umdbase *cart;                              ///< Pointer to all cartridge classes
-
 
 const int FlashChipSelect = 20;             ///< Digital pin for flash chip CS pin
 SerialFlashFile flashFile;                  ///< Serial flash file object
@@ -83,7 +82,7 @@ void setup() {
     
     //read commands
     //SCmd.addCommand("rdbyte", readByte);
-    //SCmd.addCommand("rdbblk", readByteBlock);
+    SCmd.addCommand("rdbblk", readByteBlock);
     //SCmd.addCommand("rdword", readWord);
     SCmd.addCommand("rdwblk", readWordBlock);
     
@@ -100,10 +99,11 @@ void setup() {
     SCmd.addCommand("sfgetid",sfGetID);
     SCmd.addCommand("sfsize", sfGetSize);
     SCmd.addCommand("sferase",sfEraseAll);
+    SCmd.addCommand("sfburn", sfBurnCart);
+    SCmd.addCommand("sfread", sfReadFile);
     SCmd.addCommand("sfwrite",sfWriteFile);
     SCmd.addCommand("sflist", sfListFiles);
-    SCmd.addCommand("sfread", sfReadFile);
-    SCmd.addCommand("sfburn", sfBurnCart);
+    SCmd.addCommand("sfverify", sfVerify);
     
     SCmd.addDefaultHandler(_unknownCMD);
     SCmd.clearBuffer();
@@ -257,16 +257,76 @@ void getFlashID()
  **********************************************************************/
 void calcChecksum()
 {
-    //call cart's checksum command
-	cart->calcChecksum();
-	
-    //return calculated checksum
-	Serial.write((char)(cart->checksum.calculated));
-	Serial.write((char)(cart->checksum.calculated>>8));
     
+    //give rom size to PC
+    Serial.println(cart->getRomSize(),DEC);
+    
+    //call cart's checksum command
+    cart->calcChecksum();
+    
+    //return calculated checksum
+    Serial.println(cart->checksum.calculated,DEC);
+
     //return cart's header checksum, if not available just discard this data
-	Serial.write((char)(cart->checksum.expected));
-	Serial.write((char)(cart->checksum.expected>>8));
+    Serial.println(cart->checksum.expected,DEC);
+
+}
+
+/*******************************************************************//**
+ *  \brief Read a block of bytes from the cartridge
+ *  Read an 8bit byte block from the cartridge. In Coleco mode
+ *  the address is forced to uint16_t.
+ *  
+ *  Usage:
+ *  rdbblk 0x0000 128
+ *    - returns 128 bytes starting at address 0x0000
+ *  
+ *  \return Void
+ **********************************************************************/
+void readByteBlock()
+{
+    char *arg;
+    bool sramRead = false;
+    bool bankedPCE = false;
+    uint32_t address = 0;
+    uint16_t blockSize = 0, i;
+    uint8_t data, bank = 0;
+
+    //get the address in the next argument
+    arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the size in the next argument
+    arg = SCmd.next(); 
+    blockSize = strtoul(arg, (char**)0, 0);
+    
+    //check for next argument, if present, for type of read
+    arg = SCmd.next();
+    if( arg != NULL )
+    {
+        switch(*arg)
+        {
+            case 's':
+                sramRead = true;
+                break;
+            case 'b':
+                bankedPCE = true;
+                break;
+            default:
+                break;
+        }
+    }
+    
+    digitalWrite(cart->nLED, LOW);
+    
+
+    for( i = 0; i < blockSize; i++ )
+    {
+        data = cart->readByte(address++);
+        Serial.write((char)(data));
+    }
+    
+    digitalWrite(cart->nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -329,17 +389,17 @@ void readWordBlock()
     
     if( sramRead )
     {
-		cart->enableSram(0);
-		//read words from block, output converts to little endian
-		for( i = 0; i < blockSize; i += 2 )
-		{
-			data = cart->readWord(address);
-			address += 2;
-			Serial.write((char)(data));
-			Serial.write((char)(data>>8));
-		}
-		cart->disableSram(0);
-		
+        cart->enableSram(0);
+        //read words from block, output converts to little endian
+        for( i = 0; i < blockSize; i += 2 )
+        {
+            data = cart->readWord(address);
+            address += 2;
+            Serial.write((char)(data));
+            Serial.write((char)(data>>8));
+        }
+        cart->disableSram(0);
+        
     }else
     {
         //read words from block, output is little endian
@@ -425,13 +485,13 @@ void writeSRAMByteBlock()
                 address += 2;
             }
         }
-	}else
-	{
-		for( count=0; count < blockSize ; count++ )
-		{
-			cart->writeByte( address++, dataBuffer.byte[count]);
-		}
-	}
+    }else
+    {
+        for( count=0; count < blockSize ; count++ )
+        {
+            cart->writeByte( address++, dataBuffer.byte[count]);
+        }
+    }
     
     cart->disableSram(0);
     
@@ -600,18 +660,18 @@ void sfBurnCart()
             
             if( cart->info.busSize == 16 )
             {
-				for( i=0 ; i < ( blockSize >> 1) ; i++ )
-				{
-					cart->programWord(address, dataBuffer.word[i], true);
-					address += 2;
-				}
-			}else
-			{
-				for( i=0 ; i < blockSize ; i++ )
-				{
-					cart->programByte(address, dataBuffer.byte[i], true);
-					address++;
-				}
+                for( i=0 ; i < ( blockSize >> 1) ; i++ )
+                {
+                    cart->programWord(address, dataBuffer.word[i], true);
+                    address += 2;
+                }
+            }else
+            {
+                for( i=0 ; i < blockSize ; i++ )
+                {
+                    cart->programByte(address, dataBuffer.byte[i], true);
+                    address++;
+                }
             }
             pos += blockSize;
             Serial.println(pos, DEC);
@@ -777,6 +837,94 @@ void sfListFiles()
             break; // no more files
         }
     }
+    
+    digitalWrite(cart->nLED, HIGH);
+}
+
+/*******************************************************************//**
+ *  \brief Verify cartridge against a serial flash file
+ *  
+ *  Usage:
+ *  sfverify file.bin
+ *  
+ *  \return Void
+ **********************************************************************/
+void sfVerify()
+{
+    char *arg;
+    uint8_t readByte;
+    uint16_t i=0, readWord;
+    uint32_t fileSize, pos=0;
+    char fileName[13];      //Max filename length (8.3 plus a null char terminator)
+    
+    //get the file name
+    arg = SCmd.next();
+    i = 0;
+    while( (*arg != 0) && ( i < 12) )
+    {
+        fileName[i++] = *(arg++);
+    }
+    fileName[i] = 0; //null char terminator
+    
+    digitalWrite(cart->nLED, LOW);
+    
+    flashFile = SerialFlash.open(fileName);
+    if (flashFile)
+    {
+        Serial.println(F("found"));
+        fileSize = flashFile.size();
+        Serial.println(fileSize,DEC);
+        
+        while( pos < fileSize )
+        {
+            flashFile.read(dataBuffer.byte, DATA_BUFFER_SIZE);
+            
+            if( cart->info.busSize == 16 )
+            {
+                for( i = 0; i < DATA_BUFFER_SIZE/2 ; i++ )
+                {
+                    readWord = cart->readWord(pos);
+                    if( dataBuffer.word[i] != readWord )
+                    {
+                        //throw some error
+                        Serial.print("$");
+                        Serial.println(pos, DEC);
+                        Serial.println(dataBuffer.word[i], DEC);
+                        Serial.println(readWord, DEC);
+                    }
+                    pos += 2;
+                }
+            }else
+            {
+                for( i = 0; i < DATA_BUFFER_SIZE; i++ )
+                {
+                    readByte = cart->readByte(pos);
+                    if( dataBuffer.byte[i] != readByte )
+                    {
+                        //throw some error
+                        Serial.print("$");
+                        Serial.println(pos, DEC);
+                        Serial.println(dataBuffer.byte[i], DEC);
+                        Serial.println(readByte, DEC);
+                    }
+                    pos++;
+                }
+                
+            }
+            
+            //PC side app expects a "." before timeout
+            Serial.print(".");
+        }
+
+    }else
+    {
+        Serial.println(F("error"));
+    }
+    
+    flashFile.close();
+    
+    //Send something other than a "." to indicate we are done
+    Serial.print("!");
     
     digitalWrite(cart->nLED, HIGH);
 }
