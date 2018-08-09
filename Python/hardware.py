@@ -82,6 +82,7 @@ class umd:
     
     checksumRom = 0
     checksumCalc = 0
+    romsize = 0
                    
     opTime = ""
     romInfo = {}
@@ -640,8 +641,8 @@ class umd:
         self.serialPort.write(bytes(cmd,"utf-8"))
         
         response = self.serialPort.readline().decode("utf-8")
-        romsize = int(response)
-        print("checksum on 0x{0:X} bytes".format(romsize))
+        self.romsize = int(response)
+        print("checksum on 0x{0:X} bytes".format(self.romsize))
         
         response = self.serialPort.read(1).decode("utf-8")
         while( response == "." ):

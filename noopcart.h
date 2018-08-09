@@ -209,7 +209,7 @@ class noopcart : public umdbase
          **********************************************************************/
         uint32_t getFlashSizeFromID(uint8_t manufacturer, uint8_t device, uint8_t info){return 0;}
 
-	virtual uint32_t getRomSize(){}
+	virtual uint32_t getRomSize(){return 0u;}
 };
 
 #endif

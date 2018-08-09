@@ -13,7 +13,7 @@ CartFactory::CartFactory()
 {
     carts[CartFactory::UNDEFINED]   = new noopcart();
     carts[CartFactory::COLECO] = new GenericCart();
-    carts[CartFactory::GEN]    = new GenericCart();
+    carts[CartFactory::GEN]    = new genesis();
     carts[CartFactory::SMS]    = new sms();
     carts[CartFactory::PCE]    = new GenericCart();
     carts[CartFactory::TG16]   = new GenericCart();

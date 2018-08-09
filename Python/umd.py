@@ -137,7 +137,7 @@ if __name__ == "__main__":
                         nargs=1, 
                         help="Size in bytes for current command", 
                         type=str,
-                        default="1")
+                        default="0")
     
     parser.add_argument("--file", 
                         help="File path for read/write operations", 
@@ -277,6 +277,11 @@ if __name__ == "__main__":
             ofile = args.file
             if args.file == "console" and args.dat:
                 ofile = "_temp.bin"
+
+            if byteCount == 0:
+                umd.checksum()
+                if umd.romsize > 0:
+                    byteCount = umd.romsize
             umd.read(address, byteCount, args.rd, ofile)
             print("read {0} bytes completed in {1:.3f} s".format(byteCount, umd.opTime))
             if args.dat:
