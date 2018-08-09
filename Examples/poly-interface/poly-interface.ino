@@ -54,12 +54,13 @@ void setup() {
     
     Serial.begin(460800);
 
+    umdbase::initialize();
     //flash to show we're alive
     for( i=0 ; i<2 ; i++ )
     {
-        digitalWrite(cart->nLED, LOW);
+        digitalWrite(umdbase::nLED, LOW);
         delay(100);
-        digitalWrite(cart->nLED, HIGH);
+        digitalWrite(umdbase::nLED, HIGH);
         delay(100);
     }
 
