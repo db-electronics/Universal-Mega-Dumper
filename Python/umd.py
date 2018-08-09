@@ -137,7 +137,7 @@ if __name__ == "__main__":
                         nargs=1, 
                         help="Size in bytes for current command", 
                         type=str,
-                        default="1")
+                        default="0")
     
     parser.add_argument("--file", 
                         help="File path for read/write operations", 
@@ -277,31 +277,42 @@ if __name__ == "__main__":
             ofile = args.file
             if args.file == "console" and args.dat:
                 ofile = "_temp.bin"
-            umd.read(address, byteCount, args.rd, ofile)
-            print("read {0} bytes completed in {1:.3f} s".format(byteCount, umd.opTime))
-            if args.dat:
-                matched_name = ""
-                with open(ofile, 'rb') as in_file:
-                    romdata = in_file.read()
-                    sha1sum = hashlib.sha1(romdata).hexdigest().upper()
-                    for _, elem in iterparse(args.dat[0]):
-                        if elem.tag == 'rom':
-                            if elem.attrib['sha1'] and elem.attrib['sha1'] == sha1sum:
-                                print("Found match in dat: " + elem.attrib['name'])
-                                matched_name = elem.attrib['name']
-                                break
-                        elem.clear()
-                if matched_name is not "":
-                    try:
-                        os.remove(matched_name)
-                    except OSError:
-                        pass
-                    if args.file == "console":
-                        os.rename(ofile, matched_name)
-                    else:
-                        shutil.copyfile(ofile, matched_name)
+
+            if byteCount == 0:
+                print("no size specified; asking umd device to read from header.")
+                print("NOTE: Size from header can be inaccurate")
+                umd.getRomSize()
+                if umd.romsize > 0:
+                    byteCount = umd.romsize
+                    print("Determined rom size of: {}".format(byteCount))
                 else:
-                    print("Unable to find a match in {0}.  File left in {1}".format(args.dat[0],ofile))
+                    print("Unable to determine rom size.")
+            if byteCount > 0:
+                umd.read(address, byteCount, args.rd, ofile)
+                print("read {0} bytes completed in {1:.3f} s".format(byteCount, umd.opTime))
+                if args.dat:
+                    matched_name = ""
+                    with open(ofile, 'rb') as in_file:
+                        romdata = in_file.read()
+                        sha1sum = hashlib.sha1(romdata).hexdigest().upper()
+                        for _, elem in iterparse(args.dat[0]):
+                            if elem.tag == 'rom':
+                                if elem.attrib['sha1'] and elem.attrib['sha1'] == sha1sum:
+                                    print("Found match in dat: " + elem.attrib['name'])
+                                    matched_name = elem.attrib['name']
+                                    break
+                            elem.clear()
+                    if matched_name is not "":
+                        try:
+                            os.remove(matched_name)
+                        except OSError:
+                            pass
+                        if args.file == "console":
+                            os.rename(ofile, matched_name)
+                        else:
+                            shutil.copyfile(ofile, matched_name)
+                    else:
+                        print("Unable to find a match in {0}.  File left in {1}".format(args.dat[0],ofile))
 
 
     # clear operations - erase various memories

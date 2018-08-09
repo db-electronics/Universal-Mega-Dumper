@@ -24,16 +24,14 @@
 #include <SerialCommand.h>                  // https://github.com/db-electronics/ArduinoSerialCommand
 #include <SerialFlash.h>                    // https://github.com/PaulStoffregen/SerialFlash
 #include <SPI.h>
-#include <umdbase.h>
-#include <genesis.h>
-#include <sms.h>
+
+#include "umdbase.h"
+#include "cartfactory.h"
 
 #define DATA_BUFFER_SIZE            2048    ///< Size of serial receive data buffer
 
 SerialCommand SCmd;                         ///< Receive and parse serial commands
 umdbase *cart;                              ///< Pointer to all cartridge classes
-genesis genCart;                            ///< Genesis cartridge type
-sms smsCart;                                ///< SMS cartridge type
 
 const int FlashChipSelect = 20;             ///< Digital pin for flash chip CS pin
 SerialFlashFile flashFile;                  ///< Serial flash file object
@@ -56,12 +54,15 @@ void setup() {
     
     Serial.begin(460800);
 
+    
+    umdbase::initialize();
+    
     //flash to show we're alive
     for( i=0 ; i<2 ; i++ )
     {
-        digitalWrite(genCart.nLED, LOW);
+        digitalWrite(umdbase::nLED, LOW);
         delay(100);
-        digitalWrite(genCart.nLED, HIGH);
+        digitalWrite(umdbase::nLED, HIGH);
         delay(100);
     }
 
@@ -81,6 +82,7 @@ void setup() {
     SCmd.addCommand("erase",  eraseChip);
     SCmd.addCommand("getid",  getFlashID);
     SCmd.addCommand("checksum", calcChecksum);
+    SCmd.addCommand("romsize", getRomSize);
     
     //read commands
     //SCmd.addCommand("rdbyte", readByte);
@@ -155,55 +157,27 @@ void _flashThunder()
  **********************************************************************/
 void _setMode()
 {
+    // We need a cart factory but only one, and this function is the only one that needs to update
+    // the cart ptr.  So we can use the static keyword to keep this across calls to the function
+    static CartFactory cf;
+    
     char *arg;
     uint8_t mode;
     
     arg = SCmd.next();
     mode = (uint8_t)strtoul(arg, (char**)0, 0);
-    
-    switch(mode)
+
+    cart = cf.getCart(static_cast<CartFactory::Mode>(mode));
+
+    if (mode <= cf.getMaxCartMode())
     {
-        //Colecovision
-        case 1:
-            
-            Serial.println(F("mode = 1")); 
-            break;
-        //Genesis
-        case 2:
-            cart = &genCart;
-            cart->setup();
-            Serial.println(F("mode = 2")); 
-            break;
-        //Master System
-        case 3:
-            cart = &smsCart;
-            cart->setup();
-            Serial.println(F("mode = 3")); 
-            break;
-        //PC Engine
-        case 4:
-            
-            Serial.println(F("mode = 4")); 
-            break;
-        //Turbografx-16
-        case 5:
-            
-            Serial.println(F("mode = 5"));
-            break;
-        //SNES    
-        case 6:
-            
-            Serial.println(F("mode = 6"));
-            break;
-        //SNESLO
-        case 7:
-        
-            Serial.println(F("mode = 6"));
-            break;
-        default:
-            Serial.println(F("mode = undefined")); 
-            break;
-    }  
+        Serial.print(F("mode = "));
+        Serial.println(arg[0]);
+    }
+    else
+    {
+        Serial.print(F("mode = undefined"));
+    }
 }
 
 /*******************************************************************//**
@@ -285,6 +259,19 @@ void getFlashID()
         cart->getFlashID(0);
     }
             
+}
+
+/*******************************************************************//**
+ * \brief Get the rom size from the cart interface and send it to the PC
+ * Usage:
+ * romsize
+ *   - returns a uint32_t value
+ *     
+ **********************************************************************/
+void getRomSize()
+{
+    //give rom size to PC
+    Serial.println(cart->getRomSize(),DEC);
 }
 
 /*******************************************************************//**
@@ -443,8 +430,8 @@ void readWordBlock()
         
     }else if( latchBankRead )
     {
-        genCart.writeByteTime(0xA130FD, 0x08); // map bank 8 to 0x300000 - 0x37FFFF
-        genCart.writeByteTime(0xA130FF, 0x09); // map bank 9 to 0x380000 - 0x3FFFFF
+        cart->writeByteTime(0xA130FD, 0x08); // map bank 8 to 0x300000 - 0x37FFFF
+        cart->writeByteTime(0xA130FF, 0x09); // map bank 9 to 0x380000 - 0x3FFFFF
 
         address = 0x300000 + addrOffset; // TODO: Should start at 0x300000 BUG
 
@@ -457,8 +444,8 @@ void readWordBlock()
             Serial.write((char)(data>>8));
         }
 
-        genCart.writeByteTime(0xA130FD, 0x06); // return banks to original state
-        genCart.writeByteTime(0xA130FF, 0x07); // return banks to original state
+        cart->writeByteTime(0xA130FD, 0x06); // return banks to original state
+        cart->writeByteTime(0xA130FF, 0x07); // return banks to original state
     }else
     {
         //read words from block, output is little endian
@@ -554,8 +541,8 @@ void readBlock()
             
         }else if( latchBankRead )
         {
-            genCart.writeByteTime(0xA130FD, 0x08); // map bank 8 to 0x300000 - 0x37FFFF
-            genCart.writeByteTime(0xA130FF, 0x09); // map bank 9 to 0x380000 - 0x3FFFFF
+            cart->writeByteTime(0xA130FD, 0x08); // map bank 8 to 0x300000 - 0x37FFFF
+            cart->writeByteTime(0xA130FF, 0x09); // map bank 9 to 0x380000 - 0x3FFFFF
 
             address = 0x300000 + addrOffset; // TODO: Should start at 0x300000 BUG
 
@@ -568,8 +555,8 @@ void readBlock()
                 Serial.write((char)(readWord>>8));
             }
 
-            genCart.writeByteTime(0xA130FD, 0x06); // return banks to original state
-            genCart.writeByteTime(0xA130FF, 0x07); // return banks to original state
+            cart->writeByteTime(0xA130FD, 0x06); // return banks to original state
+            cart->writeByteTime(0xA130FF, 0x07); // return banks to original state
         }else
         {
             //read words from block, output is little endian
@@ -582,10 +569,6 @@ void readBlock()
             }
         }
     }
-
-    
-    
-    
 
     digitalWrite(cart->nLED, HIGH);
 }

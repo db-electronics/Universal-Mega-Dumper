@@ -27,7 +27,7 @@
 /*******************************************************************//**
  * The constructor
  **********************************************************************/
-umdbase::umdbase() 
+/*static*/ void umdbase::initialize() 
 {
     SET_DATABUS_TO_INPUT();
 
@@ -62,6 +62,10 @@ umdbase::umdbase()
     pinMode(CTRL5, INPUT);
     pinMode(CTRL6, INPUT);
     pinMode(CTRL7, INPUT);
+}
+
+umdbase::~umdbase()
+{
 }
 
 /*******************************************************************//**
@@ -661,4 +665,9 @@ void umdbase::programWord(uint32_t address, uint16_t data, bool wait)
 	{
 		while( toggleBit16(2) != 2 );
 	}
+}
+
+void umdbase::writeByteTime(uint32_t address, uint8_t data)
+{
+    // do nothing
 }

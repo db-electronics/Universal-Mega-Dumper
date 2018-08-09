@@ -62,7 +62,7 @@ class sms: public umdbase
          * \return byte from cartridge
          **********************************************************************/
         virtual uint8_t readByte(uint32_t address);
-        
+
         /*******************************************************************//**
          * \brief Write a byte to a 24bit address
          * \param address 24bit address
