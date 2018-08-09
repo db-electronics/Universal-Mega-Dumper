@@ -64,6 +64,10 @@ umdbase::umdbase()
     pinMode(CTRL7, INPUT);
 }
 
+umdbase::~umdbase()
+{
+}
+
 /*******************************************************************//**
  * The setup function sets all of the Teensy pins
  **********************************************************************/

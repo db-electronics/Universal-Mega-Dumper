@@ -153,13 +153,17 @@ void _flashThunder()
  **********************************************************************/
 void _setMode()
 {
+    // We need a cart factory but only one, and this function is the only one that needs to update
+    // the cart ptr.  So we can use the static keyword to keep this across calls to the function
+    static CartFactory cf;
+    
     char *arg;
     uint8_t mode;
     
     arg = SCmd.next();
     mode = (uint8_t)strtoul(arg, (char**)0, 0);
 
-    cart = getCart(mode);
+    cart = cf.getCart(static_cast<CartFactory::Mode>(mode));
     
     Serial.print(F("mode = "));
     Serial.println(arg[0]);

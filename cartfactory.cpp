@@ -1,32 +1,46 @@
 #include <stdint.h>
 #include "umdbase.h"
+#include "cartfactory.h"
 #include "genesis.h"
 #include "sms.h"
 #include "generic.h"
 #include "noopcart.h"
 
 
-#define CARTS_LEN 7
 
-noopcart* noop = new noopcart();
-generic* genericCart = new generic();
 
-umdbase* carts[] = {
-  new genesis(),
-  new genesis(),
-  new sms(),
-  genericCart, // pce
-  genericCart, // tg16
-  genericCart, // snes
-  genericCart, // sneslo
-};
-
-umdbase* getCart(uint8_t mode)
+CartFactory::CartFactory()
 {
-    if (mode < CARTS_LEN && mode >=0)
+    carts[CartFactory::UNDEFINED]   = new noopcart();
+    carts[CartFactory::COLECO] = new GenericCart();
+    carts[CartFactory::GEN]    = new GenericCart();
+    carts[CartFactory::SMS]    = new sms();
+    carts[CartFactory::PCE]    = new GenericCart();
+    carts[CartFactory::TG16]   = new GenericCart();
+    carts[CartFactory::SNES]   = new GenericCart();
+    carts[CartFactory::SNESLO] = new GenericCart();
+}
+
+CartFactory::~CartFactory()
+{
+    for (int i=0; i < CARTS_LEN; i++)
     {
-        return carts[mode-1];
+	delete carts[i];
     }
-    return noop;
+}
+
+
+umdbase* CartFactory::getCart(CartFactory::Mode mode)
+{
+    if (mode < CARTS_LEN && mode > CartFactory::UNDEFINED)
+    {
+        return carts[mode];
+    }
+    return carts[CartFactory::UNDEFINED];
+}
+
+CartFactory::Mode CartFactory::getMaxCartMode()
+{
+    return static_cast<Mode>(CARTS_LEN);
 }
 

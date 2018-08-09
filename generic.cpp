@@ -1,18 +1,18 @@
 #include "generic.h"
 
-void generic::calcChecksum()
+void GenericCart::calcChecksum()
 {
 }
 
-void generic::enableSram(uint8_t param)
+void GenericCart::enableSram(uint8_t param)
 {
 }
 
-void generic::disableSram(uint8_t param)
+void GenericCart::disableSram(uint8_t param)
 {
 }
 
-uint32_t generic::getRomSize()
+uint32_t GenericCart::getRomSize()
 {
     return 0;
 }

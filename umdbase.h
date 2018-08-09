@@ -104,6 +104,8 @@ class umdbase
          * \brief Constructor
          **********************************************************************/
         umdbase();
+
+	virtual ~umdbase();
         
         /*******************************************************************//**
          * \brief setup the UMD's hardware for the current cartridge

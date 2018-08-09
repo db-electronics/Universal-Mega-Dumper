@@ -1,5 +1,5 @@
 /*******************************************************************//**
- *  \file umdbase.h
+ *  \file generic.h
  *  \author btrim
  *  \brief This program allows to read and write to various game cartridges. 
  *
@@ -24,10 +24,12 @@
 #include <stdint.h>
 #include "umdbase.h"
 /*******************************************************************//** 
- * \class generic
+ * \class Generic
  * \brief Teensy umd class to read and write db Flash Carts
+ * Relies on umdbase for all operations but provides no-op methods for 
+ * umdbase's pure virtual functions.
  **********************************************************************/
-class generic : public umdbase
+class GenericCart : public umdbase
 {
     virtual void calcChecksum();
 
@@ -35,6 +37,11 @@ class generic : public umdbase
 
     virtual void disableSram(uint8_t param);
 
+    /**
+     * \brief There's no way to know the rom size, so this
+     *        returns 0
+     * \return 0
+     */        
     virtual uint32_t getRomSize();
 };
 
