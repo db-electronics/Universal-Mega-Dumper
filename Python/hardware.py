@@ -629,6 +629,21 @@ class umd:
 
 
 ########################################################################    
+## getRomSize(self):
+#  \param self self
+#  Ask the cart for the rom size.
+########################################################################
+    def getRomSize(self):
+        cmd = "romsize\r\n"
+        self.serialPort.write(bytes(cmd, "utf-8"))
+
+        response = self.serialPort.readline().decode("utf-8")
+        try:
+            self.romsize = int(response)
+        except:
+            pass
+
+########################################################################    
 ## checksumUMD(self):
 #  \param self self
 #
@@ -651,10 +666,15 @@ class umd:
         
         
         response = self.serialPort.readline().decode("utf-8")
-        self.checksumCalc = int(response)
-        
+        try:
+            self.checksumCalc = int(response)
+        except:
+            pass
         response = self.serialPort.readline().decode("utf-8")
-        self.checksumRom = int(response)
+        try:
+            self.checksumRom = int(response)
+        except:
+            pass
         
         self.opTime = time.time() - startTime
         print("")

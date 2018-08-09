@@ -79,6 +79,7 @@ void setup() {
     SCmd.addCommand("erase",  eraseChip);
     SCmd.addCommand("getid",  getFlashID);
     SCmd.addCommand("checksum", calcChecksum);
+    SCmd.addCommand("romsize", getRomSize);
     
     //read commands
     //SCmd.addCommand("rdbyte", readByte);
@@ -248,6 +249,19 @@ void getFlashID()
         cart->getFlashID(0);
     }
             
+}
+
+/**
+ * \brief Get the rom size from the cart interface and send it to the PC
+ * Usage:
+ * romsize
+ *   - returns a uint32_t value
+ *     
+ */
+void getRomSize()
+{
+    //give rom size to PC
+    Serial.println(cart->getRomSize(),DEC);
 }
 
 /*******************************************************************//**
