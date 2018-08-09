@@ -54,7 +54,9 @@ void setup() {
     
     Serial.begin(460800);
 
+    
     umdbase::initialize();
+    
     //flash to show we're alive
     for( i=0 ; i<2 ; i++ )
     {
@@ -166,9 +168,16 @@ void _setMode()
     mode = (uint8_t)strtoul(arg, (char**)0, 0);
 
     cart = cf.getCart(static_cast<CartFactory::Mode>(mode));
-    
-    Serial.print(F("mode = "));
-    Serial.println(arg[0]);
+
+    if (mode <= cf.getMaxCartMode())
+    {
+        Serial.print(F("mode = "));
+        Serial.println(arg[0]);
+    }
+    else
+    {
+        Serial.print(F("mode = undefined"));
+    }
 }
 
 /*******************************************************************//**
