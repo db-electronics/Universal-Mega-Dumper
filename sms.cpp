@@ -195,6 +195,13 @@ void sms::calcChecksum()
     
 }
 
+uint16_t sms::readWord(uint32_t address)
+{
+    uint8_t lo = readByte(address);
+    uint8_t hi = readByte(address+1u);
+    return lo | (hi << 8);
+}
+
 /*******************************************************************//**
  * The readByte(uint32_t) function returns a byte read from 
  * a 24bit address using mapper
@@ -205,11 +212,11 @@ uint8_t sms::readByte(uint32_t address)
     uint8_t readData;
 
     //no banking necessary for addresses up to 0x7FFF
-    if( address < SMS_SLOT_2_ADDR )
+   /* if( address < SMS_SLOT_2_ADDR )
     {
         latchAddress((uint16_t)address);
 
-    }else
+    }else*/
     {
         latchAddress(setSMSSlotRegister(2, address));
     }

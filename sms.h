@@ -19,8 +19,8 @@
  *   along with Universal Mega Dumper.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef genesis_h
-#define genesis_h
+#ifndef sms_h
+#define sms_h
 
 /*******************************************************************//** 
  * \class genesis
@@ -56,6 +56,8 @@ class sms: public umdbase
          * \return byte from cartridge
          **********************************************************************/
         virtual uint8_t readByte(uint32_t address);
+
+	virtual uint16_t readWord(uint32_t address);
         
         /*******************************************************************//**
          * \brief set the SMS slot register value
