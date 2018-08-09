@@ -32,10 +32,10 @@ import subprocess
 # De-bounce the Run button so multiple runs don't happen,
 #  and start the runUmd function in another thread
 def runButton(button):
-    app.queueFunction(app.setButtonState,"Run","disabled")
+    app.queueFunction(app.setButtonState,"Run UMD","disabled")
     app.queueFunction(app.clearAllTextAreas)
     app.thread(runUmd)
-    app.queueFunction(app.setButtonState,"Run","normal")
+    app.queueFunction(app.setButtonState,"Run UMD","normal")
 
 # Should usually be run in another thread.  Builds argument list and calls python to run umd.py.
 # This could be improved to run the code directly in-process but for now this was the easiest way
@@ -133,7 +133,7 @@ if __name__ == '__main__':
         app.addLabel("SizeLbl", "Size",4,0)
         app.setLabelAnchor("SizeLbl","e")
         app.addEntry("Size",4,1)
-        app.setEntry("Size","1")
+        app.setEntry("Size","0")
         app.addOptionBox("unit",["","KB","MB","Kb","Mb"],4,2)
 
         app.addLabel("StartLbl","Starting Address", 5,0)

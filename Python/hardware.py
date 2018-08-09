@@ -82,6 +82,7 @@ class umd:
     
     checksumRom = 0
     checksumCalc = 0
+    romsize = 0
                    
     opTime = ""
     romInfo = {}
@@ -628,6 +629,21 @@ class umd:
 
 
 ########################################################################    
+## getRomSize(self):
+#  \param self self
+#  Ask the cart for the rom size.
+########################################################################
+    def getRomSize(self):
+        cmd = "romsize\r\n"
+        self.serialPort.write(bytes(cmd, "utf-8"))
+
+        response = self.serialPort.readline().decode("utf-8")
+        try:
+            self.romsize = int(response)
+        except:
+            pass
+
+########################################################################    
 ## checksumUMD(self):
 #  \param self self
 #
@@ -640,8 +656,8 @@ class umd:
         self.serialPort.write(bytes(cmd,"utf-8"))
         
         response = self.serialPort.readline().decode("utf-8")
-        romsize = int(response)
-        print("checksum on 0x{0:X} bytes".format(romsize))
+        self.romsize = int(response)
+        print("checksum on 0x{0:X} bytes".format(self.romsize))
         
         response = self.serialPort.read(1).decode("utf-8")
         while( response == "." ):
@@ -650,10 +666,15 @@ class umd:
         
         
         response = self.serialPort.readline().decode("utf-8")
-        self.checksumCalc = int(response)
-        
+        try:
+            self.checksumCalc = int(response)
+        except:
+            pass
         response = self.serialPort.readline().decode("utf-8")
-        self.checksumRom = int(response)
+        try:
+            self.checksumRom = int(response)
+        except:
+            pass
         
         self.opTime = time.time() - startTime
         print("")
