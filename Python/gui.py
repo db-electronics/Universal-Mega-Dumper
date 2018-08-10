@@ -73,7 +73,7 @@ def runUmd():
 
     #app.infoBox("Test"," ".join(args))
 
-    proc = subprocess.run(args, text=True, capture_output=True)
+    proc = subprocess.run(args, universal_newlines=True, stdout=subprocess.PIPE)
     app.queueFunction(app.setTextArea, "Output",proc.stdout)
     app.queueFunction(app.setStatusbarBg, "lightgray",0)
     app.queueFunction(app.setStatusbar, "Done",0)
