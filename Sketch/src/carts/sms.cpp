@@ -263,6 +263,15 @@ uint8_t sms::readByte(uint32_t address)
     
 }
 
+/**
+ * A passthrough for umdbase::writeByte because the 32-bit addr
+ * write was being called (type coercion leading to a "better" match?)
+ */
+void sms::writeByte(uint16_t address, uint8_t data)
+{
+    umdbase::writeByte(address, data);
+}
+
 /*******************************************************************//**
  * The writeByte function strobes a byte into the cartridge at a 24bit
  * address.
@@ -272,24 +281,7 @@ void sms::writeByte(uint32_t address, uint8_t data)
 
     //latch the address and set slot 2
     latchAddress(setSMSSlotRegister(2, address));
-    SET_DATABUS_TO_OUTPUT();
-    DATAOUTL = data;
-    
-    // write to the bus
-    //digitalWrite(nCE, LOW);
-    //digitalWrite(nWR, LOW);
-    PORTCE &= nCE_clrmask;
-    PORTWR &= nWR_clrmask;
-    
-    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
-    
-    //digitalWrite(nWR, HIGH);
-    //digitalWrite(nCE, HIGH);
-    PORTWR |= nWR_setmask;
-    PORTCE |= nCE_setmask;
-    
-    SET_DATABUS_TO_INPUT();
-    
+    umdbase::writeByte(address, data);
 }
 
 /*******************************************************************//**
