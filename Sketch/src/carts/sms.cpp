@@ -20,7 +20,7 @@
  */
 
 #include "Arduino.h"
-#include "umdbase.h"
+#include "../umdbase.h"
 #include "sms.h"
 
 /*******************************************************************//**

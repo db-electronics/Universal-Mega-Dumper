@@ -21,6 +21,7 @@
 
 #ifndef genesis_h
 #define genesis_h
+#include "../umdbase.h"
 
 /*******************************************************************//** 
  * \class genesis
