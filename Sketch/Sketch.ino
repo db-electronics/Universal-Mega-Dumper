@@ -25,8 +25,8 @@
 #include <SerialFlash.h>                    // https://github.com/PaulStoffregen/SerialFlash
 #include <SPI.h>
 
-#include "umdbase.h"
-#include "cartfactory.h"
+#include "src/umdbase.h"
+#include "src/cartfactory.h"
 
 #define DATA_BUFFER_SIZE            2048    ///< Size of serial receive data buffer
 

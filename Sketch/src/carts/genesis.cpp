@@ -19,8 +19,7 @@
  *   along with Universal Mega Dumper.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Arduino.h"
-#include "umdbase.h"
+#include <Arduino.h>
 #include "genesis.h"
 
 /*******************************************************************//**

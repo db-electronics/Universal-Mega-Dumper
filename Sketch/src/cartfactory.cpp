@@ -1,10 +1,10 @@
 #include <stdint.h>
 #include "umdbase.h"
 #include "cartfactory.h"
-#include "genesis.h"
-#include "sms.h"
-#include "generic.h"
-#include "noopcart.h"
+#include "carts/genesis.h"
+#include "carts/sms.h"
+#include "carts/generic.h"
+#include "carts/noopcart.h"
 
 
 
