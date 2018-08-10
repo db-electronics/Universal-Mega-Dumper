@@ -98,3 +98,11 @@ ENV/
 # Rope project settings
 .ropeproject
 
+# vim backup and swap
+*~
+*.swp
+
+# pycharm / intellij 
+.idea
+
+

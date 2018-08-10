@@ -63,6 +63,16 @@ class sms: public umdbase
          **********************************************************************/
         virtual uint8_t readByte(uint32_t address);
 
+
+        /*******************************************************************//**
+         * \brief Write a byte to a 16bit address
+	 * 	  Only necessary because we need to override the 24bit version
+         * \param address 16bit address
+         * \param data byte
+         * \return void
+         **********************************************************************/
+	virtual void writeByte(uint16_t address, uint8_t data);
+
         /*******************************************************************//**
          * \brief Write a byte to a 24bit address
          * \param address 24bit address
@@ -70,6 +80,7 @@ class sms: public umdbase
          * \return void
          **********************************************************************/
         virtual void writeByte(uint32_t address, uint8_t data);
+
         
         /*******************************************************************//**
          * \brief set the SMS slot register value
