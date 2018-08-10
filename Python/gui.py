@@ -73,8 +73,13 @@ def runUmd():
 
     #app.infoBox("Test"," ".join(args))
 
+
+    output = ""
     proc = subprocess.run(args, text=True, capture_output=True)
-    app.queueFunction(app.setTextArea, "Output",proc.stdout)
+    for line in proc.stdout.split("\n"):
+        if not line.startswith("Percent"):
+            output = output + line + "\n"
+    app.queueFunction(app.setTextArea, "Output",output)
     app.queueFunction(app.setStatusbarBg, "lightgray",0)
     app.queueFunction(app.setStatusbar, "Done",0)
 
