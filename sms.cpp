@@ -264,6 +264,35 @@ uint8_t sms::readByte(uint32_t address)
 }
 
 /*******************************************************************//**
+ * The writeByte function strobes a byte into the cartridge at a 24bit
+ * address.
+ **********************************************************************/
+void sms::writeByte(uint32_t address, uint8_t data)
+{
+
+    //latch the address and set slot 2
+    latchAddress(setSMSSlotRegister(2, address));
+    SET_DATABUS_TO_OUTPUT();
+    DATAOUTL = data;
+    
+    // write to the bus
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nWR, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTWR &= nWR_clrmask;
+    
+    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    
+    //digitalWrite(nWR, HIGH);
+    //digitalWrite(nCE, HIGH);
+    PORTWR |= nWR_setmask;
+    PORTCE |= nCE_setmask;
+    
+    SET_DATABUS_TO_INPUT();
+    
+}
+
+/*******************************************************************//**
  * The setSMSSlotRegister function updates the cartridge slot register
  * with the correct bank number of the corresponding address
  **********************************************************************/
@@ -312,20 +341,20 @@ uint16_t sms::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
 }
 
 /*******************************************************************//**
- * The enableSram() function writes to the time register to enable
+ * The enableSram() function writes to the conf register to enable
  * the SRAM latch
  **********************************************************************/
 void sms::enableSram(uint8_t param)
 {
-
+    writeByte((uint16_t)SMS_CONF_REG_ADDR,0x88);
 }
 
 /*******************************************************************//**
- * The enableSram() function writes to the time register to disable
+ * The enableSram() function writes to the conf register to disable
  * the SRAM latch
  **********************************************************************/
 void sms::disableSram(uint8_t param)
 {
-
+    writeByte((uint16_t)SMS_CONF_REG_ADDR,0x00);
 }
 

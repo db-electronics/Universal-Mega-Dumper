@@ -150,7 +150,7 @@ class noopcart : public umdbase
          **********************************************************************/
         virtual void writeByte(uint32_t address, uint8_t data){}
 
-	virtual void writeByteTime(uint32_t address, uint8_t data){}
+        virtual void writeByteTime(uint32_t address, uint8_t data){}
         
         /*******************************************************************//**
          * \brief Write a word to a 24bit address
@@ -209,7 +209,7 @@ class noopcart : public umdbase
          **********************************************************************/
         uint32_t getFlashSizeFromID(uint8_t manufacturer, uint8_t device, uint8_t info){return 0;}
 
-	virtual uint32_t getRomSize(){return 0u;}
+        virtual uint32_t getRomSize(){return 0u;}
 };
 
 #endif

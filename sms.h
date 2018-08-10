@@ -64,6 +64,14 @@ class sms: public umdbase
         virtual uint8_t readByte(uint32_t address);
 
         /*******************************************************************//**
+         * \brief Write a byte to a 24bit address
+         * \param address 24bit address
+         * \param data byte
+         * \return void
+         **********************************************************************/
+        virtual void writeByte(uint32_t address, uint8_t data);
+        
+        /*******************************************************************//**
          * \brief set the SMS slot register value
          * \param slotNum the slot number
          * \param address the real ROM address

@@ -75,7 +75,7 @@ def runUmd():
 
 
     output = ""
-    proc = subprocess.run(args, text=True, capture_output=True)
+    proc = subprocess.run(args, universal_newlines=True, stdout=subprocess.PIPE)
     for line in proc.stdout.split("\n"):
         if not line.startswith("Percent"):
             output = output + line + "\n"
@@ -122,7 +122,7 @@ if __name__ == '__main__':
 
         app.addLabel("ModeLbl", "Mode", 0, 0)
         app.setLabelAnchor("ModeLbl","e")
-        app.addOptionBox("Mode", modes.keys(), 0, 1, colspan=2)
+        app.addOptionBox("Mode", sorted(modes.keys()), 0, 1, colspan=2)
 
         app.addRadioButton("rwmode","Read", 1, 1)
         app.setRadioButton("rwmode","Read")
