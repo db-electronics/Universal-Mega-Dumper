@@ -5,7 +5,7 @@
  *         The UMD base class handles all generic cartridge operations, console
  *         specific operations are handled in derived classes.
  *
- * \copyright This file is part of Universal Mega Dumper.
+ *  \copyright This file is part of Universal Mega Dumper.
  *
  *   Universal Mega Dumper is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by

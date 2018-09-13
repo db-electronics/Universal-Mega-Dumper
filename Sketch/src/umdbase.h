@@ -226,7 +226,7 @@ class umdbase
          **********************************************************************/
         virtual void writeByte(uint32_t address, uint8_t data);
 
-	virtual void writeByteTime(uint32_t address, uint8_t data);
+        virtual void writeByteTime(uint32_t address, uint8_t data);
         
         /*******************************************************************//**
          * \brief Write a word to a 24bit address
