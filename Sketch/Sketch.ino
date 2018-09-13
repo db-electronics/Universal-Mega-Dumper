@@ -1,10 +1,10 @@
 /*******************************************************************//**
- *  \file Interface.ino
+ *  \file Sketch.ino
  *  \author René Richard
  *  \brief This program provides a serial interface over USB to the
  *         Universal Mega Dumper. 
  *
- * \copyright This file is part of Universal Mega Dumper.
+ *  \copyright This file is part of Universal Mega Dumper.
  *
  *   Universal Mega Dumper is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -173,6 +173,7 @@ void _setMode()
     {
         Serial.print(F("mode = "));
         Serial.println(arg[0]);
+        cart->setup();
     }
     else
     {
