@@ -33,7 +33,7 @@ sms::sms()
 /*******************************************************************//**
  * Setup the ports for Genesis mode
  **********************************************************************/
-void sms::setup()
+void sms::setup(uint8_t alg)
 {
 
     pinMode(nWR, OUTPUT);
@@ -49,7 +49,7 @@ void sms::setup()
     setSMSSlotRegister(2,SMS_SLOT_2_ADDR);
 
     SMS_SelectedPage = 2;
-
+    flashID.alg = alg;
     info.cartType = SMS;
     info.busSize = 8;
 }

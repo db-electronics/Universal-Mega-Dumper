@@ -36,7 +36,7 @@ class genesis: public umdbase
          **********************************************************************/
         genesis();
         
-        virtual void setup();
+        virtual void setup(uint8_t alg);
         
         /*******************************************************************//**
          * \brief Read the Manufacturer and Product ID in the Flash IC

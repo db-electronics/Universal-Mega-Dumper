@@ -111,7 +111,7 @@ class umdbase
          * \brief setup the UMD's hardware for the current cartridge
          * \return void
          **********************************************************************/
-        virtual void setup();
+        virtual void setup(uint8_t alg);
         
         /*******************************************************************//**
          * \name Cartridge Flash Functions

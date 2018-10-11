@@ -51,12 +51,11 @@ union dataBuffer{
 void setup() {
 
     uint8_t i;
-    
+
     Serial.begin(460800);
 
-    
     umdbase::initialize();
-    
+
     //flash to show we're alive
     for( i=0 ; i<2 ; i++ )
     {
@@ -162,21 +161,27 @@ void _setMode()
     static CartFactory cf;
     
     char *arg;
-    uint8_t mode;
+    uint8_t mode, alg;
     
+    // this is the cart type
     arg = SCmd.next();
     mode = (uint8_t)strtoul(arg, (char**)0, 0);
 
+    // next arg, if present, specificies the flash alg, default to 0
+    arg = SCmd.next();
+    if( arg != NULL ){
+        alg = (uint8_t)strtoul(arg, (char**)0, 0);
+    }else{
+        alg = 0;
+    }
+
     cart = cf.getCart(static_cast<CartFactory::Mode>(mode));
 
-    if (mode <= cf.getMaxCartMode())
-    {
+    if (mode <= cf.getMaxCartMode()){
         Serial.print(F("mode = "));
         Serial.println(arg[0]);
-        cart->setup();
-    }
-    else
-    {
+        cart->setup(alg);
+    }else{
         Serial.print(F("mode = undefined"));
     }
 }

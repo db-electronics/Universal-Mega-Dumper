@@ -32,7 +32,7 @@ genesis::genesis()
 /*******************************************************************//**
  * Setup the ports for Genesis mode
  **********************************************************************/
-void genesis::setup()
+void genesis::setup(uint8_t alg)
 {
     pinMode(GEN_SL1, INPUT);
     pinMode(GEN_SR1, INPUT);
@@ -51,7 +51,8 @@ void genesis::setup()
 
     info.cartType = GENESIS;
     info.busSize = 16;
-
+    flashID.alg = alg;
+    
     _resetPin = GEN_nVRES;
     //resetCart();   
 }

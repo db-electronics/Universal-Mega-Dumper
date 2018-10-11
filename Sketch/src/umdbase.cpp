@@ -71,7 +71,7 @@ umdbase::~umdbase()
 /*******************************************************************//**
  * The setup function sets all of the Teensy pins
  **********************************************************************/
-void umdbase::setup()
+void umdbase::setup(uint8_t alg)
 {
     SET_DATABUS_TO_INPUT();
     
@@ -106,6 +106,9 @@ void umdbase::setup()
     pinMode(CTRL5, INPUT);
     pinMode(CTRL6, INPUT);
     pinMode(CTRL7, INPUT);
+
+    flashID.alg = alg;
+
 }
 
 /*******************************************************************//**
