@@ -96,15 +96,15 @@ void sms::getFlashID(uint8_t alg)
     {
         //SST39SF0x0 software ID detect
         //get first byte
-        writeByte((uint16_t)0x5555,0xAA);
-        writeByte((uint16_t)0x2AAA,0x55);
-        writeByte((uint16_t)0x5555,0x90);
+        writeByte((uint32_t)0x5555,0xAA);
+        writeByte((uint32_t)0x2AAA,0x55);
+        writeByte((uint32_t)0x5555,0x90);
         // read manufacturer
-        flashID.manufacturer = readByte((uint16_t)0x0000);
+        flashID.manufacturer = readByte((uint32_t)0x0000);
         // read device
-        flashID.device = readByte((uint16_t)0x0001);
+        flashID.device = readByte((uint32_t)0x0001);
         // exit software ID mode
-        writeByte((uint16_t)0x0000, 0xF0);
+        writeByte((uint32_t)0x0000, 0xF0);
         // figure out the size
         flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, 0 );
     }
@@ -281,7 +281,7 @@ void sms::writeByte(uint32_t address, uint8_t data)
 
     //latch the address and set slot 2
     latchAddress(setSMSSlotRegister(2, address));
-    umdbase::writeByte(address, data);
+    umdbase::writeByte((uint16_t)address, data);
 }
 
 /*******************************************************************//**

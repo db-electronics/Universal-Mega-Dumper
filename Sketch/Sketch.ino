@@ -167,23 +167,28 @@ void _setMode()
     arg = SCmd.next();
     mode = (uint8_t)strtoul(arg, (char**)0, 0);
 
-    // next arg, if present, specificies the flash alg, default to 0
-    arg = SCmd.next();
-    if( arg != NULL ){
-        alg = (uint8_t)strtoul(arg, (char**)0, 0);
-    }else{
-        alg = 0;
-    }
-
     cart = cf.getCart(static_cast<CartFactory::Mode>(mode));
-
     if (mode <= cf.getMaxCartMode()){
         Serial.print(F("mode = "));
         Serial.println(arg[0]);
+
+        // next arg, if present, specificies the flash alg, default to 0
+        arg = SCmd.next();
+        if( arg != NULL ){
+            alg = (uint8_t)strtoul(arg, (char**)0, 0);
+        }else{
+            alg = 0;
+        }
         cart->setup(alg);
+
     }else{
-        Serial.print(F("mode = undefined"));
+        Serial.println(F("mode = undefined"));
     }
+
+    // report algorithm for debug
+    Serial.print(F("Alg = "));
+    Serial.println(cart->flashID.alg, DEC);
+
 }
 
 /*******************************************************************//**
@@ -231,12 +236,13 @@ void getFlashID()
 {
     char *arg;
 
+    digitalWrite(cart->nLED, LOW);
+
     //check for next argument, if present
     arg = SCmd.next();
-    if( arg != NULL )
-    {
-        switch(*arg)
-        {
+
+    if( arg != NULL ){
+        switch(*arg){
             //manufacturer
             case 'm':
                 Serial.write((char)(cart->flashID.manufacturer));
@@ -249,6 +255,10 @@ void getFlashID()
             case 't':
                 Serial.write((char)(cart->flashID.type));
                 break;
+            //algorightm
+            case 'a':
+                Serial.write((char)(cart->flashID.alg));
+                break;
             //size
             case 's':
                 Serial.write((char)(cart->flashID.size));
@@ -259,12 +269,12 @@ void getFlashID()
             default:
                 break;
         }
-    }else
-    {
-        // query the chip when no parameters are passed
-        cart->getFlashID(0);
+    }else{
+        // query the chip when no parameters are passed, use the set algorithm
+        cart->getFlashID(cart->flashID.alg);
     }
-            
+
+    digitalWrite(cart->nLED, HIGH);
 }
 
 /*******************************************************************//**

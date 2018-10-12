@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 ########################################################################
 # \file umd.py
@@ -26,19 +26,15 @@
 
 import os
 import sys
-import glob
 import time
-import serial
-import getopt
 import argparse
-import struct
 import hashlib
 import shutil
 from xml.etree.ElementTree import iterparse
-from hardware import umd
-from genesis import genesis
-from sms import sms
-from snes import snes
+from core.hardware import umddb
+from core.genesis import genesis
+from core.sms import sms
+from core.snes import snes
 
 # https://docs.python.org/3/howto/argparse.html
 
@@ -156,7 +152,7 @@ if __name__ == "__main__":
     
     # init UMD object, set console type
     cartType = carts.get(args.mode)
-    #umd = umd(cartType, args.port)
+    #umd = umddb(cartType, args.port)
     
     #if( args.mode != "none" ):
         ##print( "setting mode to {0}".format(carts.get(args.mode)) )
@@ -184,7 +180,7 @@ if __name__ == "__main__":
         
         # get the file list from the UMD's serial flash
         if args.rd == "sflist":
-            umd = umd(cartType, args.port)
+            umd = umddb(cartType, args.port)
             umd.sfGetFileList()
             usedSpace = 0
             freeSpace = 0
@@ -203,7 +199,7 @@ if __name__ == "__main__":
             if ( args.file == "console" ):
                 print("must specify a local --FILE to write the serial flash file's contents into")
             else:
-                umd = umd(cartType, args.port)
+                umd = umddb(cartType, args.port)
                 umd.sfReadFile(args.sfile, args.file)
                 print("read {0} from serial flash to {1} in {2:.3f} s".format(args.sfile, args.file, umd.opTime))
         
@@ -216,7 +212,7 @@ if __name__ == "__main__":
                 if args.file != "console":
                     extractHeader(genesis.headerAddress, genesis.headerSize, args.file, "_header.bin")
                 else:
-                    umd = umd(cartType, args.port)
+                    umd = umddb(cartType, args.port)
                     umd.read(genesis.headerAddress, genesis.headerSize, args.rd, "_header.bin")
                 # display
                 for item in sorted( genesis.formatHeader("_header.bin").items() ):
@@ -235,7 +231,7 @@ if __name__ == "__main__":
                 if args.file != "console":
                     extractHeader(sms.headerAddress, sms.headerSize, args.file, "_header.bin")
                 else:
-                    umd = umd(cartType, args.port)
+                    umd = umddb(cartType, args.port)
                     umd.read(sms.headerAddress, sms.headerSize, args.rd, "_header.bin")
                     
                 for item in sorted( sms.formatHeader("_header.bin").items() ):
@@ -259,20 +255,20 @@ if __name__ == "__main__":
                 
         # read the flash id - obviously does not work on original games with OTP roms
         elif args.rd == "fid":
-            umd = umd(cartType, args.port)
+            umd = umddb(cartType, args.port)
             umd.getFlashID()
             for item in sorted( umd.flashIDData.items() ):
                 print(item)
             
         # read the serial flash id
         elif args.rd == "sfid":
-            umd = umd(cartType, args.port)
+            umd = umddb(cartType, args.port)
             umd.sfGetId()
             print (''.join('0x{:02X} '.format(x) for x in umd.sfID))
                 
         # read from the cartridge, ROM/SAVE/BRAM specified in args.rd
         else:
-            umd = umd(cartType, args.port)
+            umd = umddb(cartType, args.port)
             print("reading {0} bytes starting at address 0x{1:X} from {2} {3}".format(byteCount, address, cartType, args.rd))
             ofile = args.file
             if args.file == "console" and args.dat:
@@ -318,7 +314,7 @@ if __name__ == "__main__":
     # clear operations - erase various memories
     elif args.clr:
         # currently always need the hardware for clear
-        umd = umd(cartType, args.port)
+        umd = umddb(cartType, args.port)
         
         # erase the entire serial flash
         if args.clr == "sf":
@@ -348,7 +344,7 @@ if __name__ == "__main__":
     # write operations
     elif args.wr:
         # currently always need the hardware for writes
-        umd = umd(cartType, args.port)
+        umd = umddb(cartType, args.port)
         
         # write a local file to the UMD's serial flash
         if args.wr == "sf":
@@ -406,7 +402,7 @@ if __name__ == "__main__":
             
         # else, UMD knows how to calculate checksum for each cartridge type
         else:
-            umd = umd(cartType, args.port)
+            umd = umddb(cartType, args.port)
             umd.checksum()
             checksumCalc = umd.checksumCalc
             checksumRom = umd.checksumRom
@@ -417,7 +413,7 @@ if __name__ == "__main__":
     # Verify operations
     elif args.verify:
         # declare UMD
-        umd = umd(cartType, args.port)
+        umd = umddb(cartType, args.port)
         
         # read a file from the UMD's serial flash - the file is read in its entirety and output to a local file
         if args.sfile:
