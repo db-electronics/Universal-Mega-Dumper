@@ -241,7 +241,7 @@ uint8_t sms::readByte(uint32_t address)
     uint8_t readData;
 
     //latch the address and set slot 2
-    latchAddress(setSMSSlotRegister(2, address));
+    latchAddress16(setSMSSlotRegister(2, address));
 
     SET_DATABUS_TO_INPUT();
     
@@ -263,15 +263,6 @@ uint8_t sms::readByte(uint32_t address)
     
 }
 
-/**
- * A passthrough for umdbase::writeByte because the 32-bit addr
- * write was being called (type coercion leading to a "better" match?)
- */
-void sms::writeByte(uint16_t address, uint8_t data)
-{
-    umdbase::writeByte(address, data);
-}
-
 /*******************************************************************//**
  * The writeByte function strobes a byte into the cartridge at a 24bit
  * address.
@@ -280,7 +271,7 @@ void sms::writeByte(uint32_t address, uint8_t data)
 {
 
     //latch the address and set slot 2
-    latchAddress(setSMSSlotRegister(2, address));
+    latchAddress16(setSMSSlotRegister(2, address));
     umdbase::writeByte((uint16_t)address, data);
 }
 
@@ -297,31 +288,19 @@ uint16_t sms::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
     switch( slotNum )
     {
         case 0:
-            if(SMS_SelectedPage != selectedPage )
-            {
-                writeByte( (uint16_t)SMS_SLOT_0_REG_ADDR, selectedPage );
-            }
+            writeByte( (uint16_t)SMS_SLOT_0_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_0_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
         case 1:
-            if(SMS_SelectedPage != selectedPage )
-            {
-                writeByte( (uint16_t)SMS_SLOT_1_REG_ADDR, selectedPage );
-            }
+            writeByte( (uint16_t)SMS_SLOT_1_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_1_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
         case 2:
-            if(SMS_SelectedPage != selectedPage )
-            {
-                writeByte( (uint16_t)SMS_SLOT_2_REG_ADDR, selectedPage );
-            }
+            writeByte( (uint16_t)SMS_SLOT_2_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
         default:
-            if(SMS_SelectedPage != selectedPage )
-            {
-                writeByte( (uint16_t)SMS_SLOT_2_REG_ADDR, selectedPage );
-            }
+            writeByte( (uint16_t)SMS_SLOT_2_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
     }

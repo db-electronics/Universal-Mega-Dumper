@@ -161,7 +161,7 @@ void _setMode()
     static CartFactory cf;
     
     char *arg;
-    uint8_t mode, alg;
+    uint8_t mode;
     
     // this is the cart type
     arg = SCmd.next();
@@ -173,22 +173,16 @@ void _setMode()
         Serial.println(arg[0]);
 
         // next arg, if present, specificies the flash alg, default to 0
-        arg = SCmd.next();
-        if( arg != NULL ){
-            alg = (uint8_t)strtoul(arg, (char**)0, 0);
+        if( mode == 3 ){
+
         }else{
-            alg = 0;
+            cart->setup(alg);
         }
-        cart->setup(alg);
+        
 
     }else{
         Serial.println(F("mode = undefined"));
     }
-
-    // report algorithm for debug
-    Serial.print(F("Alg = "));
-    Serial.println(cart->flashID.alg, DEC);
-
 }
 
 /*******************************************************************//**
