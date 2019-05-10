@@ -67,8 +67,7 @@ void setup() {
 
     if (!SerialFlash.begin(FlashChipSelect)) {
         //error("Unable to access SPI Flash chip");
-    }else
-    {
+    }else{
         SerialFlash.readID(sfID);
         sfSize = SerialFlash.capacity(sfID);
     }
@@ -176,7 +175,7 @@ void _setMode()
         if( mode == 3 ){
 
         }else{
-            cart->setup(alg);
+            cart->setup(0);
         }
         
 

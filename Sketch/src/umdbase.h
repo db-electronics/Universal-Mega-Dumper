@@ -87,7 +87,7 @@ class umdbase
             uint8_t device;
             uint8_t type;
             uint32_t size;
-            uint8_t alg;
+            uint8_t alg;            /**< alg = 0 MX29F800 mode, alg = 1 SST39SF0x0 mode */
         } flashID;
     
 		/*******************************************************************//**
