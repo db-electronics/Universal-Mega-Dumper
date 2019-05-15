@@ -129,6 +129,7 @@ class umddb:
                 response = ser.readline().decode("utf-8")
                 if response == "thunder\r\n":
                     dbPort = serialport
+                    break
                 ser.close()
             except (OSError, serial.SerialException):
                 pass

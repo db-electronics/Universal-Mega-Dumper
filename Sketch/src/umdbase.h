@@ -185,7 +185,7 @@ class umdbase
          * \param address 16bit address
          * \return byte from cartridge
          **********************************************************************/
-        virtual uint8_t readByte(uint16_t address);
+        virtual uint8_t readByte16(uint16_t address);
         
         /*******************************************************************//**
          * \brief Read a byte from a 24bit address
@@ -216,7 +216,7 @@ class umdbase
          * \param data byte
          * \return void
          **********************************************************************/
-        virtual void writeByte(uint16_t address, uint8_t data);
+        virtual void writeByte16(uint16_t address, uint8_t data);
         
         /*******************************************************************//**
          * \brief Write a byte to a 24bit address
@@ -315,13 +315,13 @@ class umdbase
          * \brief latch a 16bit address
          * \return void
          **********************************************************************/
-        void latchAddress(uint16_t address);
+        void latchAddress16(uint16_t address);
         
         /*******************************************************************//**
          * \brief latch a 24bit address
          * \return void
          **********************************************************************/
-        void latchAddress(uint32_t address);
+        void latchAddress32(uint32_t address);
                 
         /*******************************************************************//**
          * \brief Read the Manufacturer and Product ID in the Flash IC

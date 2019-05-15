@@ -207,7 +207,7 @@ uint32_t umdbase::getFlashSizeFromID(uint8_t manufacturer, uint8_t device, uint8
  * The _latchAddress function latches a 24bit address to the cartridge
  * \warning contains direct port manipulation
  **********************************************************************/
-void umdbase::latchAddress(uint32_t address)
+void umdbase::latchAddress32(uint32_t address)
 {
     uint8_t addrh,addrm,addrl;
     
@@ -248,7 +248,7 @@ void umdbase::latchAddress(uint32_t address)
  * 
  * \warning upper 8 address bits (23..16) are not modified
  **********************************************************************/
-void umdbase::latchAddress(uint16_t address)
+void umdbase::latchAddress16(uint16_t address)
 {
     uint8_t addrm,addrl;
     
@@ -433,11 +433,11 @@ uint8_t umdbase::toggleBit16(uint8_t attempts)
  * The readByte(uint16_t) function returns a byte read from 
  * a 16bit address.
  **********************************************************************/
-uint8_t umdbase::readByte(uint16_t address)
+uint8_t umdbase::readByte16(uint16_t address)
 {
     uint8_t readData;
 
-    latchAddress(address);
+    latchAddress16(address);
     SET_DATABUS_TO_INPUT();
     
     // read the bus
@@ -465,7 +465,7 @@ uint8_t umdbase::readByte(uint32_t address)
 {
     uint8_t readData;
 
-    latchAddress(address);
+    latchAddress32(address);
     SET_DATABUS_TO_INPUT();
     
     // read the bus
@@ -495,7 +495,7 @@ uint16_t umdbase::readWord(uint32_t address)
 {
     uint16_t readData;
 
-    latchAddress(address);
+    latchAddress32(address);
     SET_DATABUS_TO_INPUT();
 
     // read the bus
@@ -526,7 +526,7 @@ uint16_t umdbase::readWord(uint32_t address)
  **********************************************************************/
 void umdbase::writeWord(uint32_t address, uint16_t data)
 {
-    latchAddress(address);
+    latchAddress32(address);
     SET_DATABUS_TO_OUTPUT();
 
     //put word on bus
@@ -557,10 +557,10 @@ void umdbase::writeWord(uint32_t address, uint16_t data)
  * 
  * \warning upper 8 address bits (23..16) are not modified
  **********************************************************************/
-void umdbase::writeByte(uint16_t address, uint8_t data)
+void umdbase::writeByte16(uint16_t address, uint8_t data)
 {
 
-    latchAddress(address);
+    latchAddress16(address);
     SET_DATABUS_TO_OUTPUT();
     DATAOUTL = data;
     
@@ -588,7 +588,7 @@ void umdbase::writeByte(uint16_t address, uint8_t data)
 void umdbase::writeByte(uint32_t address, uint8_t data)
 {
 
-    latchAddress(address);
+    latchAddress32(address);
     SET_DATABUS_TO_OUTPUT();
     DATAOUTL = data;
     

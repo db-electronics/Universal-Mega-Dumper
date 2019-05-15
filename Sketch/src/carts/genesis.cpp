@@ -183,7 +183,7 @@ void genesis::eraseChip(bool wait)
 void genesis::writeByte(uint32_t address, uint8_t data)
 {
 
-    latchAddress(address);
+    latchAddress32(address);
     SET_DATABUS_TO_OUTPUT();
     DATAOUTH = data;
     
@@ -211,7 +211,7 @@ void genesis::writeByte(uint32_t address, uint8_t data)
 void genesis::writeByteTime(uint32_t address, uint8_t data)
 {
     
-    latchAddress(address);
+    latchAddress32(address);
     SET_DATABUS_TO_OUTPUT();
 
     //put byte on bus
@@ -234,7 +234,7 @@ uint16_t genesis::readBigWord(uint32_t address)
 {
     uint16_t readData;
 
-    latchAddress(address);
+    latchAddress32(address);
     SET_DATABUS_TO_INPUT();
 
     // read the bus
