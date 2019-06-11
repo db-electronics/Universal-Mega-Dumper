@@ -197,6 +197,8 @@ void eraseChip()
 {
     char *arg;
 
+    digitalWrite(cart->nLED, LOW);
+
     arg = SCmd.next();
     if( arg != NULL )
     {
@@ -213,6 +215,7 @@ void eraseChip()
     {
         cart->eraseChip(false);
     }
+    digitalWrite(cart->nLED, HIGH);
 }
 
 /*******************************************************************//**
