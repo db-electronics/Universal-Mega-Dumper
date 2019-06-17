@@ -222,23 +222,24 @@ void umdbase::latchAddress32(uint32_t address)
     DATAOUTH = addrm;
     DATAOUTL = addrl;
     
-    //digitalWrite(ALE_low, HIGH);
-    PORTALE |= ALE_low_setmask;
-    //digitalWrite(ALE_low, LOW);
-    PORTALE &= ALE_low_clrmask;
+    digitalWrite(ALE_low, HIGH);
+    //PORTALE |= ALE_low_setmask;
+    digitalWrite(ALE_low, LOW);
+    //PORTALE &= ALE_low_clrmask;
 
     //put high address on bus and latch it
     DATAOUTH = 0x00;
     DATAOUTL = addrh;
     
-    //digitalWrite(ALE_low, HIGH);
-    PORTALE |= ALE_high_setmask;
-    //digitalWrite(ALE_low, LOW);
-    PORTALE &= ALE_high_clrmask;
+    digitalWrite(ALE_low, HIGH);
+    //PORTALE |= ALE_high_setmask;
+    digitalWrite(ALE_low, LOW);
+    //PORTALE &= ALE_high_clrmask;
     
     //without this additional 0x00 write reads to undefined regions would
     //return the last value written to DATAOUTL
-    DATAOUTL = 0x00; 
+    DATAOUTL = 0x00;
+    DATAOUTH = 0x00;
     
     SET_DATABUS_TO_INPUT(); 
 }
@@ -290,14 +291,14 @@ void umdbase::getFlashID(uint8_t alg)
         //mx29f800 software ID detect byte mode
         // enter software ID mode
         writeByte((uint32_t)0x0AAA, 0xAA);
-        writeByte((uint16_t)0x0555, 0x55);
-        writeByte((uint16_t)0x0AAA, 0x90);
+        writeByte((uint32_t)0x0555, 0x55);
+        writeByte((uint32_t)0x0AAA, 0x90);
         // read manufacturer
         flashID.manufacturer = readByte((uint32_t)0x0000);
         // read device
         flashID.device = readByte((uint32_t)0x0001);
         // exit software ID mode
-        writeByte((uint16_t)0x0000, 0xF0);
+        writeByte((uint32_t)0x0000, 0xF0);
         // figure out the size
         flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, 0 );
     }else
@@ -441,18 +442,18 @@ uint8_t umdbase::readByte16(uint16_t address)
     SET_DATABUS_TO_INPUT();
     
     // read the bus
-    //digitalWrite(nCE, LOW);
-    //digitalWrite(nRD, LOW);
-    PORTCE &= nCE_clrmask;
-    PORTRD &= nRD_clrmask;
-    PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow;
+    digitalWrite(nCE, LOW);
+    digitalWrite(nRD, LOW);
+    // PORTCE &= nCE_clrmask;
+    // PORTRD &= nRD_clrmask;
+    // PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow;
     
     readData = DATAINL;
     
-    //digitalWrite(nCE, HIGH);
-    //digitalWrite(nRD, HIGH);
-    PORTRD |= nRD_setmask;
-    PORTCE |= nCE_setmask;
+    digitalWrite(nCE, HIGH);
+    digitalWrite(nRD, HIGH);
+    // PORTRD |= nRD_setmask;
+    // PORTCE |= nCE_setmask;
   
     return readData;
 }
@@ -469,18 +470,18 @@ uint8_t umdbase::readByte(uint32_t address)
     SET_DATABUS_TO_INPUT();
     
     // read the bus
-    //digitalWrite(nCE, LOW);
-    //digitalWrite(nRD, LOW);
-    PORTCE &= nCE_clrmask;
-    PORTRD &= nRD_clrmask;
-    PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow;
+    digitalWrite(nCE, LOW);
+    digitalWrite(nRD, LOW);
+    // PORTCE &= nCE_clrmask;
+    // PORTRD &= nRD_clrmask;
+    // PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow;
     
     readData = DATAINL;
     
-    //digitalWrite(nCE, HIGH);
-    //digitalWrite(nRD, HIGH);
-    PORTRD |= nRD_setmask;
-    PORTCE |= nCE_setmask;
+    digitalWrite(nCE, HIGH);
+    digitalWrite(nRD, HIGH);
+    // PORTRD |= nRD_setmask;
+    // PORTCE |= nCE_setmask;
   
     return readData;
 }
@@ -499,21 +500,21 @@ uint16_t umdbase::readWord(uint32_t address)
     SET_DATABUS_TO_INPUT();
 
     // read the bus
-    //digitalWrite(nCE, LOW);
-    //digitalWrite(nRD, LOW);
-    PORTCE &= nCE_clrmask;
-    PORTRD &= nRD_clrmask;
-    PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow
+    digitalWrite(nCE, LOW);
+    digitalWrite(nRD, LOW);
+    //PORTCE &= nCE_clrmask;
+    //PORTRD &= nRD_clrmask;
+    //PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow
     
     //convert to little endian while reading
     readData = (uint16_t)DATAINL;
     readData <<= 8;
     readData |= (uint16_t)(DATAINH & 0x00FF);
   
-    //digitalWrite(nCE, HIGH);
-    //digitalWrite(nRD, HIGH);
-    PORTRD |= nRD_setmask;
-    PORTCE |= nCE_setmask;
+    digitalWrite(nCE, HIGH);
+    digitalWrite(nRD, HIGH);
+    //PORTRD |= nRD_setmask;
+    //PORTCE |= nCE_setmask;
 
     return readData;
 }
@@ -534,17 +535,18 @@ void umdbase::writeWord(uint32_t address, uint16_t data)
     DATAOUTL = (uint8_t)(data>>8);
 
     // write to the bus
-    //digitalWrite(nCE, LOW);
-    //digitalWrite(nWR, LOW);
-    PORTCE &= nCE_clrmask;
-    PORTWR &= nWR_clrmask;
+    digitalWrite(nCE, LOW);
+    digitalWrite(nWR, LOW);
+    delayMicroseconds(1);
+    // PORTCE &= nCE_clrmask;
+    // PORTWR &= nWR_clrmask;
     
-    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    // PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
     
-    //digitalWrite(nWR, HIGH);
-    //digitalWrite(nCE, HIGH);
-    PORTWR |= nWR_setmask;
-    PORTCE |= nCE_setmask;
+    digitalWrite(nWR, HIGH);
+    digitalWrite(nCE, HIGH);
+    // PORTWR |= nWR_setmask;
+    // PORTCE |= nCE_setmask;
 
     SET_DATABUS_TO_INPUT();
 }
@@ -565,17 +567,17 @@ void umdbase::writeByte16(uint16_t address, uint8_t data)
     DATAOUTL = data;
     
     // write to the bus
-    //digitalWrite(nCE, LOW);
-    //digitalWrite(nWR, LOW);
-    PORTCE &= nCE_clrmask;
-    PORTWR &= nWR_clrmask;
+    digitalWrite(nCE, LOW);
+    digitalWrite(nWR, LOW);
+    // PORTCE &= nCE_clrmask;
+    // PORTWR &= nWR_clrmask;
     
-    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    // PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
     
-    //digitalWrite(nWR, HIGH);
-    //digitalWrite(nCE, HIGH);
-    PORTWR |= nWR_setmask;
-    PORTCE |= nCE_setmask;
+    digitalWrite(nWR, HIGH);
+    digitalWrite(nCE, HIGH);
+    // PORTWR |= nWR_setmask;
+    // PORTCE |= nCE_setmask;
     
     SET_DATABUS_TO_INPUT();
     
@@ -593,17 +595,17 @@ void umdbase::writeByte(uint32_t address, uint8_t data)
     DATAOUTL = data;
     
     // write to the bus
-    //digitalWrite(nCE, LOW);
-    //digitalWrite(nWR, LOW);
-    PORTCE &= nCE_clrmask;
-    PORTWR &= nWR_clrmask;
+    digitalWrite(nCE, LOW);
+    digitalWrite(nWR, LOW);
+    // PORTCE &= nCE_clrmask;
+    // PORTWR &= nWR_clrmask;
     
-    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    // PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
     
-    //digitalWrite(nWR, HIGH);
-    //digitalWrite(nCE, HIGH);
-    PORTWR |= nWR_setmask;
-    PORTCE |= nCE_setmask;
+    digitalWrite(nWR, HIGH);
+    digitalWrite(nCE, HIGH);
+    // PORTWR |= nWR_setmask;
+    // PORTCE |= nCE_setmask;
     
     SET_DATABUS_TO_INPUT();
     
@@ -657,12 +659,13 @@ void umdbase::programByte(uint32_t address, uint8_t data, bool wait)
 void umdbase::programWord(uint32_t address, uint16_t data, bool wait)
 {
     writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
-	writeWord( (uint16_t)(0x0002AA << 1), 0x5500);
-    writeWord( (uint16_t)(0x000555 << 1), 0xA000);
+	writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+    writeWord( (uint32_t)(0x000555 << 1), 0xA000);
     
     //write the data
     writeWord( (uint32_t)address, data );
-    
+    //delayMicroseconds(10);
+
     //use data polling to validate end of program cycle
 	if(wait)
 	{

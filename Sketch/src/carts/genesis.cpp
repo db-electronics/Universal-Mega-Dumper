@@ -188,17 +188,17 @@ void genesis::writeByte(uint32_t address, uint8_t data)
     DATAOUTH = data;
     
     // write to the bus
-    //digitalWrite(nCE, LOW);
-    //digitalWrite(nWR, LOW);
-    PORTCE &= nCE_clrmask;
-    PORTWR &= nWR_clrmask;
+    digitalWrite(nCE, LOW);
+    digitalWrite(nWR, LOW);
+    // PORTCE &= nCE_clrmask;
+    // PORTWR &= nWR_clrmask;
     
-    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    // PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
     
-    //digitalWrite(nWR, HIGH);
-    //digitalWrite(nCE, HIGH);
-    PORTWR |= nWR_setmask;
-    PORTCE |= nCE_setmask;
+    digitalWrite(nWR, HIGH);
+    digitalWrite(nCE, HIGH);
+    // PORTWR |= nWR_setmask;
+    // PORTCE |= nCE_setmask;
     
     SET_DATABUS_TO_INPUT();
     
@@ -238,21 +238,21 @@ uint16_t genesis::readBigWord(uint32_t address)
     SET_DATABUS_TO_INPUT();
 
     // read the bus
-    //digitalWrite(nCE, LOW);
-    //digitalWrite(nRD, LOW);
-    PORTCE &= nCE_clrmask;
-    PORTRD &= nRD_clrmask;
-    PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow
+    digitalWrite(nCE, LOW);
+    digitalWrite(nRD, LOW);
+    // PORTCE &= nCE_clrmask;
+    // PORTRD &= nRD_clrmask;
+    // PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow
     
     //convert to big endian while reading
     readData = (uint16_t)DATAINH;
     readData <<= 8;
     readData |= (uint16_t)(DATAINL & 0x00FF);
   
-    //digitalWrite(nCE, HIGH);
-    //digitalWrite(nRD, HIGH);
-    PORTRD |= nRD_setmask;
-    PORTCE |= nCE_setmask;
+    digitalWrite(nCE, HIGH);
+    digitalWrite(nRD, HIGH);
+    // PORTRD |= nRD_setmask;
+    // PORTCE |= nCE_setmask;
 
     return readData;
 }
