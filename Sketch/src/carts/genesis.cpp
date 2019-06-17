@@ -71,6 +71,7 @@ void genesis::getFlashID(uint8_t alg)
     flashID.device = 0;
     flashID.type = 0;
     flashID.size = 0;
+    flashID.buffermode = 0;
     flashID.alg = alg;
 
     // enter software ID mode
@@ -90,6 +91,10 @@ void genesis::getFlashID(uint8_t alg)
     writeWord( (uint32_t)0x000000, 0xF000);
     // figure out the size
     flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, flashID.type );
+
+    if(flashID.manufacturer == 0x01){
+        flashID.buffermode = 1;
+    }
 }
 
 /*******************************************************************//**
@@ -122,6 +127,38 @@ void genesis::calcChecksum()
     
     //Send something other than a "." to indicate we are done
     Serial.print("!");
+}
+
+/*******************************************************************//**
+ * The programWordBuffer() function uses the S29GL0xx buffer mode
+ * to program a block of words at once
+ **********************************************************************/
+void genesis::programWordBuffer(uint32_t address, uint16_t * buf, uint8_t size)
+{
+    uint8_t i;
+    uint32_t sectorAddr, writeAddr;
+
+    // address must full within a 32b/16w boundary
+    sectorAddr = 0xFFFFFFE0 & address;
+    writeAddr = sectorAddr;
+
+    // enter write to buffer mode
+    writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+    writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+    writeWord( sectorAddr, 0x2500);
+    writeWord( sectorAddr, size-1);
+
+    // write contents to program flash buffer
+    for(i=0; i<size; i++){
+        writeWord( writeAddr, *(buf++) );
+        writeAddr += 2;
+    }
+
+    // program buffer to flash
+    writeWord( sectorAddr, 0x2900);
+
+    //use data polling to validate end of program cycle
+    while( toggleBit16(4) != 4 );
 }
 
 /*******************************************************************//**
@@ -162,7 +199,7 @@ void genesis::eraseChip(bool wait)
         intervalMillis = millis();
         
         // wait for 4 consecutive toggle bit success reads before exiting
-        while( toggleBit8(4) != 4 )
+        while( toggleBit16(4) != 4 )
         {
             if( (millis() - intervalMillis) > 250 )
             {

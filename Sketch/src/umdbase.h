@@ -88,7 +88,7 @@ class umdbase
             uint8_t type;
             uint32_t size;
             uint8_t alg;            /**< alg = 0 MX29F800 mode, alg = 1 SST39SF0x0 mode */
-            uint8_t wrmode;         /**< wrmode = 0 single write, wrmode = 1 buffered write */
+            uint8_t buffermode;     /**< buffermode = 0 single write, buffermode = 1 buffered write */
         } flashID;
     
 		/*******************************************************************//**

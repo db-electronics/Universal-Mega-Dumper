@@ -80,6 +80,8 @@ class genesis: public umdbase
          **********************************************************************/
         void writeByteTime(uint32_t address, uint8_t data);
         
+        void programWordBuffer(uint32_t address, uint16_t * buf, uint8_t size);
+
         /*******************************************************************//**
          * \brief Read a word without converting to littel endian
          * \param address 32bit address

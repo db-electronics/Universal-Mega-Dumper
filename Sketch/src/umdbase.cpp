@@ -667,9 +667,8 @@ void umdbase::programWord(uint32_t address, uint16_t data, bool wait)
     //delayMicroseconds(10);
 
     //use data polling to validate end of program cycle
-	if(wait)
-	{
-		while( toggleBit16(2) != 2 );
+	if(wait){
+		while( toggleBit16(4) != 4 );
 	}
 }
 

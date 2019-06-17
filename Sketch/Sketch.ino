@@ -173,7 +173,7 @@ void _setMode()
 
         // next arg, if present, specificies the flash alg, default to 0
         if( mode == 3 ){
-
+            cart->setup(0);
         }else{
             cart->setup(0);
         }
@@ -239,6 +239,10 @@ void getFlashID()
 
     if( arg != NULL ){
         switch(*arg){
+            //buffered mode
+            case 'b':
+                Serial.write((char)(cart->flashID.buffermode));
+                break;
             //manufacturer
             case 'm':
                 Serial.write((char)(cart->flashID.manufacturer));
@@ -694,12 +698,17 @@ void programWordBlock()
     SCmd.clearBuffer();
     
     //program size/2 words
-    count = 0;
-    while( count < ( blockSize >> 1) )
-    {
-        cart->programWord(address, dataBuffer.word[count++], true);
-        address += 2;
+    if( cart->flashID.buffermode == 0){
+        count = 0;
+        while( count < ( blockSize >> 1) )
+        {
+            cart->programWord(address, dataBuffer.word[count++], true);
+            address += 2;
+        }
+    }else{
+    
     }
+    
     
     Serial.println(F("done"));
     
