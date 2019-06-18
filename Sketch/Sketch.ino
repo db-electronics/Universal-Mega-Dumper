@@ -710,7 +710,7 @@ void programWordBlock()
             address += 2;
 
             //use data polling to validate end of program cycle
-            while( cart->toggleBit16(4) != 4 )
+            while( cart->toggleBit16(4) != 4 );
         }
     }else{
         count = 0;
