@@ -671,8 +671,9 @@ void writeSRAMByteBlock()
 void programWordBlock()
 {
     char *arg;
-    uint32_t address=0;
+    uint32_t address=0, sectorAddr;
     uint16_t blockSize, count=0;
+    uint8_t i;
             
     //get the address in the next argument
     arg = SCmd.next();
@@ -687,10 +688,8 @@ void programWordBlock()
     //receive size bytes
     Serial.read(); //there's an extra byte here for some reason - discard
     
-    while( count < blockSize )
-    {
-        if( Serial.available() )
-        {
+    while( count < blockSize ){
+        if( Serial.available() ){
             dataBuffer.byte[count++] = Serial.read();
         }
     }
@@ -700,18 +699,48 @@ void programWordBlock()
     //program size/2 words
     if( cart->flashID.buffermode == 0){
         count = 0;
-        while( count < ( blockSize >> 1) )
-        {
-            cart->programWord(address, dataBuffer.word[count++], true);
+        while( count < ( blockSize >> 1) ){
+
+            cart->writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+            cart->writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+            cart->writeWord( (uint32_t)(0x000555 << 1), 0xA000);
+            
+            //write the data
+            cart->writeWord( (uint32_t)address, dataBuffer.word[count++] );
             address += 2;
+
+            //use data polling to validate end of program cycle
+            while( cart->toggleBit16(4) != 4 )
         }
     }else{
-    
+        count = 0;
+        while( count < ( blockSize >> 1) ){
+            // address must full within a 32b/16w boundary
+            address &= 0xFFFFFFE0;
+            sectorAddr = address;
+
+            // enter write to buffer mode
+            cart->writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+            cart->writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+            cart->writeWord( sectorAddr, 0x2500);
+            // word count minus 1
+            cart->writeWord( sectorAddr, 15);
+
+            // write contents to program flash buffer
+            for(i=0; i<16; i++){
+                cart->writeWord( address, dataBuffer.word[count++] );
+                address += 2;
+            }
+
+            // program buffer to flash command
+            cart->writeWord( sectorAddr, 0x2900);
+
+            //use data polling to validate end of program cycle
+            while( cart->toggleBit16(4) != 4 );
+        }
     }
     
-    
     Serial.println(F("done"));
-    
     digitalWrite(cart->nLED, HIGH);
 }
 
