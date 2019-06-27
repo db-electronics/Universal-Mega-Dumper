@@ -176,6 +176,10 @@ class umddb:
         self.serialPort.write(bytes("getid s\r\n","utf-8"))
         data = int.from_bytes(self.serialPort.read(4), byteorder="little" )
         self.flashIDData.update({"Size": hex(data) })
+        # Buffer mode
+        self.serialPort.write(bytes("getid b\r\n","utf-8"))
+        data = int.from_bytes(self.serialPort.read(1), byteorder="little" )
+        self.flashIDData.update({"Buffered Mode": hex(data) })
                 
 ########################################################################    
 ## getSfFileList
@@ -198,9 +202,11 @@ class umddb:
         expect = "mode = {}\r\n".format(self.modes.get(mode))
         if response != expect:
             print("umd.setMode - expected '{}' : received '{}'".format(expect, response))
+        #else:
+            #print("umd.setMode - expected '{}' : received '{}'".format(expect, response))
 
         # read back algorithm for debug
-        response = self.serialPort.readline().decode("utf-8")
+        # response = self.serialPort.readline().decode("utf-8")
         #print(response)
 
 ########################################################################    
@@ -725,7 +731,7 @@ class umddb:
                     expected = int(response)
                     response = self.serialPort.readline().decode("utf-8")
                     error = int(response)
-                    print("error at 0x{0:X} expected 0x{1:X} read 0x{2:X}".format(address, expected, error))
+                    print("error at 0x{0:X} expected 0x{1:04X} read 0x{2:04X}".format(address, expected, error))
                 elif( response == "." ):
                     done = 0
                     #print(response, end="", flush=True)

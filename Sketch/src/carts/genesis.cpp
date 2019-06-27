@@ -274,9 +274,9 @@ uint16_t genesis::readBigWord(uint32_t address)
     latchAddress32(address);
     SET_DATABUS_TO_INPUT();
 
-    // read the bus
-    digitalWrite(nCE, LOW);
+    // read the bus, setup the direction on the level shifters first to avoid contention
     digitalWrite(nRD, LOW);
+    digitalWrite(nCE, LOW);
     // PORTCE &= nCE_clrmask;
     // PORTRD &= nRD_clrmask;
     // PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow

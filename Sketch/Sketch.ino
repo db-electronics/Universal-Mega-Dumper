@@ -697,7 +697,8 @@ void programWordBlock()
     SCmd.clearBuffer();
     
     //program size/2 words
-    if( cart->flashID.buffermode == 0){
+    //if( cart->flashID.buffermode == 0 ){
+    if( 1 ){
         count = 0;
         while( count < ( blockSize >> 1) ){
 

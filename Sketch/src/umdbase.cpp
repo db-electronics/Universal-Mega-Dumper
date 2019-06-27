@@ -231,9 +231,9 @@ void umdbase::latchAddress32(uint32_t address)
     DATAOUTH = 0x00;
     DATAOUTL = addrh;
     
-    digitalWrite(ALE_low, HIGH);
+    digitalWrite(ALE_high, HIGH);
     //PORTALE |= ALE_high_setmask;
-    digitalWrite(ALE_low, LOW);
+    digitalWrite(ALE_high, LOW);
     //PORTALE &= ALE_high_clrmask;
     
     //without this additional 0x00 write reads to undefined regions would
@@ -263,10 +263,10 @@ void umdbase::latchAddress16(uint16_t address)
     DATAOUTH = addrm;
     DATAOUTL = addrl;
     
-    //digitalWrite(ALE_low, HIGH);
-    PORTALE |= ALE_low_setmask;
-    //digitalWrite(ALE_low, LOW);
-    PORTALE &= ALE_low_clrmask;
+    digitalWrite(ALE_low, HIGH);
+    //PORTALE |= ALE_low_setmask;
+    digitalWrite(ALE_low, LOW);
+    //PORTALE &= ALE_low_clrmask;
 
     SET_DATABUS_TO_INPUT();
 }
@@ -413,15 +413,12 @@ uint8_t umdbase::toggleBit16(uint8_t attempts)
     //first read of bit 6 - big endian
     oldValue = readWord((uint32_t)0x0000) & 0x4000;
 
-    for( i=0; i<attempts; i++ )
-    {
+    for( i=0; i<attempts; i++ ){
         //successive reads compare this read to the previous one for toggle bit
         readValue = readWord((uint32_t)0x0000) & 0x4000;
-        if( oldValue == readValue )
-        {
+        if( oldValue == readValue ){
             retValue += 1;
-        }else
-        {
+        }else{
             retValue = 0;
         }
         oldValue = readValue;
@@ -500,8 +497,10 @@ uint16_t umdbase::readWord(uint32_t address)
     SET_DATABUS_TO_INPUT();
 
     // read the bus
-    digitalWrite(nCE, LOW);
+    digitalWrite(nCE, LOW); // moving nCE after nRD completely breaks reading
     digitalWrite(nRD, LOW);
+
+    delayMicroseconds(1);
     //PORTCE &= nCE_clrmask;
     //PORTRD &= nRD_clrmask;
     //PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow
@@ -511,8 +510,8 @@ uint16_t umdbase::readWord(uint32_t address)
     readData <<= 8;
     readData |= (uint16_t)(DATAINH & 0x00FF);
   
-    digitalWrite(nCE, HIGH);
     digitalWrite(nRD, HIGH);
+    digitalWrite(nCE, HIGH);
     //PORTRD |= nRD_setmask;
     //PORTCE |= nCE_setmask;
 
@@ -534,9 +533,11 @@ void umdbase::writeWord(uint32_t address, uint16_t data)
     DATAOUTH = (uint8_t)(data);
     DATAOUTL = (uint8_t)(data>>8);
 
-    // write to the bus
+    // write to the bus, ensure RD is high because it controls the level shifters direction
+    digitalWrite(nRD, HIGH);
     digitalWrite(nCE, LOW);
     digitalWrite(nWR, LOW);
+
     delayMicroseconds(1);
     // PORTCE &= nCE_clrmask;
     // PORTWR &= nWR_clrmask;
