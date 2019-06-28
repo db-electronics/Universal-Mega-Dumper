@@ -238,8 +238,8 @@ void umdbase::latchAddress32(uint32_t address)
     
     //without this additional 0x00 write reads to undefined regions would
     //return the last value written to DATAOUTL
-    DATAOUTL = 0x00;
-    DATAOUTH = 0x00;
+    //DATAOUTL = 0x00; // commenting this out fixed the s29gl032 problems - dunno why yet
+    //DATAOUTH = 0x00;
     
     SET_DATABUS_TO_INPUT(); 
 }
@@ -497,23 +497,26 @@ uint16_t umdbase::readWord(uint32_t address)
     SET_DATABUS_TO_INPUT();
 
     // read the bus
-    digitalWrite(nCE, LOW); // moving nCE after nRD completely breaks reading
-    digitalWrite(nRD, LOW);
+    // digitalWrite(nCE, LOW); // moving nCE after nRD completely breaks reading
+    // digitalWrite(nRD, LOW);
 
-    delayMicroseconds(1);
-    //PORTCE &= nCE_clrmask;
-    //PORTRD &= nRD_clrmask;
-    //PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow
+    
+    PORTCE &= nCE_clrmask;
+    PORTRD &= nRD_clrmask;
+
+    // PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow
     
     //convert to little endian while reading
+    delayMicroseconds(10);
+
     readData = (uint16_t)DATAINL;
     readData <<= 8;
     readData |= (uint16_t)(DATAINH & 0x00FF);
   
-    digitalWrite(nRD, HIGH);
-    digitalWrite(nCE, HIGH);
-    //PORTRD |= nRD_setmask;
-    //PORTCE |= nCE_setmask;
+    //digitalWrite(nRD, HIGH);
+    //digitalWrite(nCE, HIGH);
+    PORTRD |= nRD_setmask;
+    PORTCE |= nCE_setmask;
 
     return readData;
 }

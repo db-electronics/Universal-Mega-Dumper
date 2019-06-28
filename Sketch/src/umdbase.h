@@ -38,8 +38,8 @@
 #define SET_DATABUS_TO_INPUT() 	\
 	DATAH_DDR = 0x00;			\
 	DATAL_DDR = 0x00;			\
-	DATAOUTH = 0x00;			\
-	DATAOUTL = 0x00;			\
+	DATAOUTH = 0xFF;			\
+	DATAOUTL = 0xFF;			\
 
 #define SET_DATABUS_TO_OUTPUT()	\
 	DATAH_DDR = 0xFF;			\
