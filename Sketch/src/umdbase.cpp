@@ -222,19 +222,19 @@ void umdbase::latchAddress32(uint32_t address)
     DATAOUTH = addrm;
     DATAOUTL = addrl;
     
-    digitalWrite(ALE_low, HIGH);
-    //PORTALE |= ALE_low_setmask;
-    digitalWrite(ALE_low, LOW);
-    //PORTALE &= ALE_low_clrmask;
+    //digitalWrite(ALE_low, HIGH);
+    PORTALE |= ALE_low_setmask;
+    //digitalWrite(ALE_low, LOW);
+    PORTALE &= ALE_low_clrmask;
 
     //put high address on bus and latch it
     DATAOUTH = 0x00;
     DATAOUTL = addrh;
     
-    digitalWrite(ALE_high, HIGH);
-    //PORTALE |= ALE_high_setmask;
-    digitalWrite(ALE_high, LOW);
-    //PORTALE &= ALE_high_clrmask;
+    //digitalWrite(ALE_high, HIGH);
+    PORTALE |= ALE_high_setmask;
+    //digitalWrite(ALE_high, LOW);
+    PORTALE &= ALE_high_clrmask;
     
     //without this additional 0x00 write reads to undefined regions would
     //return the last value written to DATAOUTL
