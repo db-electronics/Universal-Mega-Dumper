@@ -537,20 +537,20 @@ void umdbase::writeWord(uint32_t address, uint16_t data)
     DATAOUTL = (uint8_t)(data>>8);
 
     // write to the bus, ensure RD is high because it controls the level shifters direction
-    digitalWrite(nRD, HIGH);
-    digitalWrite(nCE, LOW);
-    digitalWrite(nWR, LOW);
+    // digitalWrite(nRD, HIGH);
+    // digitalWrite(nCE, LOW);
+    // digitalWrite(nWR, LOW);
 
-    delayMicroseconds(1);
-    // PORTCE &= nCE_clrmask;
-    // PORTWR &= nWR_clrmask;
+    // delayMicroseconds(1);
+    PORTCE &= nCE_clrmask;
+    PORTWR &= nWR_clrmask;
     
-    // PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
     
-    digitalWrite(nWR, HIGH);
-    digitalWrite(nCE, HIGH);
-    // PORTWR |= nWR_setmask;
-    // PORTCE |= nCE_setmask;
+    //digitalWrite(nWR, HIGH);
+    //digitalWrite(nCE, HIGH);
+    PORTWR |= nWR_setmask;
+    PORTCE |= nCE_setmask;
 
     SET_DATABUS_TO_INPUT();
 }
