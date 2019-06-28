@@ -33,7 +33,7 @@ sms::sms()
 /*******************************************************************//**
  * Setup the ports for Genesis mode
  **********************************************************************/
-void sms::setup()
+void sms::setup(uint8_t alg)
 {
 
     pinMode(nWR, OUTPUT);
@@ -49,7 +49,7 @@ void sms::setup()
     setSMSSlotRegister(2,SMS_SLOT_2_ADDR);
 
     SMS_SelectedPage = 2;
-
+    flashID.alg = alg;
     info.cartType = SMS;
     info.busSize = 8;
 }
@@ -96,15 +96,15 @@ void sms::getFlashID(uint8_t alg)
     {
         //SST39SF0x0 software ID detect
         //get first byte
-        writeByte((uint16_t)0x5555,0xAA);
-        writeByte((uint16_t)0x2AAA,0x55);
-        writeByte((uint16_t)0x5555,0x90);
+        writeByte((uint32_t)0x5555,0xAA);
+        writeByte((uint32_t)0x2AAA,0x55);
+        writeByte((uint32_t)0x5555,0x90);
         // read manufacturer
-        flashID.manufacturer = readByte((uint16_t)0x0000);
+        flashID.manufacturer = readByte((uint32_t)0x0000);
         // read device
-        flashID.device = readByte((uint16_t)0x0001);
+        flashID.device = readByte((uint32_t)0x0001);
         // exit software ID mode
-        writeByte((uint16_t)0x0000, 0xF0);
+        writeByte((uint32_t)0x0000, 0xF0);
         // figure out the size
         flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, 0 );
     }
@@ -241,7 +241,7 @@ uint8_t sms::readByte(uint32_t address)
     uint8_t readData;
 
     //latch the address and set slot 2
-    latchAddress(setSMSSlotRegister(2, address));
+    latchAddress16(setSMSSlotRegister(2, address));
 
     SET_DATABUS_TO_INPUT();
     
@@ -263,15 +263,6 @@ uint8_t sms::readByte(uint32_t address)
     
 }
 
-/**
- * A passthrough for umdbase::writeByte because the 32-bit addr
- * write was being called (type coercion leading to a "better" match?)
- */
-void sms::writeByte(uint16_t address, uint8_t data)
-{
-    umdbase::writeByte(address, data);
-}
-
 /*******************************************************************//**
  * The writeByte function strobes a byte into the cartridge at a 24bit
  * address.
@@ -280,8 +271,8 @@ void sms::writeByte(uint32_t address, uint8_t data)
 {
 
     //latch the address and set slot 2
-    latchAddress(setSMSSlotRegister(2, address));
-    umdbase::writeByte(address, data);
+    latchAddress16(setSMSSlotRegister(2, address));
+    umdbase::writeByte((uint16_t)address, data);
 }
 
 /*******************************************************************//**
@@ -297,31 +288,19 @@ uint16_t sms::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
     switch( slotNum )
     {
         case 0:
-            if(SMS_SelectedPage != selectedPage )
-            {
-                writeByte( (uint16_t)SMS_SLOT_0_REG_ADDR, selectedPage );
-            }
+            writeByte( (uint16_t)SMS_SLOT_0_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_0_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
         case 1:
-            if(SMS_SelectedPage != selectedPage )
-            {
-                writeByte( (uint16_t)SMS_SLOT_1_REG_ADDR, selectedPage );
-            }
+            writeByte( (uint16_t)SMS_SLOT_1_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_1_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
         case 2:
-            if(SMS_SelectedPage != selectedPage )
-            {
-                writeByte( (uint16_t)SMS_SLOT_2_REG_ADDR, selectedPage );
-            }
+            writeByte( (uint16_t)SMS_SLOT_2_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
         default:
-            if(SMS_SelectedPage != selectedPage )
-            {
-                writeByte( (uint16_t)SMS_SLOT_2_REG_ADDR, selectedPage );
-            }
+            writeByte( (uint16_t)SMS_SLOT_2_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
     }

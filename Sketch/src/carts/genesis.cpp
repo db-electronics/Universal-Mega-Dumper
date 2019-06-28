@@ -32,7 +32,7 @@ genesis::genesis()
 /*******************************************************************//**
  * Setup the ports for Genesis mode
  **********************************************************************/
-void genesis::setup()
+void genesis::setup(uint8_t alg)
 {
     pinMode(GEN_SL1, INPUT);
     pinMode(GEN_SR1, INPUT);
@@ -51,7 +51,8 @@ void genesis::setup()
 
     info.cartType = GENESIS;
     info.busSize = 16;
-
+    flashID.alg = alg;
+    
     _resetPin = GEN_nVRES;
     //resetCart();   
 }
@@ -70,6 +71,7 @@ void genesis::getFlashID(uint8_t alg)
     flashID.device = 0;
     flashID.type = 0;
     flashID.size = 0;
+    flashID.buffermode = 0;
     flashID.alg = alg;
 
     // enter software ID mode
@@ -89,6 +91,10 @@ void genesis::getFlashID(uint8_t alg)
     writeWord( (uint32_t)0x000000, 0xF000);
     // figure out the size
     flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, flashID.type );
+
+    if(flashID.manufacturer == 0x01){
+        flashID.buffermode = 1;
+    }
 }
 
 /*******************************************************************//**
@@ -121,6 +127,38 @@ void genesis::calcChecksum()
     
     //Send something other than a "." to indicate we are done
     Serial.print("!");
+}
+
+/*******************************************************************//**
+ * The programWordBuffer() function uses the S29GL0xx buffer mode
+ * to program a block of words at once
+ **********************************************************************/
+void genesis::programWordBuffer(uint32_t address, uint16_t * buf, uint8_t size)
+{
+    uint8_t i;
+    uint32_t sectorAddr, writeAddr;
+
+    // address must full within a 32b/16w boundary
+    sectorAddr = 0xFFFFFFE0 & address;
+    writeAddr = sectorAddr;
+
+    // enter write to buffer mode
+    writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+    writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+    writeWord( sectorAddr, 0x2500);
+    writeWord( sectorAddr, size-1);
+
+    // write contents to program flash buffer
+    for(i=0; i<size; i++){
+        writeWord( writeAddr, *(buf++) );
+        writeAddr += 2;
+    }
+
+    // program buffer to flash
+    writeWord( sectorAddr, 0x2900);
+
+    //use data polling to validate end of program cycle
+    while( toggleBit16(4) != 4 );
 }
 
 /*******************************************************************//**
@@ -161,7 +199,7 @@ void genesis::eraseChip(bool wait)
         intervalMillis = millis();
         
         // wait for 4 consecutive toggle bit success reads before exiting
-        while( toggleBit8(4) != 4 )
+        while( toggleBit16(4) != 4 )
         {
             if( (millis() - intervalMillis) > 250 )
             {
@@ -182,22 +220,22 @@ void genesis::eraseChip(bool wait)
 void genesis::writeByte(uint32_t address, uint8_t data)
 {
 
-    latchAddress(address);
+    latchAddress32(address);
     SET_DATABUS_TO_OUTPUT();
     DATAOUTH = data;
     
     // write to the bus
-    //digitalWrite(nCE, LOW);
-    //digitalWrite(nWR, LOW);
-    PORTCE &= nCE_clrmask;
-    PORTWR &= nWR_clrmask;
+    digitalWrite(nCE, LOW);
+    digitalWrite(nWR, LOW);
+    // PORTCE &= nCE_clrmask;
+    // PORTWR &= nWR_clrmask;
     
-    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    // PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
     
-    //digitalWrite(nWR, HIGH);
-    //digitalWrite(nCE, HIGH);
-    PORTWR |= nWR_setmask;
-    PORTCE |= nCE_setmask;
+    digitalWrite(nWR, HIGH);
+    digitalWrite(nCE, HIGH);
+    // PORTWR |= nWR_setmask;
+    // PORTCE |= nCE_setmask;
     
     SET_DATABUS_TO_INPUT();
     
@@ -210,7 +248,7 @@ void genesis::writeByte(uint32_t address, uint8_t data)
 void genesis::writeByteTime(uint32_t address, uint8_t data)
 {
     
-    latchAddress(address);
+    latchAddress32(address);
     SET_DATABUS_TO_OUTPUT();
 
     //put byte on bus
@@ -233,25 +271,25 @@ uint16_t genesis::readBigWord(uint32_t address)
 {
     uint16_t readData;
 
-    latchAddress(address);
+    latchAddress32(address);
     SET_DATABUS_TO_INPUT();
 
-    // read the bus
-    //digitalWrite(nCE, LOW);
-    //digitalWrite(nRD, LOW);
-    PORTCE &= nCE_clrmask;
-    PORTRD &= nRD_clrmask;
-    PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow
+    // read the bus, setup the direction on the level shifters first to avoid contention
+    digitalWrite(nRD, LOW);
+    digitalWrite(nCE, LOW);
+    // PORTCE &= nCE_clrmask;
+    // PORTRD &= nRD_clrmask;
+    // PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow
     
     //convert to big endian while reading
     readData = (uint16_t)DATAINH;
     readData <<= 8;
     readData |= (uint16_t)(DATAINL & 0x00FF);
   
-    //digitalWrite(nCE, HIGH);
-    //digitalWrite(nRD, HIGH);
-    PORTRD |= nRD_setmask;
-    PORTCE |= nCE_setmask;
+    digitalWrite(nCE, HIGH);
+    digitalWrite(nRD, HIGH);
+    // PORTRD |= nRD_setmask;
+    // PORTCE |= nCE_setmask;
 
     return readData;
 }

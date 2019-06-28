@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 ########################################################################
 # \file  hardware.py
@@ -29,14 +29,12 @@ import sys
 import glob
 import time
 import serial
-import getopt
-import argparse
-import struct
+
 
 ## Universal Mega Dumper
 #
-#  All communications with the UMD are handled by the umd class
-class umd:
+#  All communications with the UMD are handled by the umddb class
+class umddb:
     
     ## UMD Modes
     cartType = ""
@@ -131,6 +129,7 @@ class umd:
                 response = ser.readline().decode("utf-8")
                 if response == "thunder\r\n":
                     dbPort = serialport
+                    break
                 ser.close()
             except (OSError, serial.SerialException):
                 pass
@@ -169,10 +168,18 @@ class umd:
         self.serialPort.write(bytes("getid t\r\n","utf-8"))
         data = int.from_bytes(self.serialPort.read(1), byteorder="little" )
         self.flashIDData.update({"Type": hex(data) })
+        # Algorithm
+        self.serialPort.write(bytes("getid a\r\n", "utf-8"))
+        data = int.from_bytes(self.serialPort.read(1), byteorder="little")
+        self.flashIDData.update({"Algorithm": hex(data)})
         # Size
         self.serialPort.write(bytes("getid s\r\n","utf-8"))
         data = int.from_bytes(self.serialPort.read(4), byteorder="little" )
         self.flashIDData.update({"Size": hex(data) })
+        # Buffer mode
+        self.serialPort.write(bytes("getid b\r\n","utf-8"))
+        data = int.from_bytes(self.serialPort.read(1), byteorder="little" )
+        self.flashIDData.update({"Buffered Mode": hex(data) })
                 
 ########################################################################    
 ## getSfFileList
@@ -184,12 +191,23 @@ class umd:
     def setMode(self, mode):
         
         #self.modes.get(mode)
-        
-        self.serialPort.write(bytes("setmode {}\r\n".format(self.modes.get(mode)),"utf-8"))
+
+        # force flash algorithm 1 (microchip 8bit flash) for SMS
+        if mode == 'SMS':
+            self.serialPort.write(bytes("setmode {} 1\r\n".format(self.modes.get(mode)),"utf-8"))
+        else:
+            self.serialPort.write(bytes("setmode {}\r\n".format(self.modes.get(mode)),"utf-8"))
+
         response = self.serialPort.readline().decode("utf-8")
         expect = "mode = {}\r\n".format(self.modes.get(mode))
-        if ( response != expect ):
+        if response != expect:
             print("umd.setMode - expected '{}' : received '{}'".format(expect, response))
+        #else:
+            #print("umd.setMode - expected '{}' : received '{}'".format(expect, response))
+
+        # read back algorithm for debug
+        # response = self.serialPort.readline().decode("utf-8")
+        #print(response)
 
 ########################################################################    
 ## sfGetId
@@ -713,7 +731,7 @@ class umd:
                     expected = int(response)
                     response = self.serialPort.readline().decode("utf-8")
                     error = int(response)
-                    print("error at 0x{0:X} expected 0x{1:X} read 0x{2:X}".format(address, expected, error))
+                    print("error at 0x{0:X} expected 0x{1:04X} read 0x{2:04X}".format(address, expected, error))
                 elif( response == "." ):
                     done = 0
                     #print(response, end="", flush=True)

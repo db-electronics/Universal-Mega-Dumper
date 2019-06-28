@@ -35,11 +35,12 @@
 #define DATAH_DDR       DDRD      /**< DDRD data direction for high byte of databus */
 #define DATAL_DDR       DDRC      /**< DDRC data direction for low byte of databus */
 
+// setting DATAOUTx to all 1's fixes the S29GL032 reading problem, this activates the pull-up resistors
 #define SET_DATABUS_TO_INPUT() 	\
 	DATAH_DDR = 0x00;			\
 	DATAL_DDR = 0x00;			\
-	DATAOUTH = 0x00;			\
-	DATAOUTL = 0x00;			\
+	DATAOUTH = 0xFF;			\
+	DATAOUTL = 0xFF;			\
 
 #define SET_DATABUS_TO_OUTPUT()	\
 	DATAH_DDR = 0xFF;			\
@@ -87,7 +88,8 @@ class umdbase
             uint8_t device;
             uint8_t type;
             uint32_t size;
-            uint8_t alg;
+            uint8_t alg;            /**< alg = 0 MX29F800 mode, alg = 1 SST39SF0x0 mode */
+            uint8_t buffermode;     /**< buffermode = 0 single write, buffermode = 1 buffered write */
         } flashID;
     
 		/*******************************************************************//**
@@ -111,7 +113,7 @@ class umdbase
          * \brief setup the UMD's hardware for the current cartridge
          * \return void
          **********************************************************************/
-        virtual void setup();
+        virtual void setup(uint8_t alg);
         
         /*******************************************************************//**
          * \name Cartridge Flash Functions
@@ -185,7 +187,7 @@ class umdbase
          * \param address 16bit address
          * \return byte from cartridge
          **********************************************************************/
-        virtual uint8_t readByte(uint16_t address);
+        virtual uint8_t readByte16(uint16_t address);
         
         /*******************************************************************//**
          * \brief Read a byte from a 24bit address
@@ -216,7 +218,7 @@ class umdbase
          * \param data byte
          * \return void
          **********************************************************************/
-        virtual void writeByte(uint16_t address, uint8_t data);
+        virtual void writeByte16(uint16_t address, uint8_t data);
         
         /*******************************************************************//**
          * \brief Write a byte to a 24bit address
@@ -315,13 +317,13 @@ class umdbase
          * \brief latch a 16bit address
          * \return void
          **********************************************************************/
-        void latchAddress(uint16_t address);
+        void latchAddress16(uint16_t address);
         
         /*******************************************************************//**
          * \brief latch a 24bit address
          * \return void
          **********************************************************************/
-        void latchAddress(uint32_t address);
+        void latchAddress32(uint32_t address);
                 
         /*******************************************************************//**
          * \brief Read the Manufacturer and Product ID in the Flash IC

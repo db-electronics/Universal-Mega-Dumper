@@ -51,12 +51,11 @@ union dataBuffer{
 void setup() {
 
     uint8_t i;
-    
+
     Serial.begin(460800);
 
-    
     umdbase::initialize();
-    
+
     //flash to show we're alive
     for( i=0 ; i<2 ; i++ )
     {
@@ -68,8 +67,7 @@ void setup() {
 
     if (!SerialFlash.begin(FlashChipSelect)) {
         //error("Unable to access SPI Flash chip");
-    }else
-    {
+    }else{
         SerialFlash.readID(sfID);
         sfSize = SerialFlash.capacity(sfID);
     }
@@ -164,20 +162,25 @@ void _setMode()
     char *arg;
     uint8_t mode;
     
+    // this is the cart type
     arg = SCmd.next();
     mode = (uint8_t)strtoul(arg, (char**)0, 0);
 
     cart = cf.getCart(static_cast<CartFactory::Mode>(mode));
-
-    if (mode <= cf.getMaxCartMode())
-    {
+    if (mode <= cf.getMaxCartMode()){
         Serial.print(F("mode = "));
         Serial.println(arg[0]);
-        cart->setup();
-    }
-    else
-    {
-        Serial.print(F("mode = undefined"));
+
+        // next arg, if present, specificies the flash alg, default to 0
+        if( mode == 3 ){
+            cart->setup(0);
+        }else{
+            cart->setup(0);
+        }
+        
+
+    }else{
+        Serial.println(F("mode = undefined"));
     }
 }
 
@@ -193,6 +196,8 @@ void _setMode()
 void eraseChip()
 {
     char *arg;
+
+    digitalWrite(cart->nLED, LOW);
 
     arg = SCmd.next();
     if( arg != NULL )
@@ -210,6 +215,7 @@ void eraseChip()
     {
         cart->eraseChip(false);
     }
+    digitalWrite(cart->nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -226,12 +232,17 @@ void getFlashID()
 {
     char *arg;
 
+    digitalWrite(cart->nLED, LOW);
+
     //check for next argument, if present
     arg = SCmd.next();
-    if( arg != NULL )
-    {
-        switch(*arg)
-        {
+
+    if( arg != NULL ){
+        switch(*arg){
+            //buffered mode
+            case 'b':
+                Serial.write((char)(cart->flashID.buffermode));
+                break;
             //manufacturer
             case 'm':
                 Serial.write((char)(cart->flashID.manufacturer));
@@ -244,6 +255,10 @@ void getFlashID()
             case 't':
                 Serial.write((char)(cart->flashID.type));
                 break;
+            //algorightm
+            case 'a':
+                Serial.write((char)(cart->flashID.alg));
+                break;
             //size
             case 's':
                 Serial.write((char)(cart->flashID.size));
@@ -254,12 +269,12 @@ void getFlashID()
             default:
                 break;
         }
-    }else
-    {
-        // query the chip when no parameters are passed
-        cart->getFlashID(0);
+    }else{
+        // query the chip when no parameters are passed, use the set algorithm
+        cart->getFlashID(cart->flashID.alg);
     }
-            
+
+    digitalWrite(cart->nLED, HIGH);
 }
 
 /*******************************************************************//**
@@ -656,8 +671,9 @@ void writeSRAMByteBlock()
 void programWordBlock()
 {
     char *arg;
-    uint32_t address=0;
+    uint32_t address=0, sectorAddr;
     uint16_t blockSize, count=0;
+    uint8_t i;
             
     //get the address in the next argument
     arg = SCmd.next();
@@ -672,10 +688,8 @@ void programWordBlock()
     //receive size bytes
     Serial.read(); //there's an extra byte here for some reason - discard
     
-    while( count < blockSize )
-    {
-        if( Serial.available() )
-        {
+    while( count < blockSize ){
+        if( Serial.available() ){
             dataBuffer.byte[count++] = Serial.read();
         }
     }
@@ -683,15 +697,51 @@ void programWordBlock()
     SCmd.clearBuffer();
     
     //program size/2 words
-    count = 0;
-    while( count < ( blockSize >> 1) )
-    {
-        cart->programWord(address, dataBuffer.word[count++], true);
-        address += 2;
+    //if( cart->flashID.buffermode == 0 ){
+    if( 1 ){
+        count = 0;
+        while( count < ( blockSize >> 1) ){
+
+            cart->writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+            cart->writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+            cart->writeWord( (uint32_t)(0x000555 << 1), 0xA000);
+            
+            //write the data
+            cart->writeWord( (uint32_t)address, dataBuffer.word[count++] );
+            address += 2;
+
+            //use data polling to validate end of program cycle
+            while( cart->toggleBit16(4) != 4 );
+        }
+    }else{
+        count = 0;
+        while( count < ( blockSize >> 1) ){
+            // address must full within a 32b/16w boundary
+            address &= 0xFFFFFFE0;
+            sectorAddr = address;
+
+            // enter write to buffer mode
+            cart->writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
+            cart->writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
+            cart->writeWord( sectorAddr, 0x2500);
+            // word count minus 1
+            cart->writeWord( sectorAddr, 15);
+
+            // write contents to program flash buffer
+            for(i=0; i<16; i++){
+                cart->writeWord( address, dataBuffer.word[count++] );
+                address += 2;
+            }
+
+            // program buffer to flash command
+            cart->writeWord( sectorAddr, 0x2900);
+
+            //use data polling to validate end of program cycle
+            while( cart->toggleBit16(4) != 4 );
+        }
     }
     
     Serial.println(F("done"));
-    
     digitalWrite(cart->nLED, HIGH);
 }
 
