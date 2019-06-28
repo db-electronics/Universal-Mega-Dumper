@@ -35,6 +35,7 @@
 #define DATAH_DDR       DDRD      /**< DDRD data direction for high byte of databus */
 #define DATAL_DDR       DDRC      /**< DDRC data direction for low byte of databus */
 
+// setting DATAOUTx to all 1's fixes the S29GL032 reading problem, this activates the pull-up resistors
 #define SET_DATABUS_TO_INPUT() 	\
 	DATAH_DDR = 0x00;			\
 	DATAL_DDR = 0x00;			\

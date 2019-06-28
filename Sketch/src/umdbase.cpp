@@ -504,11 +504,11 @@ uint16_t umdbase::readWord(uint32_t address)
     PORTCE &= nCE_clrmask;
     PORTRD &= nRD_clrmask;
 
-    // PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow
+    // removing this line breaks all reads as the fastest ROM is 70ns
+    PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow, 
     
+    //delayMicroseconds(1);
     //convert to little endian while reading
-    delayMicroseconds(10);
-
     readData = (uint16_t)DATAINL;
     readData <<= 8;
     readData |= (uint16_t)(DATAINH & 0x00FF);
