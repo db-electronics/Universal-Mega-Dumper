@@ -38,6 +38,7 @@ from core.snes import snes
 
 # https://docs.python.org/3/howto/argparse.html
 
+
 ########################################################################    
 ## extractHeader(start, size, ifile, ofile):
 #  \param self self
@@ -55,8 +56,8 @@ def extractHeader(start, size, ifile, ofile):
     with open(ofile, "wb+") as fwrite:
         with open(ifile, "rb") as fread:
             fread.seek(start, 0)
-            readBytes = fread.read(size)
-            fwrite.write(readBytes)
+            read_bytes = fread.read(size)
+            fwrite.write(read_bytes)
 
 ####################################################################################
 ## Main

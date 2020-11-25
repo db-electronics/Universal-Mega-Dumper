@@ -421,15 +421,15 @@ class umddb:
 ########################################################################
     def eraseChip(self, chip):
         
-        startTime = time.time()
-        self.serialPort.write(bytes("erase w\r\n".format(chip),"utf-8"))
+        start_time = time.time()
+        self.serialPort.write(bytes("erase w\r\n".format(chip), "utf-8"))
         
         response = self.serialPort.read(1).decode("utf-8")
-        while( response == "." ):
+        while response == ".":
             print(response, end="", flush=True)
             response = self.serialPort.read(1).decode("utf-8")
         
-        self.opTime = time.time() - startTime
+        self.opTime = time.time() - start_time
         print("")
 
 ########################################################################    
@@ -443,13 +443,13 @@ class umddb:
     def programSingle(self, address, value):
         
         # 8bits or 16bits wide?
-        if cartType == "Genesis":
+        if self.cartType == "Genesis":
             progCmd = "prgword"
         else:
             progCmd = "prgbyte"
             
         cmd = "{0} {1} {2}\r\n".format(progCmd, address, value)
-        self.serialPort.write(bytes(cmd,"utf-8"))
+        self.serialPort.write(bytes(cmd, "utf-8"))
 
 ########################################################################    
 ## read
@@ -464,11 +464,10 @@ class umddb:
 #  else a new file will be created/overwritten with the binary data
 ########################################################################
     def read(self, address, size, target, outfile):
-    
-        
+
         width = self.busWidth.get(self.cartType)
         
-        #["rom", "save", "bram", "header", "fid", "sfid", "sf", "sflist", "byte", "word", "sbyte", "sword"]
+        # ["rom", "save", "bram", "header", "fid", "sfid", "sf", "sflist", "byte", "word", "sbyte", "sword"]
         if( width == 8 ):
             if( target == "byte" or target == "sbyte" ):
                 readCmd = "rdbyte"
