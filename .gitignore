@@ -7,7 +7,6 @@ Python/html
 
 # Geany project files
 *.geany
-*.vscode
 *.code-workspace
 
 # Byte-compiled / optimized / DLL files
