@@ -43,10 +43,15 @@ void sms::setup(uint8_t alg)
     pinMode(nCE, OUTPUT);
     digitalWrite(nRD, HIGH);
 
+    // reset pulse
+    pinMode(SMS_nRST, OUTPUT);
+    digitalWrite(SMS_nRST, LOW);
+    delay(1);
+    digitalWrite(SMS_nRST, HIGH);
+
     //set default slot registers
-    setSMSSlotRegister(0,SMS_SLOT_0_ADDR);
-    setSMSSlotRegister(1,SMS_SLOT_1_ADDR);
-    setSMSSlotRegister(2,SMS_SLOT_2_ADDR);
+    setSMSSlotRegister(1, (uint32_t)SMS_SLOT_1_ADDR);
+    setSMSSlotRegister(2, (uint32_t)SMS_SLOT_2_ADDR);
 
     SMS_SelectedPage = 2;
     flashID.alg = alg;
@@ -70,47 +75,28 @@ void sms::getFlashID(uint8_t alg)
     flashID.alg = alg;
     
     //set default slot registers
-    setSMSSlotRegister(0,SMS_SLOT_0_ADDR);
-    setSMSSlotRegister(1,SMS_SLOT_1_ADDR);
-    setSMSSlotRegister(2,SMS_SLOT_2_ADDR);
+    setSMSSlotRegister(1, (uint32_t)SMS_SLOT_1_ADDR);
+    setSMSSlotRegister(2, (uint32_t)SMS_SLOT_2_ADDR);
     
     //enable rom write enable bit
-    writeByte((uint16_t)SMS_CONF_REG_ADDR,0x80);
-    
-    if( alg == 0 )
-    {        
-        //mx29f800 software ID detect byte mode
-        // enter software ID mode
-        writeByte((uint16_t)0x0AAA, 0xAA);
-        writeByte((uint16_t)0x0555, 0x55);
-        writeByte((uint16_t)0x0AAA, 0x90);
-        // read manufacturer
-        flashID.manufacturer = readByte((uint32_t)0x0000);
-        // read device
-        flashID.device = readByte((uint32_t)0x0001);
-        // exit software ID mode
-        writeByte((uint16_t)0x0000, 0xF0);
-        // figure out the size
-        flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, 0 );
-    }else
-    {
-        //SST39SF0x0 software ID detect
-        //get first byte
-        writeByte((uint32_t)0x5555,0xAA);
-        writeByte((uint32_t)0x2AAA,0x55);
-        writeByte((uint32_t)0x5555,0x90);
-        // read manufacturer
-        flashID.manufacturer = readByte((uint32_t)0x0000);
-        // read device
-        flashID.device = readByte((uint32_t)0x0001);
-        // exit software ID mode
-        writeByte((uint32_t)0x0000, 0xF0);
-        // figure out the size
-        flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, 0 );
-    }
+    writeByte16(SMS_CONF_REG_ADDR,0x80);
+          
+    //mx29f800 software ID detect byte mode
+    // enter software ID mode
+    writeByte16(0x0AAA, 0xAA);
+    writeByte16(0x0555, 0x55);
+    writeByte16(0x0AAA, 0x90);
+    // read manufacturer
+    flashID.manufacturer = readByte16(0x0000);
+    // read device
+    flashID.device = readByte16(0x0001);
+    // exit software ID mode
+    writeByte16(0x0000, 0xF0);
+    // figure out the size
+    flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, 0 );
     
     // disable rom write enable bit
-    writeByte((uint16_t)SMS_CONF_REG_ADDR,0x00);
+    writeByte16(SMS_CONF_REG_ADDR,0x00);
 }
 
 /*******************************************************************//**
@@ -122,9 +108,9 @@ void sms::calcChecksum()
     uint32_t address;
     uint16_t timeOut = 0;
     
-    checksum.expected = (uint16_t)readByte((uint16_t)0x7FFB);
+    checksum.expected = (uint16_t)readByte((uint32_t)0x00007FFB);
     checksum.expected <<= 8;
-    checksum.expected |= (uint16_t)readByte((uint16_t)0x7FFA);
+    checksum.expected |= (uint16_t)readByte((uint32_t)0x00007FFA);
     checksum.romSize = getRomSize();
     
     checksum.calculated = 0;
@@ -172,7 +158,7 @@ uint32_t sms::getRomSize()
     uint32_t romSize;
     
     //get size code in 0x7FFF : TODO - fancy search for 'TMR SEGA' string
-    romSizeCode = readByte( (uint16_t)0x7FFF ) & 0x0F;
+    romSizeCode = readByte((uint32_t)0x00007FFF) & 0x0F;
     
     switch(romSizeCode)
     {
@@ -240,9 +226,13 @@ uint8_t sms::readByte(uint32_t address)
 
     uint8_t readData;
 
-    //latch the address and set slot 2
-    latchAddress16(setSMSSlotRegister(2, address));
-
+    if(address < (uint32_t)SMS_SLOT_2_ADDR ){
+        latchAddress16((uint16_t)address);
+    }else{
+        //latch the address and set slot 2
+        latchAddress16(setSMSSlotRegister(2, address));
+    }
+    
     SET_DATABUS_TO_INPUT();
     
     // read the bus
@@ -265,14 +255,70 @@ uint8_t sms::readByte(uint32_t address)
 void sms::writeByte(uint32_t address, uint8_t data)
 {
 
-    //latch the address and set slot 2
-    latchAddress16(setSMSSlotRegister(2, address));
-    umdbase::writeByte((uint16_t)address, data);
+    if(address < (uint32_t)SMS_SLOT_2_ADDR ){
+        latchAddress16((uint16_t)address);
+    }else{
+        //latch the address and set slot 2
+        latchAddress16(setSMSSlotRegister(2, address));
+    }
+
+    SET_DATABUS_TO_OUTPUT();
+    DATAOUTL = data;
+    
+    // write to the bus
+    digitalWrite(nCE, LOW);
+    digitalWrite(nWR, LOW);
+    // PORTCE &= nCE_clrmask;
+    // PORTWR &= nWR_clrmask;
+    
+    // PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    
+    digitalWrite(nWR, HIGH);
+    digitalWrite(nCE, HIGH);
+    // PORTWR |= nWR_setmask;
+    // PORTCE |= nCE_setmask;
+    
+    SET_DATABUS_TO_INPUT();
+}
+
+/*******************************************************************//**
+ * The programByte function programs a byte into the flash array at a
+ * 24bit address. If the wait parameter is true the function will wait 
+ * for the program operation to complete using data polling before 
+ * returning.
+ * 
+ * \warning Sector or entire IC must be erased prior to programming
+ **********************************************************************/
+void sms::programByte(uint32_t address, uint8_t data, bool wait)
+{
+
+    //enable rom write enable bit
+    writeByte16(SMS_CONF_REG_ADDR,0x80);
+
+    //mx29f800 program byte mode
+    writeByte16(0x0AAA, 0xAA);
+    writeByte16(0x0555, 0x55);
+    writeByte16(0x0AAA, 0xA0);
+	
+	//write the data
+	writeByte(address, data);
+	
+    //disable rom write enable bit
+    writeByte16(SMS_CONF_REG_ADDR,0x00);
+
+	//use data polling to validate end of program cycle
+	if(wait)
+	{
+		while( toggleBit8(2) != 2 );
+	}
+	
+    
 }
 
 /*******************************************************************//**
  * The setSMSSlotRegister function updates the cartridge slot register
- * with the correct bank number of the corresponding address
+ * with the correct bank number of the corresponding address and 
+ * returns the virtual address to read from in the selected slot
  **********************************************************************/
 uint16_t sms::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
 {
@@ -283,19 +329,19 @@ uint16_t sms::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
     switch( slotNum )
     {
         case 0:
-            writeByte( (uint16_t)SMS_SLOT_0_REG_ADDR, selectedPage );
+            writeByte16( SMS_SLOT_0_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_0_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
         case 1:
-            writeByte( (uint16_t)SMS_SLOT_1_REG_ADDR, selectedPage );
+            writeByte16( SMS_SLOT_1_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_1_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
         case 2:
-            writeByte( (uint16_t)SMS_SLOT_2_REG_ADDR, selectedPage );
+            writeByte16( SMS_SLOT_2_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
         default:
-            writeByte( (uint16_t)SMS_SLOT_2_REG_ADDR, selectedPage );
+            writeByte16( SMS_SLOT_2_REG_ADDR, selectedPage );
             virtualAddress = ( SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF) );
             break;
     }
@@ -312,7 +358,7 @@ uint16_t sms::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
  **********************************************************************/
 void sms::enableSram(uint8_t param)
 {
-    writeByte((uint16_t)SMS_CONF_REG_ADDR,0x88);
+    writeByte16(SMS_CONF_REG_ADDR, 0x88);
 }
 
 /*******************************************************************//**
@@ -321,6 +367,6 @@ void sms::enableSram(uint8_t param)
  **********************************************************************/
 void sms::disableSram(uint8_t param)
 {
-    writeByte((uint16_t)SMS_CONF_REG_ADDR,0x00);
+    writeByte16(SMS_CONF_REG_ADDR, 0x00);
 }
 

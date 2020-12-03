@@ -285,38 +285,21 @@ void umdbase::getFlashID(uint8_t alg)
     flashID.type = 0;
     flashID.size = 0;
     flashID.alg = alg;
-    
-    if( alg == 0 )
-    {        
-        //mx29f800 software ID detect byte mode
-        // enter software ID mode
-        writeByte((uint32_t)0x0AAA, 0xAA);
-        writeByte((uint32_t)0x0555, 0x55);
-        writeByte((uint32_t)0x0AAA, 0x90);
-        // read manufacturer
-        flashID.manufacturer = readByte((uint32_t)0x0000);
-        // read device
-        flashID.device = readByte((uint32_t)0x0001);
-        // exit software ID mode
-        writeByte((uint32_t)0x0000, 0xF0);
-        // figure out the size
-        flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, 0 );
-    }else
-    {
-        //SST39SF0x0 software ID detect
-        //get first byte
-        writeByte((uint16_t)0x5555,0xAA);
-        writeByte((uint16_t)0x2AAA,0x55);
-        writeByte((uint16_t)0x5555,0x90);
-        // read manufacturer
-        flashID.manufacturer = readByte((uint16_t)0x0000);
-        // read device
-        flashID.device = readByte((uint16_t)0x0001);
-        // exit software ID mode
-        writeByte((uint16_t)0x0000, 0xF0);
-        // figure out the size
-        flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, 0 );
-    }
+          
+    //mx29f800 software ID detect byte mode
+    // enter software ID mode
+    writeByte((uint32_t)0x0AAA, 0xAA);
+    writeByte((uint32_t)0x0555, 0x55);
+    writeByte((uint32_t)0x0AAA, 0x90);
+    // read manufacturer
+    flashID.manufacturer = readByte((uint32_t)0x0000);
+    // read device
+    flashID.device = readByte((uint32_t)0x0001);
+    // exit software ID mode
+    writeByte((uint32_t)0x0000, 0xF0);
+    // figure out the size
+    flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, 0 );
+
 }
 
 /*******************************************************************//**
@@ -326,27 +309,14 @@ void umdbase::getFlashID(uint8_t alg)
  **********************************************************************/
 void umdbase::eraseChip(bool wait)
 {
-	// which algorithm to use, 0 is most common alg used
-    // 1 is mostly used by Microchip 8bit SST flash only
-	if( flashID.alg == 0 )
-	{
-		//mx29f800 chip erase byte mode
-		writeByte((uint16_t)0x0AAA, 0xAA);
-		writeByte((uint16_t)0x0555, 0x55);
-		writeByte((uint16_t)0x0AAA, 0x80);
-		writeByte((uint16_t)0x0AAA, 0xAA);
-		writeByte((uint16_t)0x0555, 0x55);
-		writeByte((uint16_t)0x0AAA, 0x10);
-	}else
-	{
-		//SST39SF0x0 chip erase
-		writeByte((uint16_t)0x5555, 0xAA);
-		writeByte((uint16_t)0x2AAA, 0x55);
-		writeByte((uint16_t)0x5555, 0x80);
-		writeByte((uint16_t)0x5555, 0xAA);
-		writeByte((uint16_t)0x2AAA, 0x55);
-		writeByte((uint16_t)0x5555, 0x10);
-	}
+
+    //mx29f800 chip erase byte mode
+    writeByte((uint32_t)0x00000AAA, 0xAA);
+    writeByte16(0x0555, 0x55);
+    writeByte16(0x0AAA, 0x80);
+    writeByte16(0x0AAA, 0xAA);
+    writeByte16(0x0555, 0x55);
+    writeByte16(0x0AAA, 0x10);
 	
 	// if wait parameter was specified, do toggle until operation is complete
 	if( wait )
@@ -381,12 +351,12 @@ uint8_t umdbase::toggleBit8(uint8_t attempts)
     uint8_t i;
     
     //first read should always be a 1 according to datasheet
-	oldValue = readByte((uint16_t)0x0000) & 0x40;
+	oldValue = readByte((uint32_t)0x00000000) & 0x40;
 	
 	for( i=0; i<attempts; i++ )
 	{
 		//successive reads compare this read to the previous one for toggle bit
-		readValue = readByte((uint16_t)0x0000) & 0x40;
+		readValue = readByte16(0x0000) & 0x40;
 		if( oldValue == readValue )
 		{
 			retValue += 1;
@@ -411,11 +381,11 @@ uint8_t umdbase::toggleBit16(uint8_t attempts)
     uint8_t i;
     
     //first read of bit 6 - big endian
-    oldValue = readWord((uint32_t)0x0000) & 0x4000;
+    oldValue = readWord((uint32_t)0x00000000) & 0x4000;
 
     for( i=0; i<attempts; i++ ){
         //successive reads compare this read to the previous one for toggle bit
-        readValue = readWord((uint32_t)0x0000) & 0x4000;
+        readValue = readWord((uint32_t)0x00000000) & 0x4000;
         if( oldValue == readValue ){
             retValue += 1;
         }else{
@@ -626,20 +596,10 @@ void umdbase::writeByte(uint32_t address, uint8_t data)
 void umdbase::programByte(uint32_t address, uint8_t data, bool wait)
 {
 	
-	// which algorithm to use, 0 is most common alg used
-	if( flashID.alg == 0 )
-	{
-		//mx29f800 program byte mode
-		writeByte((uint16_t)0x0AAA, 0xAA);
-		writeByte((uint16_t)0x0555, 0x55);
-		writeByte((uint16_t)0x0AAA, 0xA0);
-	}else
-	{
-		//SST39SF0x0 program
-		writeByte((uint16_t)0x5555, 0xAA);
-		writeByte((uint16_t)0x2AAA, 0x55);
-		writeByte((uint16_t)0x5555, 0xA0);
-	}
+    //mx29f800 program byte mode
+    writeByte((uint32_t)0x00000AAA, 0xAA);
+    writeByte16(0x0555, 0x55);
+    writeByte16(0x0AAA, 0xA0);
 	
 	//write the data
 	writeByte(address, data);

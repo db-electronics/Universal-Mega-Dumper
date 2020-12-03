@@ -71,7 +71,15 @@ class sms: public umdbase
          **********************************************************************/
         virtual void writeByte(uint32_t address, uint8_t data);
 
-        
+        /*******************************************************************//**
+         * \brief Program a byte in the Flash IC
+         * \param address 24bit address
+         * \param data byte
+         * \param wait Wait for completion using toggle bit to return from function
+         * \return void
+         **********************************************************************/
+        virtual void programByte(uint32_t address, uint8_t data, bool wait);
+
         /*******************************************************************//**
          * \brief set the SMS slot register value
          * \param slotNum the slot number
@@ -82,14 +90,14 @@ class sms: public umdbase
         
         /*******************************************************************//**
          * \brief Enable reading and writing to the SRAM
-         * \param param none for Genesis
+         * \param param none for SMS
          * \return void
          **********************************************************************/
         virtual void enableSram(uint8_t param);
         
         /*******************************************************************//**
          * \brief Disable reading and writing to the SRAM
-         * \param param none for Genesis
+         * \param param none for SMS
          * \return void
          **********************************************************************/
         virtual void disableSram(uint8_t param);
