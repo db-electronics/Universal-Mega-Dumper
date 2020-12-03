@@ -330,11 +330,9 @@ void calcChecksum()
 void readByteBlock()
 {
     char *arg;
-    bool sramRead = false;
-    bool bankedPCE = false;
     uint32_t address = 0;
     uint16_t blockSize = 0, i;
-    uint8_t data, bank = 0;
+    uint8_t data;
 
     //get the address in the next argument
     arg = SCmd.next();
@@ -344,26 +342,8 @@ void readByteBlock()
     arg = SCmd.next(); 
     blockSize = strtoul(arg, (char**)0, 0);
     
-    //check for next argument, if present, for type of read
-    arg = SCmd.next();
-    if( arg != NULL )
-    {
-        switch(*arg)
-        {
-            case 's':
-                sramRead = true;
-                break;
-            case 'b':
-                bankedPCE = true;
-                break;
-            default:
-                break;
-        }
-    }
-    
     digitalWrite(cart->nLED, LOW);
     
-
     for( i = 0; i < blockSize; i++ )
     {
         data = cart->readByte(address++);
@@ -494,7 +474,6 @@ void readBlock()
     uint32_t address = 0, addrOffset = 0;
     uint16_t blockSize = 0, i, restBlockSize = 0;
     uint16_t readWord;
-    uint8_t readByte;
 
     //get the address in the next argument
     arg = SCmd.next();

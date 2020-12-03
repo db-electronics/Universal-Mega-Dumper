@@ -26,6 +26,7 @@
             "browse": {
                 "limitSymbolsToIncludedHeaders": false,
                 "path": [
+                    "${workspaceFolder}/**",
                     "C:\\Program Files (x86)\\Arduino\\hardware\\teensy\\avr\\libraries\\**",
                     "C:\\Program Files (x86)\\Arduino\\hardware\\teensy\\avr\\cores\\**",
                     "C:\\Program Files (x86)\\Arduino\\hardware\\tools\\arm\\**",

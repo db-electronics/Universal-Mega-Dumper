@@ -95,8 +95,9 @@ class umddb:
         self.cartType = mode
         self.connectUMD(mode, port)
 
+
 ########################################################################    
-## connectUMD
+#  connectUMD
 #  \param self self
 #  \param mode the UMD mode
 #  
@@ -105,8 +106,8 @@ class umddb:
     def connectUMD(self, mode, port):
 
         #print("mode set value = {0}".format(self.modes.get(mode)))
-        
-        dbPort = ""
+
+        self.serialPort = None
         
         if port is None:
             # enumerate ports
@@ -122,24 +123,25 @@ class umddb:
             ports = [port]
 
         # test for dumper on port
-        for serialport in ports:
+        for serial_port in ports:
             try:
-                ser = serial.Serial( port = serialport, baudrate = 460800, bytesize = serial.EIGHTBITS, parity = serial.PARITY_NONE, stopbits = serial.STOPBITS_ONE, timeout=0.1)
-                ser.write(bytes("flash\r\n","utf-8"))
-                response = ser.readline().decode("utf-8")
+                test_port = serial.Serial(port=serial_port,
+                                          baudrate=460800,
+                                          bytesize=serial.EIGHTBITS,
+                                          parity=serial.PARITY_NONE,
+                                          stopbits=serial.STOPBITS_ONE,
+                                          timeout=5)
+                test_port.write(bytes("flash\r\n", "utf-8"))
+                response = test_port.readline().decode("utf-8")
                 if response == "thunder\r\n":
-                    dbPort = serialport
+                    self.serialPort = test_port
+                    self.setMode(mode)
                     break
-                ser.close()
+                test_port.close()
             except (OSError, serial.SerialException):
                 pass
         
-        # use the port found above to setup a 'permanent' object to communicate with the UMD        
-        try:
-            self.serialPort = serial.Serial( port = dbPort, baudrate = 460800, bytesize = serial.EIGHTBITS, parity = serial.PARITY_NONE, stopbits = serial.STOPBITS_ONE, timeout=1)
-            # set the UMD mode while we're at it
-            self.setMode(mode)
-        except (OSError, serial.SerialException):
+        if serial_port is None:
             print("class umd.__init__ - could not connect to umd")
             sys.exit(1)
 
@@ -192,11 +194,7 @@ class umddb:
         
         #self.modes.get(mode)
 
-        # force flash algorithm 1 (microchip 8bit flash) for SMS
-        if mode == 'SMS':
-            self.serialPort.write(bytes("setmode {} 1\r\n".format(self.modes.get(mode)),"utf-8"))
-        else:
-            self.serialPort.write(bytes("setmode {}\r\n".format(self.modes.get(mode)),"utf-8"))
+        self.serialPort.write(bytes("setmode {}\r\n".format(self.modes.get(mode)), "utf-8"))
 
         response = self.serialPort.readline().decode("utf-8")
         expect = "mode = {}\r\n".format(self.modes.get(mode))
@@ -510,7 +508,7 @@ class umddb:
                 # show command
                 print(cmd, end="")
                 
-                self.serialPort.write(bytes(cmd,"utf-8"))
+                self.serialPort.write(bytes(cmd, "utf-8"))
                 response = self.serialPort.read(sizeOfRead)
                 
                 # loop through results, pretty display to console

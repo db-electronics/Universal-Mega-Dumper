@@ -75,13 +75,13 @@ if __name__ == "__main__":
 
     
     ## UMD Modes, names on the right must match values inside the classumd.py dicts
-    carts = {"none" : "none",
-            "cv" : "Colecovision",
-            "gen" : "Genesis", 
-            "sms" : "SMS",
-            "pce" : "PCEngine",
-            "tg" : "Turbografx-16",
-            "snes" : "Super Nintendo" }
+    carts = {"none": "none",
+             "cv": "Colecovision",
+             "gen": "Genesis",
+             "sms": "SMS",
+             "pce": "PCEngine",
+             "tg": "Turbografx-16",
+             "snes": "Super Nintendo"}
     
     parser = argparse.ArgumentParser(prog="umd 0.1.0.1")
     parser.add_argument("--mode", 
@@ -299,7 +299,7 @@ if __name__ == "__main__":
                                     matched_name = elem.attrib['name']
                                     break
                             elem.clear()
-                    if matched_name is not "":
+                    if matched_name != "":
                         try:
                             os.remove(matched_name)
                         except OSError:

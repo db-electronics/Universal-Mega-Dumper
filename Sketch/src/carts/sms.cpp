@@ -246,18 +246,13 @@ uint8_t sms::readByte(uint32_t address)
     SET_DATABUS_TO_INPUT();
     
     // read the bus
-    //digitalWrite(nCE, LOW);
-    //digitalWrite(nRD, LOW);
-    PORTCE &= nCE_clrmask;
-    PORTRD &= nRD_clrmask;
-    PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow;
+    digitalWrite(nCE, LOW);
+    digitalWrite(nRD, LOW);
     
     readData = DATAINL;
     
-    //digitalWrite(nCE, HIGH);
-    //digitalWrite(nRD, HIGH);
-    PORTRD |= nRD_setmask;
-    PORTCE |= nCE_setmask;
+    digitalWrite(nCE, HIGH);
+    digitalWrite(nRD, HIGH);
     
     return readData;
     
