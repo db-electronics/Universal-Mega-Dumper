@@ -57,6 +57,13 @@ class sms: public umdbase
 		virtual uint32_t getRomSize();
         
         /*******************************************************************//**
+         * \brief Erase the entire Flash IC
+         * \param wait specify whether to wait for the operation to complete before returning
+         * \return void
+         **********************************************************************/
+        virtual void eraseChip(bool wait);
+
+        /*******************************************************************//**
          * \brief Read a byte from a 24bit address using mapper
          * \param address 24bit address
          * \return byte from cartridge
@@ -102,9 +109,11 @@ class sms: public umdbase
          **********************************************************************/
         virtual void disableSram(uint8_t param);
         
+        void romWrites(bool enable);
         
     private:
 
+        static const uint16_t SMS_SLOT_MASK = 0x3FFF;
         static const uint16_t SMS_SLOT_0_ADDR = 0x0000;     ///< SMS Sega Mapper slot 0 base address 0x0000 - 0x3FFF
         static const uint16_t SMS_SLOT_1_ADDR = 0x4000;     ///< SMS Sega Mapper slot 1 base address 0x4000 - 0x7FFF
         static const uint16_t SMS_SLOT_2_ADDR = 0x8000;     ///< SMS Sega Mapper slot 2 base address 0x8000 - 0xBFFF
@@ -119,6 +128,7 @@ class sms: public umdbase
     
         //Master System pin functions
         static const uint8_t SMS_nRST = 42;
+
 };
 
 #endif

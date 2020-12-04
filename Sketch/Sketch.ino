@@ -96,6 +96,7 @@ void setup() {
     
     //program commands
     SCmd.addCommand("prgwblk",programWordBlock);
+    SCmd.addCommand("prgbblk",programByteBlock);
     
     //register callbacks for SerialCommand related to the onboard serial flash
     SCmd.addCommand("sfgetid",sfGetID);
