@@ -1,5 +1,7 @@
 # ROM folders in Python subdir
 Python/roms/*
+*.bin
+*.sms
 
 # Doxygen output
 html/
