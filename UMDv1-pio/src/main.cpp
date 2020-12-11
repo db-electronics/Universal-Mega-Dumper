@@ -120,7 +120,7 @@ void setup() {
     
     //program commands
     SCmd.addCommand("prgwblk",programWordBlock);
-    //SCmd.addCommand("prgbblk",programByteBlock);
+    SCmd.addCommand("prgbblk",programByteBlock);
     
     //register callbacks for SerialCommand related to the onboard serial flash
     SCmd.addCommand("sfgetid",sfGetID);
@@ -280,10 +280,6 @@ void getFlashID()
             case 't':
                 Serial.write((char)(cart->flashID.type));
                 break;
-            //algorightm
-            case 'a':
-                Serial.write((char)(cart->flashID.alg));
-                break;
             //size
             case 's':
                 Serial.write((char)(cart->flashID.size));
@@ -296,7 +292,7 @@ void getFlashID()
         }
     }else{
         // query the chip when no parameters are passed, use the set algorithm
-        cart->getFlashID(cart->flashID.alg);
+        cart->getFlashID();
     }
 
     digitalWrite(cart->nLED, HIGH);
@@ -658,6 +654,63 @@ void writeSRAMByteBlock()
 }
 
 /*******************************************************************//**
+ *  \brief Program a byte block in the cartridge
+ *  
+ *  Usage:
+ *  progword 0x0000 0x12
+ *    - programs 0x12 into address 0x0000
+ *  progword 412 12
+ *    - programs decimal 12 into address decimal 412
+ *  
+ *  \return Void
+ **********************************************************************/
+void programByteBlock()
+{
+    char *arg;
+    uint32_t address=0;
+    uint16_t blockSize, count=0;
+            
+    //get the address in the next argument
+    arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the size in the next argument
+    arg = SCmd.next();
+    blockSize = strtoul(arg, (char**)0, 0);
+    
+    digitalWrite(cart->nLED, LOW);
+    
+    //receive size bytes
+    Serial.read(); //there's an extra byte here for some reason - discard
+    
+    while( count < blockSize ){
+        if( Serial.available() ){
+            dataBuffer.byte[count++] = Serial.read();
+        }
+    }
+    
+    SCmd.clearBuffer();
+    
+    count = 0;
+    while( count < blockSize ){
+
+        cart->writeByte( (uint32_t)0x00000555, 0xAA);
+        cart->writeByte( (uint32_t)0x000002AA, 0x55);
+        cart->writeByte( (uint32_t)0x00000555, 0xA0);
+        
+        //write the data
+        cart->writeByte( (uint32_t)address, dataBuffer.byte[count++] );
+        address++;
+
+        //use data polling to validate end of program cycle
+        while( cart->toggleBit16(4) != 4 );
+    }
+    
+    Serial.println(F("done"));
+    digitalWrite(cart->nLED, HIGH);
+}
+
+/*******************************************************************//**
  *  \brief Program a word block in the cartridge
  *  Program a word in the cartridge. Prior to progamming,
  *  the sector or entire chip must be erased. The function
@@ -720,7 +773,7 @@ void programWordBlock()
     }else{
         count = 0;
         while( count < ( blockSize >> 1) ){
-            // address must full within a 32b/16w boundary
+            // address must fall within a 32b/16w boundary
             address &= 0xFFFFFFE0;
             sectorAddr = address;
 

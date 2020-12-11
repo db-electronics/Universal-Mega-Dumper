@@ -54,7 +54,6 @@ void sms::setup(uint8_t alg)
     setSMSSlotRegister(2, (uint32_t)SMS_SLOT_2_ADDR);
 
     SMS_SelectedPage = 2;
-    flashID.alg = alg;
     info.cartType = SMS;
     info.busSize = 8;
 }
@@ -64,14 +63,13 @@ void sms::setup(uint8_t alg)
  * Spansion devices) and size of the flash. SMS flash ID reads need to
  * ensure the proper mapper register values are set.
  **********************************************************************/
-void sms::getFlashID(uint8_t alg)
+void sms::getFlashID(void)
 {
     // clear all data
     flashID.manufacturer = 0;
     flashID.device = 0;
     flashID.type = 0;
     flashID.size = 0;
-    flashID.alg = alg;
     
     //set default slot registers
     setSMSSlotRegister(1, (uint32_t)SMS_SLOT_1_ADDR);

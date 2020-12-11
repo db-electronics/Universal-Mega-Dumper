@@ -88,7 +88,6 @@ class umdbase
             uint8_t device;
             uint8_t type;
             uint32_t size;
-            uint8_t alg;            /**< alg = 0 MX29F800 mode, alg = 1 SST39SF0x0 mode */
             uint8_t buffermode;     /**< buffermode = 0 single write, buffermode = 1 buffered write */
         } flashID;
     
@@ -113,7 +112,7 @@ class umdbase
          * \brief setup the UMD's hardware for the current cartridge
          * \return void
          **********************************************************************/
-        virtual void setup(uint8_t alg);
+        virtual void setup(uint8_t param);
         
         /*******************************************************************//**
          * \name Cartridge Flash Functions
@@ -125,7 +124,7 @@ class umdbase
          * \param alg The algorithm to use, SST 5V devices are different
          * \return void
          **********************************************************************/
-        virtual void getFlashID(uint8_t alg);
+        virtual void getFlashID();
         
         /*******************************************************************//**
          * \brief Erase the entire Flash IC

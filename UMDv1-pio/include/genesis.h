@@ -36,14 +36,14 @@ class genesis: public umdbase
          **********************************************************************/
         genesis();
         
-        virtual void setup(uint8_t alg);
+        virtual void setup(uint8_t param);
         
         /*******************************************************************//**
          * \brief Read the Manufacturer and Product ID in the Flash IC
          * \param alg The algorithm to use, SST 5V devices are different
          * \return void
          **********************************************************************/
-        virtual void getFlashID(uint8_t alg);
+        virtual void getFlashID();
         
         /*******************************************************************//**
          * \brief Perform checksum operations on the cartridge

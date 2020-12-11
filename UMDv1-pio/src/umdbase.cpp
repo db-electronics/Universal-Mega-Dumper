@@ -71,7 +71,7 @@ umdbase::~umdbase()
 /*******************************************************************//**
  * The setup function sets all of the Teensy pins
  **********************************************************************/
-void umdbase::setup(uint8_t alg)
+void umdbase::setup(uint8_t param)
 {
     SET_DATABUS_TO_INPUT();
     
@@ -106,8 +106,6 @@ void umdbase::setup(uint8_t alg)
     pinMode(CTRL5, INPUT);
     pinMode(CTRL6, INPUT);
     pinMode(CTRL7, INPUT);
-
-    flashID.alg = alg;
 
 }
 
@@ -276,7 +274,7 @@ void umdbase::latchAddress16(uint16_t address)
  * Spansion devices) and size of the flash. Since mostly all cartridges
  * are 8bits wide the flash IDs are all handled as 8bits.
  **********************************************************************/
-void umdbase::getFlashID(uint8_t alg)
+void umdbase::getFlashID(void)
 {
     
     // clear all data
@@ -284,7 +282,6 @@ void umdbase::getFlashID(uint8_t alg)
     flashID.device = 0;
     flashID.type = 0;
     flashID.size = 0;
-    flashID.alg = alg;
           
     //mx29f800 software ID detect byte mode
     // enter software ID mode

@@ -32,7 +32,7 @@ genesis::genesis()
 /*******************************************************************//**
  * Setup the ports for Genesis mode
  **********************************************************************/
-void genesis::setup(uint8_t alg)
+void genesis::setup(uint8_t param)
 {
     pinMode(GEN_SL1, INPUT);
     pinMode(GEN_SR1, INPUT);
@@ -51,7 +51,6 @@ void genesis::setup(uint8_t alg)
 
     info.cartType = GENESIS;
     info.busSize = 16;
-    flashID.alg = alg;
     
     _resetPin = GEN_nVRES;
     //resetCart();   
@@ -62,7 +61,7 @@ void genesis::setup(uint8_t alg)
  * Spansion devices) and size of the flash. Genesis needs to do this 
  * in word mode therefore we override the virtual base function.
  **********************************************************************/
-void genesis::getFlashID(uint8_t alg)
+void genesis::getFlashID(void)
 {
     uint16_t readData = 0;
     
@@ -72,7 +71,6 @@ void genesis::getFlashID(uint8_t alg)
     flashID.type = 0;
     flashID.size = 0;
     flashID.buffermode = 0;
-    flashID.alg = alg;
 
     // enter software ID mode
     writeWord( (uint32_t)(0x000555 << 1), 0xAA00);

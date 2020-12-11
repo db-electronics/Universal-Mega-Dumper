@@ -170,10 +170,6 @@ class umddb:
         self.serialPort.write(bytes("getid t\r\n","utf-8"))
         data = int.from_bytes(self.serialPort.read(1), byteorder="little" )
         self.flashIDData.update({"Type": hex(data) })
-        # Algorithm
-        self.serialPort.write(bytes("getid a\r\n", "utf-8"))
-        data = int.from_bytes(self.serialPort.read(1), byteorder="little")
-        self.flashIDData.update({"Algorithm": hex(data)})
         # Size
         self.serialPort.write(bytes("getid s\r\n","utf-8"))
         data = int.from_bytes(self.serialPort.read(4), byteorder="little" )
