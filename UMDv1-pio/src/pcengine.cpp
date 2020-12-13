@@ -31,9 +31,9 @@ pcengine::pcengine()
 }
 
 /*******************************************************************//**
- * Setup the ports for Genesis mode
+ * Setup the ports for PC Engine / Turbografx mode
  **********************************************************************/
-void pcengine::setup(uint8_t alg)
+void pcengine::setup(uint8_t param)
 {
 
     pinMode(nWR, OUTPUT);
@@ -49,6 +49,6 @@ void pcengine::setup(uint8_t alg)
     delay(1);
     digitalWrite(SMS_nRST, HIGH);
 
-    info.cartType = SMS;
+    info.console = static_cast<console_e>(param);
     info.busSize = 8;
 }

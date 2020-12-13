@@ -49,7 +49,7 @@ void genesis::setup(uint8_t param)
     pinMode(GEN_nTIME, OUTPUT);
     digitalWrite(GEN_nTIME, HIGH);
 
-    info.cartType = GENESIS;
+    info.console = GENESIS;
     info.busSize = 16;
     
     _resetPin = GEN_nVRES;

@@ -27,16 +27,15 @@
 #include "umdbase.h"
 
 
-
 class CartFactory 
 {
 public:
     CartFactory();
-#define CARTS_LEN  7
-    enum Mode : uint8_t { UNDEFINED, COLECO, GEN, SMS, PCE, TG16, SNES, SNESLO };
+//#define CARTS_LEN  7
+    //enum Mode : uint8_t { UNDEFINED, COLECO, GEN, SMS, PCE, TG16, SNES, SNESLO };
 
-    umdbase* getCart(Mode mode);
-    Mode getMaxCartMode();
+    umdbase* getCart(umdbase::console_e mode);
+    umdbase::console_e getMaxCartMode();
 
     ~CartFactory();
 
@@ -44,7 +43,7 @@ private:
     CartFactory(const CartFactory&) = delete;
 
     // Array of carts indexed by Mode
-    umdbase* carts[CARTS_LEN+1];
+    umdbase* carts[umdbase::CARTS_LEN];
 
     umdbase* noop;
 };

@@ -59,24 +59,23 @@ class umdbase
         static const uint8_t nPB = 9;                       ///< Pushbutton pin number
     
 		/*******************************************************************//**
-         * \brief e_carttype
+         * \brief console_e
          * eMode is used by umd to keep track of which mode is currently set
          **********************************************************************/
-        enum e_carttype
+        enum console_e : uint8_t 
         { 
-            undefined,				/**< Undefined mode */
-            COLECOVISION,			/**< ColecoVision mode */
+            UNDEFINED = 0,			/**< Undefined mode */
+            COLECO,			        /**< ColecoVision mode */
             GENESIS,         		/**< Genesis Megadrive mode */
-            TG,         			/**< TG-16 mode */
-            PC,         			/**< PC Engine mode */
-            SMS,         			/**< Master System mode */
-            SN,         			/**< Super Nintendo mode */
-            SNLO        			/**< Super Nintendo LoROM mode */
+            SMS,         			/**< Master System */
+            PCE,         			/**< PC Engine mode */
+            TG16                    /**< TG-16 mode */
         };
-    
+        static const uint8_t CARTS_LEN = 6;
+
 		struct s_info {
 			uint8_t busSize;
-			e_carttype cartType;	
+			console_e console;	
 		} info;
     
 		/*******************************************************************//**

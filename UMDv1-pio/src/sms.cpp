@@ -54,7 +54,7 @@ void sms::setup(uint8_t alg)
     setSMSSlotRegister(2, (uint32_t)SMS_SLOT_2_ADDR);
 
     SMS_SelectedPage = 2;
-    info.cartType = SMS;
+    info.console = SMS;
     info.busSize = 8;
 }
 

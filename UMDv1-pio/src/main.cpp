@@ -185,25 +185,18 @@ void _setMode()
     static CartFactory cf;
     
     char *arg;
-    uint8_t mode;
+    uint8_t console;
     
     // this is the cart type
     arg = SCmd.next();
-    mode = (uint8_t)strtoul(arg, (char**)0, 0);
+    console = (uint8_t)strtoul(arg, (char**)0, 0);
 
-    cart = cf.getCart(static_cast<CartFactory::Mode>(mode));
-    if (mode <= cf.getMaxCartMode()){
+    cart = cf.getCart(static_cast<umdbase::console_e>(console));
+    if (console <= cf.getMaxCartMode()){
         Serial.print(F("mode = "));
         Serial.println(arg[0]);
-
-        // next arg, if present, specificies the flash alg, default to 0
-        if( mode == 3 ){
-            cart->setup(0);
-        }else{
-            cart->setup(0);
-        }
+        cart->setup(0);
         
-
     }else{
         Serial.println(F("mode = undefined"));
     }
@@ -631,7 +624,7 @@ void writeSRAMByteBlock()
     if( cart->info.busSize == 16 )
     {
         //Genesis SRAM only on odd bytes
-        if( cart->info.cartType == umdbase::e_carttype::GENESIS )
+        if( cart->info.console == umdbase::GENESIS )
         {
             for( count=1; count < blockSize ; count += 2 )
             {
