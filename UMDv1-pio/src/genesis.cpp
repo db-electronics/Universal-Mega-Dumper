@@ -50,7 +50,8 @@ void genesis::setup(uint8_t param)
     digitalWrite(GEN_nTIME, HIGH);
 
     info.console = GENESIS;
-    info.busSize = 16;
+    info.mirrored_bus = false;
+    info.bus_size = 16;
     
     _resetPin = GEN_nVRES;
     //resetCart();   

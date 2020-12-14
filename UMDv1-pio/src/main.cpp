@@ -26,13 +26,13 @@
 #include <SerialFlash.h>                    // https://github.com/PaulStoffregen/SerialFlash
 #include <SPI.h>
 
-#include "umdbase.h"
+#include "umdv1.h"
 #include "cartfactory.h"
 
 #define DATA_BUFFER_SIZE            2048    ///< Size of serial receive data buffer
 
 SerialCommand SCmd;                         ///< Receive and parse serial commands
-umdbase *cart;                              ///< Pointer to all cartridge classes
+umdv1 *cart;                              ///< Pointer to all cartridge classes
 
 const int FlashChipSelect = 20;             ///< Digital pin for flash chip CS pin
 SerialFlashFile flashFile;                  ///< Serial flash file object
@@ -78,14 +78,14 @@ void setup() {
 
     Serial.begin(460800);
 
-    umdbase::initialize();
+    umdv1::initialize();
 
     //flash to show we're alive
     for( i=0 ; i<2 ; i++ )
     {
-        digitalWrite(umdbase::nLED, LOW);
+        digitalWrite(umdv1::nLED, LOW);
         delay(100);
-        digitalWrite(umdbase::nLED, HIGH);
+        digitalWrite(umdv1::nLED, HIGH);
         delay(100);
     }
 
@@ -191,7 +191,7 @@ void _setMode()
     arg = SCmd.next();
     console = (uint8_t)strtoul(arg, (char**)0, 0);
 
-    cart = cf.getCart(static_cast<umdbase::console_e>(console));
+    cart = cf.getCart(static_cast<umdv1::console_e>(console));
     if (console <= cf.getMaxCartMode()){
         Serial.print(F("mode = "));
         Serial.println(arg[0]);
@@ -358,10 +358,17 @@ void readByteBlock()
     
     digitalWrite(cart->nLED, LOW);
     
-    for( i = 0; i < blockSize; i++ )
-    {
-        data = cart->readByte(address++);
-        Serial.write((char)(data));
+    // reverse the bytes for PCE
+    if( cart->info.mirrored_bus ){
+        for( i = 0; i < blockSize; i++ ){
+            data = cart->readByte(address++);
+            Serial.write((char)(cart->mirror_byte(data)));
+        }
+    }else{
+        for( i = 0; i < blockSize; i++ ){
+            data = cart->readByte(address++);
+            Serial.write((char)(data));
+        }
     }
     
     digitalWrite(cart->nLED, HIGH);
@@ -514,7 +521,7 @@ void readBlock()
     digitalWrite(cart->nLED, LOW);
 
     // 8 bit reads
-    if( cart->info.busSize == 8 )
+    if( cart->info.bus_size == 8 )
     {
         
     // 16 bit reads
@@ -621,10 +628,10 @@ void writeSRAMByteBlock()
     cart->enableSram(0);
     
     //sram writes different for 8bit and 16bit busses
-    if( cart->info.busSize == 16 )
+    if( cart->info.bus_size == 16 )
     {
         //Genesis SRAM only on odd bytes
-        if( cart->info.console == umdbase::GENESIS )
+        if( cart->info.console == umdv1::GENESIS )
         {
             for( count=1; count < blockSize ; count += 2 )
             {
@@ -676,9 +683,18 @@ void programByteBlock()
     //receive size bytes
     Serial.read(); //there's an extra byte here for some reason - discard
     
-    while( count < blockSize ){
-        if( Serial.available() ){
-            dataBuffer.byte[count++] = Serial.read();
+    // reverse the bytes as they come in for PCE
+    if( cart->info.mirrored_bus ){
+        while( count < blockSize ){
+            if( Serial.available() ){
+                dataBuffer.byte[count++] = cart->mirror_byte(Serial.read());
+            }
+        }
+    }else{
+        while( count < blockSize ){
+            if( Serial.available() ){
+                dataBuffer.byte[count++] = Serial.read();
+            }
         }
     }
     
@@ -897,7 +913,7 @@ void sfBurnCart()
         {
             flashFile.read(dataBuffer.byte, blockSize);
             
-            if( cart->info.busSize == 16 )
+            if( cart->info.bus_size == 16 )
             {
                 for( i=0 ; i < ( blockSize >> 1) ; i++ )
                 {
@@ -1118,7 +1134,7 @@ void sfVerify()
         {
             flashFile.read(dataBuffer.byte, DATA_BUFFER_SIZE);
             
-            if( cart->info.busSize == 16 )
+            if( cart->info.bus_size == 16 )
             {
                 for( i = 0; i < DATA_BUFFER_SIZE/2 ; i++ )
                 {

@@ -1,5 +1,5 @@
 /*******************************************************************//**
- *  \file pcengine.cpp
+ *  \file turbografx.cpp
  *  \author René Richard
  *  \brief This program contains specific functions for the sms cartridge
  *
@@ -21,19 +21,19 @@
 
 #include "Arduino.h"
 #include "umdv1.h"
-#include "pcengine.h"
+#include "turbografx.h"
 
 /*******************************************************************//**
  * The constructor
  **********************************************************************/
-pcengine::pcengine() 
+turbografx::turbografx() 
 {
 }
 
 /*******************************************************************//**
  * Setup the ports for PC Engine / Turbografx mode
  **********************************************************************/
-void pcengine::setup(uint8_t param)
+void turbografx::setup(uint8_t param)
 {
 
     pinMode(nWR, OUTPUT);
@@ -44,29 +44,29 @@ void pcengine::setup(uint8_t param)
     digitalWrite(nRD, HIGH);
 
     // reset pulse
-    pinMode(PCE_nRST, OUTPUT);
-    digitalWrite(PCE_nRST, LOW);
+    pinMode(TG16_nRST, OUTPUT);
+    digitalWrite(TG16_nRST, LOW);
     delay(1);
-    digitalWrite(PCE_nRST, HIGH);
+    digitalWrite(TG16_nRST, HIGH);
 
-    info.console = PCE;
+    info.console = TG16;
     info.mirrored_bus = true;
     info.bus_size = 8;
 }
 
-void pcengine::calcChecksum()
+void turbografx::calcChecksum()
 {
 }
 
-void pcengine::enableSram(uint8_t param)
+void turbografx::enableSram(uint8_t param)
 {
 }
 
-void pcengine::disableSram(uint8_t param)
+void turbografx::disableSram(uint8_t param)
 {
 }
 
-uint32_t pcengine::getRomSize()
+uint32_t turbografx::getRomSize()
 {
     return 0;
 }

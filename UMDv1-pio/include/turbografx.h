@@ -1,5 +1,5 @@
 /*******************************************************************//**
- *  \file pcengine.h
+ *  \file turbografx.h
  *  \author René Richard
  *  \brief This program contains specific functions for the sms cartridge
  *
@@ -19,23 +19,23 @@
  *   along with Universal Mega Dumper.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef pcengine_h
-#define pcengine_h
+#ifndef turbografx_h
+#define turbografx_h
 #include "umdv1.h"
 #include "stdint.h"
 
 /*******************************************************************//** 
- * \class pcengine
- * \brief pcengine specific methods
+ * \class turbografx
+ * \brief turbografx specific methods
  **********************************************************************/
-class pcengine: public umdv1
+class turbografx: public umdv1
 {
     public:
     
         /*******************************************************************//**
          * \brief Constructor
          **********************************************************************/
-        pcengine();
+        turbografx();
         
         virtual void setup(uint8_t param);
         
@@ -59,7 +59,7 @@ class pcengine: public umdv1
     private:
 
         //Master System pin functions
-        static const uint8_t PCE_nRST = 38;
+        static const uint8_t TG16_nRST = 38;
 
 };
 

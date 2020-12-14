@@ -21,44 +21,44 @@
  */
  
 #include <stdint.h>
-#include "umdbase.h"
+#include "umdv1.h"
 #include "cartfactory.h"
 #include "genesis.h"
 #include "sms.h"
 #include "pcengine.h"
+#include "turbografx.h"
 #include "generic.h"
 #include "noopcart.h"
 
 CartFactory::CartFactory()
 {
-    // these must be in the same order as umdbase::console_e
-    carts[umdbase::UNDEFINED]   = new noopcart();
-    carts[umdbase::COLECO] = new GenericCart();
-    carts[umdbase::GENESIS]    = new genesis();
-    carts[umdbase::SMS]    = new sms();
-    carts[umdbase::PCE]    = new GenericCart();
-    carts[umdbase::TG16]   = new GenericCart();
+    // these must be in the same order as umdv1::console_e
+    carts[umdv1::UNDEFINED]   = new noopcart();
+    carts[umdv1::GENESIS]    = new genesis();
+    carts[umdv1::SMS]    = new sms();
+    carts[umdv1::PCE]    = new pcengine();
+    carts[umdv1::TG16]   = new turbografx();
 }
 
 CartFactory::~CartFactory()
 {
-    for (int i=0; i < umdbase::CARTS_LEN; i++)
+    for (int i=0; i < umdv1::CARTS_LEN; i++)
     {
 	    delete carts[i];
     }
 }
 
-umdbase* CartFactory::getCart(umdbase::console_e mode)
+umdv1* CartFactory::getCart(umdv1::console_e mode)
 {
-    if (mode < umdbase::CARTS_LEN && mode > umdbase::UNDEFINED)
+    if (mode < umdv1::CARTS_LEN && mode > umdv1::UNDEFINED)
     {
         return carts[mode];
     }
-    return carts[umdbase::UNDEFINED];
+    return carts[umdv1::UNDEFINED];
 }
 
-umdbase::console_e CartFactory::getMaxCartMode()
+umdv1::console_e CartFactory::getMaxCartMode()
 {
-    return static_cast<umdbase::console_e>(umdbase::CARTS_LEN - 1);
+    return static_cast<umdv1::console_e>(umdv1::CARTS_LEN - 1);
 }
 

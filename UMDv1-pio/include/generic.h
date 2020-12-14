@@ -22,14 +22,14 @@
 #ifndef generic_h
 #define generic_h
 #include <stdint.h>
-#include "umdbase.h"
+#include "umdv1.h"
 /*******************************************************************//** 
  * \class Generic
  * \brief Teensy umd class to read and write db Flash Carts
- * Relies on umdbase for all operations but provides no-op methods for 
- * umdbase's pure virtual functions.
+ * Relies on umdv1 for all operations but provides no-op methods for 
+ * umdv1's pure virtual functions.
  **********************************************************************/
-class GenericCart : public umdbase
+class GenericCart : public umdv1
 {
     virtual void calcChecksum();
 

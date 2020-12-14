@@ -21,8 +21,8 @@
  *   along with Universal Mega Dumper.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef umdbase_h
-#define umdbase_h
+#ifndef umdv1_h
+#define umdv1_h
 
 #define DATAOUTH        PORTD     /**< PORTD used for high byte of databus output */
 #define DATAOUTL        PORTC     /**< PORTC used for low byte of databus output */
@@ -50,7 +50,7 @@
  * \class umdbase
  * \brief Teensy umd class to read and write db Flash Carts
  **********************************************************************/
-class umdbase
+class umdv1
 {
     public:
     
@@ -65,7 +65,6 @@ class umdbase
         enum console_e : uint8_t 
         { 
             UNDEFINED = 0,			/**< Undefined mode */
-            COLECO,			        /**< ColecoVision mode */
             GENESIS,         		/**< Genesis Megadrive mode */
             SMS,         			/**< Master System */
             PCE,         			/**< PC Engine mode */
@@ -74,8 +73,9 @@ class umdbase
         static const uint8_t CARTS_LEN = 6;
 
 		struct s_info {
-			uint8_t busSize;
-			console_e console;	
+			uint8_t bus_size;
+			console_e console;
+            bool mirrored_bus;
 		} info;
     
 		/*******************************************************************//**
@@ -105,7 +105,7 @@ class umdbase
          **********************************************************************/
         static void initialize();
 
-	virtual ~umdbase();
+	    virtual ~umdv1();
         
         /*******************************************************************//**
          * \brief setup the UMD's hardware for the current cartridge
@@ -113,6 +113,7 @@ class umdbase
          **********************************************************************/
         virtual void setup(uint8_t param);
         
+        uint8_t mirror_byte(uint8_t data);
         /*******************************************************************//**
          * \name Cartridge Flash Functions
          * This group of functions is specific to the catridge flash

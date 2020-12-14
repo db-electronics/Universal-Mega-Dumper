@@ -36,24 +36,23 @@ import serial
 #  All communications with the UMD are handled by the umddb class
 class umddb:
     
-    ## UMD Modes
+    # UMD Modes
     cartType = ""
-    modes = {"None" : 0,
-            "Colecovision" : 1,
-            "Genesis" : 2, 
-            "SMS" : 3,
-            "PCEngine" : 4,
-            "Turbografx-16" : 5,
-            "Super Nintendo" : 6 }
+    # this dict must match exactly the values of the enum console_e in umd.h
+    modes = {"None": 0,
+             "Genesis": 1,
+             "SMS": 2,
+             "PCEngine": 3,
+             "Turbografx-16": 4,
+             }
     
     ## Console bus widths
-    busWidth = {"None" : 0,
-            "Colecovision" : 8,
-            "Genesis" : 16, 
-            "SMS" : 8,
-            "PCEngine" : 8,
-            "Turbografx-16" : 8,
-            "Super Nintendo" : 8 }
+    busWidth = {"None": 0,
+                "Genesis": 16,
+                "SMS": 8,
+                "PCEngine": 8,
+                "Turbografx-16": 8,
+                }
     
     writeBlockSize = {
             "sf"   : 512,

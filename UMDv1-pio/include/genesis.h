@@ -21,13 +21,13 @@
 
 #ifndef genesis_h
 #define genesis_h
-#include "umdbase.h"
+#include "umdv1.h"
 
 /*******************************************************************//** 
  * \class genesis
  * \brief Genesis specific methods
  **********************************************************************/
-class genesis: public umdbase
+class genesis: public umdv1
 {
     public:
     

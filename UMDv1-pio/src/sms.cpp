@@ -20,7 +20,7 @@
  */
 
 #include "Arduino.h"
-#include "umdbase.h"
+#include "umdv1.h"
 #include "sms.h"
 
 /*******************************************************************//**
@@ -55,7 +55,8 @@ void sms::setup(uint8_t alg)
 
     SMS_SelectedPage = 2;
     info.console = SMS;
-    info.busSize = 8;
+    info.mirrored_bus = false;
+    info.bus_size = 8;
 }
 
 /*******************************************************************//**
@@ -369,15 +370,15 @@ uint16_t sms::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
     switch(slotNum)
     {
         case 1:
-            umdbase::writeByte16(SMS_SLOT_1_REG_ADDR, selectedPage);
+            umdv1::writeByte16(SMS_SLOT_1_REG_ADDR, selectedPage);
             virtualAddress = (SMS_SLOT_1_ADDR | ( (uint16_t)address & 0x3FFF));
             break;
         case 2:
-            umdbase::writeByte16(SMS_SLOT_2_REG_ADDR, selectedPage);
+            umdv1::writeByte16(SMS_SLOT_2_REG_ADDR, selectedPage);
             virtualAddress = (SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF));
             break;
         default:
-            umdbase::writeByte16(SMS_SLOT_2_REG_ADDR, selectedPage);
+            umdv1::writeByte16(SMS_SLOT_2_REG_ADDR, selectedPage);
             virtualAddress = (SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF));
             break;
     }

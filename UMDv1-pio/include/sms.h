@@ -21,13 +21,13 @@
 
 #ifndef sms_h
 #define sms_h
-#include "umdbase.h"
+#include "umdv1.h"
 
 /*******************************************************************//** 
  * \class sms
  * \brief sms specific methods
  **********************************************************************/
-class sms: public umdbase
+class sms: public umdv1
 {
     public:
     
