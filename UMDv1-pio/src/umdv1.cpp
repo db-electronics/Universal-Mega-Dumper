@@ -112,28 +112,11 @@ void umdv1::setup(uint8_t param)
 /*******************************************************************//**
  * The getFlashSizeFromID() function returns the flash size 
  **********************************************************************/
-uint32_t umdv1::getFlashSizeFromID(uint8_t manufacturer, uint8_t device, uint8_t type)
+uint32_t umdv1::getFlashSizeFromID(uint8_t manufacturer, uint8_t device)
 {
     uint32_t size = 0;
     switch( manufacturer )
-    {
-        // spansion
-        case 0x01:
-            switch( type )
-            {
-                case 0x10: // SG29GL064N
-                case 0x0C: // SG29GL064N
-                    size = 0x800000;
-                    break;
-                case 0x1A: // SG29GL032N
-                case 0x1D: // SG29GL032N
-                    size = 0x400000;
-                    break;
-                default:
-                    break;
-            }
-            break;
-        
+    {        
         // microchip
         case 0xBF:
             switch( device )
@@ -175,7 +158,7 @@ uint32_t umdv1::getFlashSizeFromID(uint8_t manufacturer, uint8_t device, uint8_t
                     break;
                 case 0xC4: // MX29LV160DT
                 case 0x49: // MX29LV160DB
-                    size = 0x400000;
+                    size = 0x200000;
                     break;    
                 // 5V
                 case 0x58: // MX29F800CT
@@ -188,7 +171,7 @@ uint32_t umdv1::getFlashSizeFromID(uint8_t manufacturer, uint8_t device, uint8_t
                     break;
                 case 0x51: // MX29F200CT
                 case 0x57: // MX29F200CB
-                    size = 0x80000;
+                    size = 0x40000;
                     break;
                 default:
                     break;
@@ -291,11 +274,11 @@ void umdv1::getFlashID(void)
     // read manufacturer
     flashID.manufacturer = readByte((uint32_t)0x0000);
     // read device
-    flashID.device = readByte((uint32_t)0x0001);
+    flashID.device = readByte((uint32_t)0x0002);
     // exit software ID mode
     writeByte((uint32_t)0x0000, 0xF0);
     // figure out the size
-    flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, 0 );
+    flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device );
 
 }
 
@@ -406,18 +389,19 @@ uint8_t umdv1::readByte16(uint16_t address)
     SET_DATABUS_TO_INPUT();
     
     // read the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nRD, LOW);
-    // PORTCE &= nCE_clrmask;
-    // PORTRD &= nRD_clrmask;
-    // PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow;
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nRD, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTRD &= nRD_clrmask;
+    PORTRD &= nRD_clrmask;
+    PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow;
     
     readData = DATAINL;
     
-    digitalWrite(nCE, HIGH);
-    digitalWrite(nRD, HIGH);
-    // PORTRD |= nRD_setmask;
-    // PORTCE |= nCE_setmask;
+    //digitalWrite(nCE, HIGH);
+    //digitalWrite(nRD, HIGH);
+    PORTRD |= nRD_setmask;
+    PORTCE |= nCE_setmask;
   
     return readData;
 }
@@ -434,18 +418,19 @@ uint8_t umdv1::readByte(uint32_t address)
     SET_DATABUS_TO_INPUT();
     
     // read the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nRD, LOW);
-    // PORTCE &= nCE_clrmask;
-    // PORTRD &= nRD_clrmask;
-    // PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow;
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nRD, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTRD &= nRD_clrmask;
+    PORTRD &= nRD_clrmask;
+    PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow;
     
     readData = DATAINL;
     
-    digitalWrite(nCE, HIGH);
-    digitalWrite(nRD, HIGH);
-    // PORTRD |= nRD_setmask;
-    // PORTCE |= nCE_setmask;
+    //digitalWrite(nCE, HIGH);
+    //digitalWrite(nRD, HIGH);
+    PORTRD |= nRD_setmask;
+    PORTCE |= nCE_setmask;
   
     return readData;
 }
@@ -610,9 +595,9 @@ void umdv1::writeByte16(uint16_t address, uint8_t data)
     //digitalWrite(nWR, LOW);
     PORTCE &= nCE_clrmask;
     PORTWR &= nWR_clrmask;
+    PORTWR &= nWR_clrmask;
     PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
     
-
     //digitalWrite(nWR, HIGH);
     //digitalWrite(nCE, HIGH);
     PORTWR |= nWR_setmask;
@@ -634,17 +619,17 @@ void umdv1::writeByte(uint32_t address, uint8_t data)
     DATAOUTL = data;
     
     // write to the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nWR, LOW);
-    // PORTCE &= nCE_clrmask;
-    // PORTWR &= nWR_clrmask;
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nWR, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTWR &= nWR_clrmask;
+    PORTWR &= nWR_clrmask;
+    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
     
-    // PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
-    
-    digitalWrite(nWR, HIGH);
-    digitalWrite(nCE, HIGH);
-    // PORTWR |= nWR_setmask;
-    // PORTCE |= nCE_setmask;
+    //digitalWrite(nWR, HIGH);
+    //digitalWrite(nCE, HIGH);
+    PORTWR |= nWR_setmask;
+    PORTCE |= nCE_setmask;
     
     SET_DATABUS_TO_INPUT();
     

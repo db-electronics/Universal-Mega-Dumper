@@ -343,10 +343,9 @@ class umdv1
          * \brief Read the Manufacturer and Product ID in the Flash IC
          * \param manufacturer the byte specifying the manufacturer
          * \param device the byte specifying the device
-         * \param info the byte specifying additional info
          * \return size the size of the flash in bytes
          **********************************************************************/
-        uint32_t getFlashSizeFromID(uint8_t manufacturer, uint8_t device, uint8_t info);
+        uint32_t getFlashSizeFromID(uint8_t manufacturer, uint8_t device);
     
     
     private:

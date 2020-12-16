@@ -32,7 +32,8 @@
 #define DATA_BUFFER_SIZE            2048    ///< Size of serial receive data buffer
 
 SerialCommand SCmd;                         ///< Receive and parse serial commands
-umdv1 *cart;                              ///< Pointer to all cartridge classes
+umdv1 *cart;                                ///< Pointer to all cartridge classes
+CartFactory cf;
 
 const int FlashChipSelect = 20;             ///< Digital pin for flash chip CS pin
 SerialFlashFile flashFile;                  ///< Serial flash file object
@@ -141,6 +142,8 @@ void loop()
 
     // check push button to clr rom and burn auto.bin from serial flash
     if( digitalRead(umdv1::nPB) == LOW ){
+        // purpose built for genesis ROM
+        cart = cf.getCart(umdv1::GENESIS);
         sfEraseCartBurnAuto(512);
     }
 }
@@ -191,7 +194,7 @@ void _setMode()
 {
     // We need a cart factory but only one, and this function is the only one that needs to update
     // the cart ptr.  So we can use the static keyword to keep this across calls to the function
-    static CartFactory cf;
+    // static CartFactory cf;
     
     char *arg;
     uint8_t console;

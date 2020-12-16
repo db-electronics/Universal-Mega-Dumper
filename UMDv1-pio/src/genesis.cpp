@@ -83,13 +83,10 @@ void genesis::getFlashID(void)
     // read device
     readData = readWord( (uint32_t)(0x000001 << 1) );
     flashID.device = (uint8_t)(readData >> 8);
-    // spansion devices have additional data here
-    readData  = readWord( (uint32_t)(0x00000E << 1) );
-    flashID.type = (uint8_t)(readData >> 8);
     // exit software ID mode
     writeWord( (uint32_t)0x000000, 0xF000);
     // figure out the size
-    flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, flashID.type );
+    flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device );
 
     if(flashID.manufacturer == 0x01){
         flashID.buffermode = 1;

@@ -76,7 +76,6 @@ if __name__ == "__main__":
     
     ## UMD Modes, names on the right must match values inside the classumd.py dicts
     carts = {"none": "none",
-             "cv": "Colecovision",
              "gen": "Genesis",
              "sms": "SMS",
              "pce": "PCEngine",

@@ -90,14 +90,14 @@ class sms:
         with open(filename, "rb") as f:
             
             # read the ROM header's checksum value
-            f.seek( 0x7FFA, 0)
+            f.seek(0x7FFA, 0)
             data = f.read(2)
-            thisWord = data[0],data[1]
+            thisWord = data[0], data[1]
             self.checksumRom = int.from_bytes(thisWord, byteorder="little")
             
             # read the ROM header's size info, some games put a smaller 
             # value here to speed up the checksum calculation
-            f.seek( 0x7FFF, 0)
+            f.seek(0x7FFF, 0)
             data = f.read(1)
             romSizeVal = int.from_bytes(data, byteorder="little") & 0x0F
             
