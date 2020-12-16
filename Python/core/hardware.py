@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 ########################################################################
 # \file  hardware.py
@@ -29,33 +29,30 @@ import sys
 import glob
 import time
 import serial
-import getopt
-import argparse
-import struct
+
 
 ## Universal Mega Dumper
 #
-#  All communications with the UMD are handled by the umd class
-class umd:
+#  All communications with the UMD are handled by the umddb class
+class umddb:
     
-    ## UMD Modes
+    # UMD Modes
     cartType = ""
-    modes = {"None" : 0,
-            "Colecovision" : 1,
-            "Genesis" : 2, 
-            "SMS" : 3,
-            "PCEngine" : 4,
-            "Turbografx-16" : 5,
-            "Super Nintendo" : 6 }
+    # this dict must match exactly the values of the enum console_e in umd.h
+    modes = {"None": 0,
+             "Genesis": 1,
+             "SMS": 2,
+             "PCEngine": 3,
+             "Turbografx-16": 4,
+             }
     
     ## Console bus widths
-    busWidth = {"None" : 0,
-            "Colecovision" : 8,
-            "Genesis" : 16, 
-            "SMS" : 8,
-            "PCEngine" : 8,
-            "Turbografx-16" : 8,
-            "Super Nintendo" : 8 }
+    busWidth = {"None": 0,
+                "Genesis": 16,
+                "SMS": 8,
+                "PCEngine": 8,
+                "Turbografx-16": 8,
+                }
     
     writeBlockSize = {
             "sf"   : 512,
@@ -97,8 +94,9 @@ class umd:
         self.cartType = mode
         self.connectUMD(mode, port)
 
+
 ########################################################################    
-## connectUMD
+#  connectUMD
 #  \param self self
 #  \param mode the UMD mode
 #  
@@ -107,8 +105,8 @@ class umd:
     def connectUMD(self, mode, port):
 
         #print("mode set value = {0}".format(self.modes.get(mode)))
-        
-        dbPort = ""
+
+        self.serialPort = None
         
         if port is None:
             # enumerate ports
@@ -124,23 +122,25 @@ class umd:
             ports = [port]
 
         # test for dumper on port
-        for serialport in ports:
+        for serial_port in ports:
             try:
-                ser = serial.Serial( port = serialport, baudrate = 460800, bytesize = serial.EIGHTBITS, parity = serial.PARITY_NONE, stopbits = serial.STOPBITS_ONE, timeout=0.1)
-                ser.write(bytes("flash\r\n","utf-8"))
-                response = ser.readline().decode("utf-8")
+                test_port = serial.Serial(port=serial_port,
+                                          baudrate=460800,
+                                          bytesize=serial.EIGHTBITS,
+                                          parity=serial.PARITY_NONE,
+                                          stopbits=serial.STOPBITS_ONE,
+                                          timeout=5)
+                test_port.write(bytes("flash\r\n", "utf-8"))
+                response = test_port.readline().decode("utf-8")
                 if response == "thunder\r\n":
-                    dbPort = serialport
-                ser.close()
+                    self.serialPort = test_port
+                    self.setMode(mode)
+                    break
+                test_port.close()
             except (OSError, serial.SerialException):
                 pass
         
-        # use the port found above to setup a 'permanent' object to communicate with the UMD        
-        try:
-            self.serialPort = serial.Serial( port = dbPort, baudrate = 460800, bytesize = serial.EIGHTBITS, parity = serial.PARITY_NONE, stopbits = serial.STOPBITS_ONE, timeout=1)
-            # set the UMD mode while we're at it
-            self.setMode(mode)
-        except (OSError, serial.SerialException):
+        if serial_port is None:
             print("class umd.__init__ - could not connect to umd")
             sys.exit(1)
 
@@ -173,6 +173,10 @@ class umd:
         self.serialPort.write(bytes("getid s\r\n","utf-8"))
         data = int.from_bytes(self.serialPort.read(4), byteorder="little" )
         self.flashIDData.update({"Size": hex(data) })
+        # Buffer mode
+        self.serialPort.write(bytes("getid b\r\n","utf-8"))
+        data = int.from_bytes(self.serialPort.read(1), byteorder="little" )
+        self.flashIDData.update({"Buffered Mode": hex(data) })
                 
 ########################################################################    
 ## getSfFileList
@@ -184,12 +188,19 @@ class umd:
     def setMode(self, mode):
         
         #self.modes.get(mode)
-        
-        self.serialPort.write(bytes("setmode {}\r\n".format(self.modes.get(mode)),"utf-8"))
+
+        self.serialPort.write(bytes("setmode {}\r\n".format(self.modes.get(mode)), "utf-8"))
+
         response = self.serialPort.readline().decode("utf-8")
         expect = "mode = {}\r\n".format(self.modes.get(mode))
-        if ( response != expect ):
+        if response != expect:
             print("umd.setMode - expected '{}' : received '{}'".format(expect, response))
+        #else:
+            #print("umd.setMode - expected '{}' : received '{}'".format(expect, response))
+
+        # read back algorithm for debug
+        # response = self.serialPort.readline().decode("utf-8")
+        #print(response)
 
 ########################################################################    
 ## sfGetId
@@ -403,15 +414,15 @@ class umd:
 ########################################################################
     def eraseChip(self, chip):
         
-        startTime = time.time()
-        self.serialPort.write(bytes("erase w\r\n".format(chip),"utf-8"))
+        start_time = time.time()
+        self.serialPort.write(bytes("erase w\r\n".format(chip), "utf-8"))
         
         response = self.serialPort.read(1).decode("utf-8")
-        while( response == "." ):
+        while response == ".":
             print(response, end="", flush=True)
             response = self.serialPort.read(1).decode("utf-8")
         
-        self.opTime = time.time() - startTime
+        self.opTime = time.time() - start_time
         print("")
 
 ########################################################################    
@@ -425,13 +436,13 @@ class umd:
     def programSingle(self, address, value):
         
         # 8bits or 16bits wide?
-        if cartType == "Genesis":
+        if self.cartType == "Genesis":
             progCmd = "prgword"
         else:
             progCmd = "prgbyte"
             
         cmd = "{0} {1} {2}\r\n".format(progCmd, address, value)
-        self.serialPort.write(bytes(cmd,"utf-8"))
+        self.serialPort.write(bytes(cmd, "utf-8"))
 
 ########################################################################    
 ## read
@@ -446,11 +457,10 @@ class umd:
 #  else a new file will be created/overwritten with the binary data
 ########################################################################
     def read(self, address, size, target, outfile):
-    
-        
+
         width = self.busWidth.get(self.cartType)
         
-        #["rom", "save", "bram", "header", "fid", "sfid", "sf", "sflist", "byte", "word", "sbyte", "sword"]
+        # ["rom", "save", "bram", "header", "fid", "sfid", "sf", "sflist", "byte", "word", "sbyte", "sword"]
         if( width == 8 ):
             if( target == "byte" or target == "sbyte" ):
                 readCmd = "rdbyte"
@@ -490,10 +500,7 @@ class umd:
                 else:
                     cmd = "{0} {1} {2}\r\n".format(readCmd, address, sizeOfRead)
                 
-                # show command
-                print(cmd, end="")
-                
-                self.serialPort.write(bytes(cmd,"utf-8"))
+                self.serialPort.write(bytes(cmd, "utf-8"))
                 response = self.serialPort.read(sizeOfRead)
                 
                 # loop through results, pretty display to console
@@ -713,7 +720,7 @@ class umd:
                     expected = int(response)
                     response = self.serialPort.readline().decode("utf-8")
                     error = int(response)
-                    print("error at 0x{0:X} expected 0x{1:X} read 0x{2:X}".format(address, expected, error))
+                    print("error at 0x{0:X} expected 0x{1:04X} read 0x{2:04X}".format(address, expected, error))
                 elif( response == "." ):
                     done = 0
                     #print(response, end="", flush=True)

@@ -20,18 +20,20 @@
  *   along with Universal Mega Dumper.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <Arduino.h>
 #include <SoftwareSerial.h>         
 #include <SerialCommand.h>                  // https://github.com/db-electronics/ArduinoSerialCommand
 #include <SerialFlash.h>                    // https://github.com/PaulStoffregen/SerialFlash
 #include <SPI.h>
 
-#include "src/umdbase.h"
-#include "src/cartfactory.h"
+#include "umdv1.h"
+#include "cartfactory.h"
 
 #define DATA_BUFFER_SIZE            2048    ///< Size of serial receive data buffer
 
 SerialCommand SCmd;                         ///< Receive and parse serial commands
-umdbase *cart;                              ///< Pointer to all cartridge classes
+umdv1 *cart;                                ///< Pointer to all cartridge classes
+CartFactory cf;
 
 const int FlashChipSelect = 20;             ///< Digital pin for flash chip CS pin
 SerialFlashFile flashFile;                  ///< Serial flash file object
@@ -43,6 +45,31 @@ union dataBuffer{
     uint16_t    word[DATA_BUFFER_SIZE/2];   ///< word access within dataBuffer
 } dataBuffer;                               ///< union of byte/words to permit the Rx of bytes and Tx of words without hassle
 
+
+void _flashThunder();
+void _setMode();
+void _unknownCMD(const char *command);
+void eraseChip();
+void readByteBlock();
+void getFlashID();
+void calcChecksum();
+void getRomSize();
+void readWordBlock();
+void writeSRAMByteBlock();
+void programWordBlock();
+void programByteBlock();
+void sfGetID();
+void sfGetSize();
+void sfEraseAll();
+void sfBurnCart();
+void sfListFiles();
+void sfReadFile();
+void sfWriteFile();
+void sfVerify();
+
+void sfEraseCartBurnAuto(uint16_t blockSize);
+void flash_led(uint8_t times, uint32_t wait);
+
 /*******************************************************************//**
  *  \brief Flash the LED, initialize the serial flash memory
  *         and register all serial commands.
@@ -50,20 +77,12 @@ union dataBuffer{
  **********************************************************************/
 void setup() {
 
-    uint8_t i;
-
     Serial.begin(460800);
 
-    umdbase::initialize();
+    umdv1::initialize();
 
     //flash to show we're alive
-    for( i=0 ; i<2 ; i++ )
-    {
-        digitalWrite(umdbase::nLED, LOW);
-        delay(100);
-        digitalWrite(umdbase::nLED, HIGH);
-        delay(100);
-    }
+    flash_led(2, 100);
 
     if (!SerialFlash.begin(FlashChipSelect)) {
         //error("Unable to access SPI Flash chip");
@@ -118,7 +137,24 @@ void setup() {
  **********************************************************************/
 void loop()
 {
+    // listen for commands
     SCmd.readSerial();
+
+    // check push button to clr rom and burn auto.bin from serial flash
+    if( digitalRead(umdv1::nPB) == LOW ){
+        // purpose built for genesis ROM
+        cart = cf.getCart(umdv1::GENESIS);
+        sfEraseCartBurnAuto(512);
+    }
+}
+
+void flash_led(uint8_t times, uint32_t wait){
+    for( uint8_t i=0 ; i<times ; i++ ){
+        digitalWrite(umdv1::nLED, LOW);
+        delay(wait);
+        digitalWrite(umdv1::nLED, HIGH);
+        delay(wait);
+    }
 }
 
 /*******************************************************************//**
@@ -158,28 +194,21 @@ void _setMode()
 {
     // We need a cart factory but only one, and this function is the only one that needs to update
     // the cart ptr.  So we can use the static keyword to keep this across calls to the function
-    static CartFactory cf;
+    // static CartFactory cf;
     
     char *arg;
-    uint8_t mode;
+    uint8_t console;
     
     // this is the cart type
     arg = SCmd.next();
-    mode = (uint8_t)strtoul(arg, (char**)0, 0);
+    console = (uint8_t)strtoul(arg, (char**)0, 0);
 
-    cart = cf.getCart(static_cast<CartFactory::Mode>(mode));
-    if (mode <= cf.getMaxCartMode()){
+    cart = cf.getCart(static_cast<umdv1::console_e>(console));
+    if (console <= cf.getMaxCartMode()){
         Serial.print(F("mode = "));
         Serial.println(arg[0]);
-
-        // next arg, if present, specificies the flash alg, default to 0
-        if( mode == 3 ){
-            cart->setup(0);
-        }else{
-            cart->setup(0);
-        }
+        cart->setup(0);
         
-
     }else{
         Serial.println(F("mode = undefined"));
     }
@@ -256,10 +285,6 @@ void getFlashID()
             case 't':
                 Serial.write((char)(cart->flashID.type));
                 break;
-            //algorightm
-            case 'a':
-                Serial.write((char)(cart->flashID.alg));
-                break;
             //size
             case 's':
                 Serial.write((char)(cart->flashID.size));
@@ -272,7 +297,7 @@ void getFlashID()
         }
     }else{
         // query the chip when no parameters are passed, use the set algorithm
-        cart->getFlashID(cart->flashID.alg);
+        cart->getFlashID();
     }
 
     digitalWrite(cart->nLED, HIGH);
@@ -345,10 +370,17 @@ void readByteBlock()
     
     digitalWrite(cart->nLED, LOW);
     
-    for( i = 0; i < blockSize; i++ )
-    {
-        data = cart->readByte(address++);
-        Serial.write((char)(data));
+    // reverse the bytes for PCE
+    if( cart->info.mirrored_bus ){
+        for( i = 0; i < blockSize; i++ ){
+            data = cart->readByte(address++);
+            Serial.write((char)(cart->mirror_byte(data)));
+        }
+    }else{
+        for( i = 0; i < blockSize; i++ ){
+            data = cart->readByte(address++);
+            Serial.write((char)(data));
+        }
     }
     
     digitalWrite(cart->nLED, HIGH);
@@ -501,7 +533,7 @@ void readBlock()
     digitalWrite(cart->nLED, LOW);
 
     // 8 bit reads
-    if( cart->info.busSize == 8 )
+    if( cart->info.bus_size == 8 )
     {
         
     // 16 bit reads
@@ -608,10 +640,10 @@ void writeSRAMByteBlock()
     cart->enableSram(0);
     
     //sram writes different for 8bit and 16bit busses
-    if( cart->info.busSize == 16 )
+    if( cart->info.bus_size == 16 )
     {
         //Genesis SRAM only on odd bytes
-        if( cart->info.cartType == umdbase::e_carttype::GENESIS )
+        if( cart->info.console == umdv1::GENESIS )
         {
             for( count=1; count < blockSize ; count += 2 )
             {
@@ -628,6 +660,72 @@ void writeSRAMByteBlock()
     }
     
     cart->disableSram(0);
+    
+    Serial.println(F("done"));
+    digitalWrite(cart->nLED, HIGH);
+}
+
+/*******************************************************************//**
+ *  \brief Program a byte block in the cartridge
+ *  
+ *  Usage:
+ *  progword 0x0000 0x12
+ *    - programs 0x12 into address 0x0000
+ *  progword 412 12
+ *    - programs decimal 12 into address decimal 412
+ *  
+ *  \return Void
+ **********************************************************************/
+void programByteBlock()
+{
+    char *arg;
+    uint32_t address=0;
+    uint16_t blockSize, count=0;
+            
+    //get the address in the next argument
+    arg = SCmd.next();
+    address = strtoul(arg, (char**)0, 0);
+    
+    //get the size in the next argument
+    arg = SCmd.next();
+    blockSize = strtoul(arg, (char**)0, 0);
+    
+    digitalWrite(cart->nLED, LOW);
+    
+    //receive size bytes
+    Serial.read(); //there's an extra byte here for some reason - discard
+    
+    // reverse the bytes as they come in for PCE
+    if( cart->info.mirrored_bus ){
+        while( count < blockSize ){
+            if( Serial.available() ){
+                dataBuffer.byte[count++] = cart->mirror_byte(Serial.read());
+            }
+        }
+    }else{
+        while( count < blockSize ){
+            if( Serial.available() ){
+                dataBuffer.byte[count++] = Serial.read();
+            }
+        }
+    }
+    
+    SCmd.clearBuffer();
+    
+    count = 0;
+    while( count < blockSize ){
+
+        cart->writeByte( (uint32_t)0x00000555, 0xAA);
+        cart->writeByte( (uint32_t)0x000002AA, 0x55);
+        cart->writeByte( (uint32_t)0x00000555, 0xA0);
+        
+        //write the data
+        cart->writeByte( (uint32_t)address, dataBuffer.byte[count++] );
+        address++;
+
+        //use data polling to validate end of program cycle
+        while( cart->toggleBit16(4) != 4 );
+    }
     
     Serial.println(F("done"));
     digitalWrite(cart->nLED, HIGH);
@@ -696,7 +794,7 @@ void programWordBlock()
     }else{
         count = 0;
         while( count < ( blockSize >> 1) ){
-            // address must full within a 32b/16w boundary
+            // address must fall within a 32b/16w boundary
             address &= 0xFFFFFFE0;
             sectorAddr = address;
 
@@ -798,7 +896,7 @@ void sfBurnCart()
 {
     char *arg;
     uint16_t blockSize, i;
-    uint32_t fileSize, address=0, pos=0;
+    uint32_t timer, fileSize, address=0, pos=0;
     char fileName[13];      //Max filename length (8.3 plus a null char terminator)
     
     //get the file name
@@ -814,8 +912,9 @@ void sfBurnCart()
     arg = SCmd.next();
     blockSize = strtoul(arg, (char**)0, 0);
     
-    digitalWrite(cart->nLED, LOW);
-    
+    //start a timer
+    timer = millis();
+
     flashFile = SerialFlash.open(fileName);
     if (flashFile)
     {
@@ -825,9 +924,14 @@ void sfBurnCart()
         
         while( pos < fileSize )
         {
+            if(millis() - timer > 250){
+                digitalWrite(cart->nLED, !digitalRead(cart->nLED));
+                timer = millis();
+            }
+
             flashFile.read(dataBuffer.byte, blockSize);
             
-            if( cart->info.busSize == 16 )
+            if( cart->info.bus_size == 16 )
             {
                 for( i=0 ; i < ( blockSize >> 1) ; i++ )
                 {
@@ -854,6 +958,63 @@ void sfBurnCart()
     flashFile.close();
     digitalWrite(cart->nLED, HIGH);
 }
+
+/*******************************************************************//**
+ *  \brief Burn a file from the serial flash to the cartridge
+ *  
+ *  Usage:
+ *  sflburn rom.bin
+ *  
+ *  \return Void
+ **********************************************************************/
+void sfEraseCartBurnAuto(uint16_t blockSize)
+{
+    uint16_t i;
+    uint32_t timer, fileSize, address=0, pos=0;
+    
+    digitalWrite(cart->nLED, LOW);
+    cart->eraseChip(true);
+    
+    // flash to signal erase is complete
+    flash_led(4, 100);
+    
+    //start a timer
+    timer = millis();
+
+    flashFile = SerialFlash.open("auto");
+    if (flashFile){
+        fileSize = flashFile.size();
+        
+        while( pos < fileSize ){
+
+            if(millis() - timer > 250){
+                digitalWrite(cart->nLED, !digitalRead(cart->nLED));
+                timer = millis();
+            }
+
+            flashFile.read(dataBuffer.byte, blockSize);
+            if( cart->info.bus_size == 16 ){
+                for( i=0 ; i < ( blockSize >> 1) ; i++ )
+                {
+                    cart->programWord(address, dataBuffer.word[i], true);
+                    address += 2;
+                }
+            }else{
+                for( i=0 ; i < blockSize ; i++ ){
+                    cart->programByte(address, dataBuffer.byte[i], true);
+                    address++;
+                }
+            }
+            pos += blockSize;
+        }
+        flash_led(4, 100);
+    }else{
+        flash_led(4, 500);
+    }
+    
+    flashFile.close();
+}
+
 
 /*******************************************************************//**
  *  \brief Read a file from the serial flash
@@ -1048,7 +1209,7 @@ void sfVerify()
         {
             flashFile.read(dataBuffer.byte, DATA_BUFFER_SIZE);
             
-            if( cart->info.busSize == 16 )
+            if( cart->info.bus_size == 16 )
             {
                 for( i = 0; i < DATA_BUFFER_SIZE/2 ; i++ )
                 {

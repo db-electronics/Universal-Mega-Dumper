@@ -36,7 +36,7 @@ class genesis: public umdbase
          **********************************************************************/
         genesis();
         
-        virtual void setup();
+        virtual void setup(uint8_t alg);
         
         /*******************************************************************//**
          * \brief Read the Manufacturer and Product ID in the Flash IC
@@ -80,6 +80,8 @@ class genesis: public umdbase
          **********************************************************************/
         void writeByteTime(uint32_t address, uint8_t data);
         
+        void programWordBuffer(uint32_t address, uint16_t * buf, uint8_t size);
+
         /*******************************************************************//**
          * \brief Read a word without converting to littel endian
          * \param address 32bit address

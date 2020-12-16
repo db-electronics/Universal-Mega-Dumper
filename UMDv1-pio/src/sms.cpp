@@ -20,7 +20,7 @@
  */
 
 #include "Arduino.h"
-#include "../umdbase.h"
+#include "umdv1.h"
 #include "sms.h"
 
 /*******************************************************************//**
@@ -54,9 +54,9 @@ void sms::setup(uint8_t alg)
     setSMSSlotRegister(2, (uint32_t)SMS_SLOT_2_ADDR);
 
     SMS_SelectedPage = 2;
-    flashID.alg = alg;
-    info.cartType = SMS;
-    info.busSize = 8;
+    info.console = SMS;
+    info.mirrored_bus = false;
+    info.bus_size = 8;
 }
 
 /*******************************************************************//**
@@ -64,14 +64,13 @@ void sms::setup(uint8_t alg)
  * Spansion devices) and size of the flash. SMS flash ID reads need to
  * ensure the proper mapper register values are set.
  **********************************************************************/
-void sms::getFlashID(uint8_t alg)
+void sms::getFlashID(void)
 {
     // clear all data
     flashID.manufacturer = 0;
     flashID.device = 0;
     flashID.type = 0;
     flashID.size = 0;
-    flashID.alg = alg;
     
     //set default slot registers
     setSMSSlotRegister(1, (uint32_t)SMS_SLOT_1_ADDR);
@@ -88,11 +87,11 @@ void sms::getFlashID(uint8_t alg)
     // read manufacturer
     flashID.manufacturer = readByte16(0x0000);
     // read device
-    flashID.device = readByte16(0x0001);
+    flashID.device = readByte16(0x0002);
     // exit software ID mode
     writeByte16(0x0000, 0xF0);
     // figure out the size
-    flashID.size = getFlashSizeFromID(flashID.manufacturer, flashID.device, 0);
+    flashID.size = getFlashSizeFromID(flashID.manufacturer, flashID.device);
     
     // disable rom write enable bit
     romWrites(false);
@@ -235,15 +234,20 @@ uint8_t sms::readByte(uint32_t address)
     
     SET_DATABUS_TO_INPUT();
     
-    // read the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nRD, LOW);
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nRD, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTRD &= nRD_clrmask;
+    PORTRD &= nRD_clrmask;
+    PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow;
     
     readData = DATAINL;
     
-    digitalWrite(nCE, HIGH);
-    digitalWrite(nRD, HIGH);
-    
+    //digitalWrite(nCE, HIGH);
+    //digitalWrite(nRD, HIGH);
+    PORTRD |= nRD_setmask;
+    PORTCE |= nCE_setmask;
+
     return readData;
     
 }
@@ -266,17 +270,17 @@ void sms::writeByte(uint32_t address, uint8_t data)
     DATAOUTL = data;
     
     // write to the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nWR, LOW);
-    // PORTCE &= nCE_clrmask;
-    // PORTWR &= nWR_clrmask;
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nWR, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTWR &= nWR_clrmask;
+    PORTWR &= nWR_clrmask;
+    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
     
-    // PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
-    
-    digitalWrite(nWR, HIGH);
-    digitalWrite(nCE, HIGH);
-    // PORTWR |= nWR_setmask;
-    // PORTCE |= nCE_setmask;
+    //digitalWrite(nWR, HIGH);
+    //digitalWrite(nCE, HIGH);
+    PORTWR |= nWR_setmask;
+    PORTCE |= nCE_setmask;
     
     SET_DATABUS_TO_INPUT();
 }
@@ -296,10 +300,10 @@ void sms::programByte(uint32_t address, uint8_t data, bool wait)
     romWrites(true);
 
     //mx29f800 program byte mode
-    writeByte16(0x0AAA, 0xAA);
+    writeByte(0x00000AAA, 0xAA);
     writeByte16(0x0555, 0x55);
     writeByte16(0x0AAA, 0xA0);
-	sms::writeByte(address, data);
+	writeByte(address, data);
 	
     //disable rom write enable bit
     romWrites(false);
@@ -371,15 +375,15 @@ uint16_t sms::setSMSSlotRegister(uint8_t slotNum, uint32_t address)
     switch(slotNum)
     {
         case 1:
-            umdbase::writeByte16(SMS_SLOT_1_REG_ADDR, selectedPage);
+            umdv1::writeByte16(SMS_SLOT_1_REG_ADDR, selectedPage);
             virtualAddress = (SMS_SLOT_1_ADDR | ( (uint16_t)address & 0x3FFF));
             break;
         case 2:
-            umdbase::writeByte16(SMS_SLOT_2_REG_ADDR, selectedPage);
+            umdv1::writeByte16(SMS_SLOT_2_REG_ADDR, selectedPage);
             virtualAddress = (SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF));
             break;
         default:
-            umdbase::writeByte16(SMS_SLOT_2_REG_ADDR, selectedPage);
+            umdv1::writeByte16(SMS_SLOT_2_REG_ADDR, selectedPage);
             virtualAddress = (SMS_SLOT_2_ADDR | ( (uint16_t)address & 0x3FFF));
             break;
     }

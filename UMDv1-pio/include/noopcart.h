@@ -25,10 +25,10 @@
 #define noopcart_h
 
 /*******************************************************************//** 
- * \class umdbase
+ * \class umdv1
  * \brief Teensy umd class to read and write db Flash Carts
  **********************************************************************/
-class noopcart : public umdbase
+class noopcart : public umdv1
 {
     public:
     

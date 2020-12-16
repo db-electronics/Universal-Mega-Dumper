@@ -32,7 +32,7 @@ genesis::genesis()
 /*******************************************************************//**
  * Setup the ports for Genesis mode
  **********************************************************************/
-void genesis::setup(uint8_t alg)
+void genesis::setup(uint8_t param)
 {
     pinMode(GEN_SL1, INPUT);
     pinMode(GEN_SR1, INPUT);
@@ -49,9 +49,9 @@ void genesis::setup(uint8_t alg)
     pinMode(GEN_nTIME, OUTPUT);
     digitalWrite(GEN_nTIME, HIGH);
 
-    info.cartType = GENESIS;
-    info.busSize = 16;
-    flashID.alg = alg;
+    info.console = GENESIS;
+    info.mirrored_bus = false;
+    info.bus_size = 16;
     
     _resetPin = GEN_nVRES;
     //resetCart();   
@@ -62,7 +62,7 @@ void genesis::setup(uint8_t alg)
  * Spansion devices) and size of the flash. Genesis needs to do this 
  * in word mode therefore we override the virtual base function.
  **********************************************************************/
-void genesis::getFlashID(uint8_t alg)
+void genesis::getFlashID(void)
 {
     uint16_t readData = 0;
     
@@ -72,7 +72,6 @@ void genesis::getFlashID(uint8_t alg)
     flashID.type = 0;
     flashID.size = 0;
     flashID.buffermode = 0;
-    flashID.alg = alg;
 
     // enter software ID mode
     writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
@@ -84,13 +83,10 @@ void genesis::getFlashID(uint8_t alg)
     // read device
     readData = readWord( (uint32_t)(0x000001 << 1) );
     flashID.device = (uint8_t)(readData >> 8);
-    // spansion devices have additional data here
-    readData  = readWord( (uint32_t)(0x00000E << 1) );
-    flashID.type = (uint8_t)(readData >> 8);
     // exit software ID mode
     writeWord( (uint32_t)0x000000, 0xF000);
     // figure out the size
-    flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device, flashID.type );
+    flashID.size = getFlashSizeFromID( flashID.manufacturer, flashID.device );
 
     if(flashID.manufacturer == 0x01){
         flashID.buffermode = 1;
@@ -203,6 +199,8 @@ void genesis::eraseChip(bool wait)
         {
             if( (millis() - intervalMillis) > 250 )
             {
+                // flash to show progress
+                digitalWrite(nLED, !digitalRead(nLED));
                 //PC side app expects a "." before timeout
                 intervalMillis = millis();
                 Serial.print(".");
@@ -225,17 +223,17 @@ void genesis::writeByte(uint32_t address, uint8_t data)
     DATAOUTH = data;
     
     // write to the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nWR, LOW);
-    // PORTCE &= nCE_clrmask;
-    // PORTWR &= nWR_clrmask;
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nWR, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTWR &= nWR_clrmask;
     
-    // PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
     
-    digitalWrite(nWR, HIGH);
-    digitalWrite(nCE, HIGH);
-    // PORTWR |= nWR_setmask;
-    // PORTCE |= nCE_setmask;
+    //digitalWrite(nWR, HIGH);
+    //digitalWrite(nCE, HIGH);
+    PORTWR |= nWR_setmask;
+    PORTCE |= nCE_setmask;
     
     SET_DATABUS_TO_INPUT();
     

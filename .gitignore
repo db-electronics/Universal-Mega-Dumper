@@ -1,5 +1,7 @@
 # ROM folders in Python subdir
 Python/roms/*
+*.bin
+*.sms
 
 # Doxygen output
 html/
@@ -7,6 +9,7 @@ Python/html
 
 # Geany project files
 *.geany
+*.code-workspace
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
