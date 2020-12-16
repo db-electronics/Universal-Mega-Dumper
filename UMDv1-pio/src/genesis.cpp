@@ -199,6 +199,8 @@ void genesis::eraseChip(bool wait)
         {
             if( (millis() - intervalMillis) > 250 )
             {
+                // flash to show progress
+                digitalWrite(nLED, !digitalRead(nLED));
                 //PC side app expects a "." before timeout
                 intervalMillis = millis();
                 Serial.print(".");

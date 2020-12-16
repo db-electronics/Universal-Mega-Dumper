@@ -896,7 +896,7 @@ void sfBurnCart()
 {
     char *arg;
     uint16_t blockSize, i;
-    uint32_t fileSize, address=0, pos=0;
+    uint32_t timer, fileSize, address=0, pos=0;
     char fileName[13];      //Max filename length (8.3 plus a null char terminator)
     
     //get the file name
@@ -912,8 +912,9 @@ void sfBurnCart()
     arg = SCmd.next();
     blockSize = strtoul(arg, (char**)0, 0);
     
-    digitalWrite(cart->nLED, LOW);
-    
+    //start a timer
+    timer = millis();
+
     flashFile = SerialFlash.open(fileName);
     if (flashFile)
     {
@@ -923,6 +924,11 @@ void sfBurnCart()
         
         while( pos < fileSize )
         {
+            if(millis() - timer > 250){
+                digitalWrite(cart->nLED, !digitalRead(cart->nLED));
+                timer = millis();
+            }
+
             flashFile.read(dataBuffer.byte, blockSize);
             
             if( cart->info.bus_size == 16 )
@@ -964,22 +970,29 @@ void sfBurnCart()
 void sfEraseCartBurnAuto(uint16_t blockSize)
 {
     uint16_t i;
-    uint32_t fileSize, address=0, pos=0;
+    uint32_t timer, fileSize, address=0, pos=0;
     
     digitalWrite(cart->nLED, LOW);
     cart->eraseChip(true);
     
-    // flash twice to signal erase is complete
-    flash_led(2, 100);
-    digitalWrite(cart->nLED, LOW);
+    // flash to signal erase is complete
+    flash_led(4, 100);
     
+    //start a timer
+    timer = millis();
+
     flashFile = SerialFlash.open("auto");
     if (flashFile){
         fileSize = flashFile.size();
         
         while( pos < fileSize ){
+
+            if(millis() - timer > 250){
+                digitalWrite(cart->nLED, !digitalRead(cart->nLED));
+                timer = millis();
+            }
+
             flashFile.read(dataBuffer.byte, blockSize);
-            
             if( cart->info.bus_size == 16 ){
                 for( i=0 ; i < ( blockSize >> 1) ; i++ )
                 {
@@ -994,9 +1007,9 @@ void sfEraseCartBurnAuto(uint16_t blockSize)
             }
             pos += blockSize;
         }
-        flash_led(2, 100);
+        flash_led(4, 100);
     }else{
-        flash_led(4, 250);
+        flash_led(4, 500);
     }
     
     flashFile.close();

@@ -500,9 +500,6 @@ class umddb:
                 else:
                     cmd = "{0} {1} {2}\r\n".format(readCmd, address, sizeOfRead)
                 
-                # show command
-                print(cmd, end="")
-                
                 self.serialPort.write(bytes(cmd, "utf-8"))
                 response = self.serialPort.read(sizeOfRead)
                 

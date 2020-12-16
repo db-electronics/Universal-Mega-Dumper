@@ -124,7 +124,7 @@ class sms:
                         i += 1
                     else:
                         # int.from_bytes wasn't happy with an 8bit value
-                        thisByte = data[i],0
+                        thisByte = data[i], 0
                         intVal = int.from_bytes(thisByte, byteorder="little") & 0xFF
                         self.checksumCalc = (self.checksumCalc + intVal) & 0xFFFF
                         i += 1
