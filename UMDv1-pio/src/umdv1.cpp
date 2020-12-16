@@ -220,19 +220,19 @@ void umdv1::latchAddress32(uint32_t address)
     DATAOUTH = addrm;
     DATAOUTL = addrl;
     
-    digitalWrite(ALE_low, HIGH);
-    //PORTALE |= ALE_low_setmask;
-    digitalWrite(ALE_low, LOW);
-    //PORTALE &= ALE_low_clrmask;
+    //digitalWrite(ALE_low, HIGH);
+    PORTALE |= ALE_low_setmask;
+    //digitalWrite(ALE_low, LOW);
+    PORTALE &= ALE_low_clrmask;
 
     //put high address on bus and latch it
     DATAOUTH = 0x00;
     DATAOUTL = addrh;
     
-    digitalWrite(ALE_high, HIGH);
-    //PORTALE |= ALE_high_setmask;
-    digitalWrite(ALE_high, LOW);
-    //PORTALE &= ALE_high_clrmask;
+    //digitalWrite(ALE_high, HIGH);
+    PORTALE |= ALE_high_setmask;
+    //digitalWrite(ALE_high, LOW);
+    PORTALE &= ALE_high_clrmask;
     
     //without this additional 0x00 write reads to undefined regions would
     //return the last value written to DATAOUTL
@@ -261,10 +261,10 @@ void umdv1::latchAddress16(uint16_t address)
     DATAOUTH = addrm;
     DATAOUTL = addrl;
     
-    digitalWrite(ALE_low, HIGH);
-    //PORTALE |= ALE_low_setmask;
-    digitalWrite(ALE_low, LOW);
-    //PORTALE &= ALE_low_clrmask;
+    //digitalWrite(ALE_low, HIGH);
+    PORTALE |= ALE_low_setmask;
+    //digitalWrite(ALE_low, LOW);
+    PORTALE &= ALE_low_clrmask;
 
     SET_DATABUS_TO_INPUT();
 }
@@ -382,7 +382,7 @@ uint8_t umdv1::toggleBit16(uint8_t attempts)
 
     for( i=0; i<attempts; i++ ){
         //successive reads compare this read to the previous one for toggle bit
-        readValue = readWord((uint32_t)0x00000000) & 0x4000;
+        readValue = readWord16(0x0000) & 0x4000;
         if( oldValue == readValue ){
             retValue += 1;
         }else{
@@ -451,23 +451,22 @@ uint8_t umdv1::readByte(uint32_t address)
 }
 
 /*******************************************************************//**
- * The readWord(uint32_t) function returns a word read from 
- * a 24bit address.
+ * The readWord(uint16_t) function returns a word read from 
+ * a 16bit address.
  * 
  * \warning converts to little endian
  **********************************************************************/
-uint16_t umdv1::readWord(uint32_t address)
+uint16_t umdv1::readWord16(uint16_t address)
 {
     uint16_t readData;
 
-    latchAddress32(address);
+    latchAddress16(address);
     SET_DATABUS_TO_INPUT();
 
     // read the bus
     // digitalWrite(nCE, LOW); // moving nCE after nRD completely breaks reading
     // digitalWrite(nRD, LOW);
 
-    
     PORTCE &= nCE_clrmask;
     PORTRD &= nRD_clrmask;
 
@@ -489,6 +488,76 @@ uint16_t umdv1::readWord(uint32_t address)
 }
 
 /*******************************************************************//**
+ * The readWord(uint32_t) function returns a word read from 
+ * a 24bit address.
+ * 
+ * \warning converts to little endian
+ **********************************************************************/
+uint16_t umdv1::readWord(uint32_t address)
+{
+    uint16_t readData;
+
+    latchAddress32(address);
+    SET_DATABUS_TO_INPUT();
+
+    // read the bus
+    // digitalWrite(nCE, LOW); // moving nCE after nRD completely breaks reading
+    // digitalWrite(nRD, LOW);
+
+    PORTCE &= nCE_clrmask;
+    PORTRD &= nRD_clrmask;
+
+    // removing this line breaks all reads as the fastest ROM is 70ns
+    PORTRD &= nRD_clrmask; // wait an additional 62.5ns. ROM is slow, 
+    
+    //delayMicroseconds(1);
+    //convert to little endian while reading
+    readData = (uint16_t)DATAINL;
+    readData <<= 8;
+    readData |= (uint16_t)(DATAINH & 0x00FF);
+  
+    //digitalWrite(nRD, HIGH);
+    //digitalWrite(nCE, HIGH);
+    PORTRD |= nRD_setmask;
+    PORTCE |= nCE_setmask;
+
+    return readData;
+}
+
+/*******************************************************************//**
+ * The writeWord function strobes a word into the cartridge at a 16bit
+ * address.
+ * 
+ * \warning word is converted to big endian
+ **********************************************************************/
+void umdv1::writeWord16(uint16_t address, uint16_t data)
+{
+    latchAddress16(address);
+    SET_DATABUS_TO_OUTPUT();
+
+    //put word on bus
+    DATAOUTH = (uint8_t)(data);
+    DATAOUTL = (uint8_t)(data>>8);
+
+    // write to the bus, ensure RD is high because it controls the level shifters direction
+    // digitalWrite(nCE, LOW);
+    // digitalWrite(nWR, LOW);
+
+    // delayMicroseconds(1);
+    PORTCE &= nCE_clrmask;
+    // PORTWR &= nWR_clrmask;
+    PORTWR &= nWR_clrmask;
+    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    
+    // digitalWrite(nWR, HIGH);
+    // digitalWrite(nCE, HIGH);
+    PORTWR |= nWR_setmask;
+    PORTCE |= nCE_setmask;
+
+    SET_DATABUS_TO_INPUT();
+}
+
+/*******************************************************************//**
  * The writeWord function strobes a word into the cartridge at a 24bit
  * address.
  * 
@@ -504,18 +573,17 @@ void umdv1::writeWord(uint32_t address, uint16_t data)
     DATAOUTL = (uint8_t)(data>>8);
 
     // write to the bus, ensure RD is high because it controls the level shifters direction
-    // digitalWrite(nRD, HIGH);
     // digitalWrite(nCE, LOW);
     // digitalWrite(nWR, LOW);
 
     // delayMicroseconds(1);
     PORTCE &= nCE_clrmask;
+    // PORTWR &= nWR_clrmask;
     PORTWR &= nWR_clrmask;
-    
     PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
     
-    //digitalWrite(nWR, HIGH);
-    //digitalWrite(nCE, HIGH);
+    // digitalWrite(nWR, HIGH);
+    // digitalWrite(nCE, HIGH);
     PORTWR |= nWR_setmask;
     PORTCE |= nCE_setmask;
 
@@ -538,17 +606,17 @@ void umdv1::writeByte16(uint16_t address, uint8_t data)
     DATAOUTL = data;
     
     // write to the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nWR, LOW);
-    // PORTCE &= nCE_clrmask;
-    // PORTWR &= nWR_clrmask;
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nWR, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTWR &= nWR_clrmask;
+    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
     
-    // PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
-    
-    digitalWrite(nWR, HIGH);
-    digitalWrite(nCE, HIGH);
-    // PORTWR |= nWR_setmask;
-    // PORTCE |= nCE_setmask;
+
+    //digitalWrite(nWR, HIGH);
+    //digitalWrite(nCE, HIGH);
+    PORTWR |= nWR_setmask;
+    PORTCE |= nCE_setmask;
     
     SET_DATABUS_TO_INPUT();
     
@@ -620,8 +688,8 @@ void umdv1::programByte(uint32_t address, uint8_t data, bool wait)
 void umdv1::programWord(uint32_t address, uint16_t data, bool wait)
 {
     writeWord( (uint32_t)(0x000555 << 1), 0xAA00);
-	writeWord( (uint32_t)(0x0002AA << 1), 0x5500);
-    writeWord( (uint32_t)(0x000555 << 1), 0xA000);
+	writeWord16((0x02AA << 1), 0x5500);
+    writeWord16((0x0555 << 1), 0xA000);
     
     //write the data
     writeWord( (uint32_t)address, data );
@@ -629,7 +697,7 @@ void umdv1::programWord(uint32_t address, uint16_t data, bool wait)
 
     //use data polling to validate end of program cycle
 	if(wait){
-		while( toggleBit16(4) != 4 );
+		while( toggleBit16(2) != 2 );
 	}
 }
 

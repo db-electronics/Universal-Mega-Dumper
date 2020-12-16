@@ -224,17 +224,17 @@ void genesis::writeByte(uint32_t address, uint8_t data)
     DATAOUTH = data;
     
     // write to the bus
-    digitalWrite(nCE, LOW);
-    digitalWrite(nWR, LOW);
-    // PORTCE &= nCE_clrmask;
-    // PORTWR &= nWR_clrmask;
+    //digitalWrite(nCE, LOW);
+    //digitalWrite(nWR, LOW);
+    PORTCE &= nCE_clrmask;
+    PORTWR &= nWR_clrmask;
     
-    // PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
+    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
     
-    digitalWrite(nWR, HIGH);
-    digitalWrite(nCE, HIGH);
-    // PORTWR |= nWR_setmask;
-    // PORTCE |= nCE_setmask;
+    //digitalWrite(nWR, HIGH);
+    //digitalWrite(nCE, HIGH);
+    PORTWR |= nWR_setmask;
+    PORTCE |= nCE_setmask;
     
     SET_DATABUS_TO_INPUT();
     

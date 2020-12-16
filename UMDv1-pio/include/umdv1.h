@@ -196,6 +196,13 @@ class umdv1
         virtual uint8_t readByte(uint32_t address);
         
         /*******************************************************************//**
+         * \brief Read a word from a 16bit address
+         * \param address 16bit address
+         * \return word from cartridge
+         **********************************************************************/
+        virtual uint16_t readWord16(uint16_t address);
+
+        /*******************************************************************//**
          * \brief Read a word from a 24bit address
          * \param address 24bit address
          * \return word from cartridge
@@ -229,6 +236,14 @@ class umdv1
 
         virtual void writeByteTime(uint32_t address, uint8_t data);
         
+        /*******************************************************************//**
+         * \brief Write a word to a 16bit address
+         * \param address 16bit address
+         * \param data word
+         * \return void
+         **********************************************************************/
+        virtual void writeWord16(uint16_t address, uint16_t data);
+
         /*******************************************************************//**
          * \brief Write a word to a 24bit address
          * \param address 24bit address

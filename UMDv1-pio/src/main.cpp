@@ -66,6 +66,8 @@ void sfReadFile();
 void sfWriteFile();
 void sfVerify();
 
+void sfEraseCartBurnAuto(uint16_t blockSize);
+void flash_led(uint8_t times, uint32_t wait);
 
 /*******************************************************************//**
  *  \brief Flash the LED, initialize the serial flash memory
@@ -74,20 +76,12 @@ void sfVerify();
  **********************************************************************/
 void setup() {
 
-    uint8_t i;
-
     Serial.begin(460800);
 
     umdv1::initialize();
 
     //flash to show we're alive
-    for( i=0 ; i<2 ; i++ )
-    {
-        digitalWrite(umdv1::nLED, LOW);
-        delay(100);
-        digitalWrite(umdv1::nLED, HIGH);
-        delay(100);
-    }
+    flash_led(2, 100);
 
     if (!SerialFlash.begin(FlashChipSelect)) {
         //error("Unable to access SPI Flash chip");
@@ -142,7 +136,22 @@ void setup() {
  **********************************************************************/
 void loop()
 {
+    // listen for commands
     SCmd.readSerial();
+
+    // check push button to clr rom and burn auto.bin from serial flash
+    if( digitalRead(umdv1::nPB) == LOW ){
+        sfEraseCartBurnAuto(512);
+    }
+}
+
+void flash_led(uint8_t times, uint32_t wait){
+    for( uint8_t i=0 ; i<times ; i++ ){
+        digitalWrite(umdv1::nLED, LOW);
+        delay(wait);
+        digitalWrite(umdv1::nLED, HIGH);
+        delay(wait);
+    }
 }
 
 /*******************************************************************//**
@@ -940,6 +949,56 @@ void sfBurnCart()
     flashFile.close();
     digitalWrite(cart->nLED, HIGH);
 }
+
+/*******************************************************************//**
+ *  \brief Burn a file from the serial flash to the cartridge
+ *  
+ *  Usage:
+ *  sflburn rom.bin
+ *  
+ *  \return Void
+ **********************************************************************/
+void sfEraseCartBurnAuto(uint16_t blockSize)
+{
+    uint16_t i;
+    uint32_t fileSize, address=0, pos=0;
+    
+    digitalWrite(cart->nLED, LOW);
+    cart->eraseChip(true);
+    
+    // flash twice to signal erase is complete
+    flash_led(2, 100);
+    digitalWrite(cart->nLED, LOW);
+    
+    flashFile = SerialFlash.open("auto");
+    if (flashFile){
+        fileSize = flashFile.size();
+        
+        while( pos < fileSize ){
+            flashFile.read(dataBuffer.byte, blockSize);
+            
+            if( cart->info.bus_size == 16 ){
+                for( i=0 ; i < ( blockSize >> 1) ; i++ )
+                {
+                    cart->programWord(address, dataBuffer.word[i], true);
+                    address += 2;
+                }
+            }else{
+                for( i=0 ; i < blockSize ; i++ ){
+                    cart->programByte(address, dataBuffer.byte[i], true);
+                    address++;
+                }
+            }
+            pos += blockSize;
+        }
+        flash_led(2, 100);
+    }else{
+        flash_led(4, 250);
+    }
+    
+    flashFile.close();
+}
+
 
 /*******************************************************************//**
  *  \brief Read a file from the serial flash
