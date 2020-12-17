@@ -41,7 +41,7 @@ uint8_t sfID[5];                            ///< Serial flash file id
 uint32_t sfSize;                            ///< Serial flash file size
 
 union dataBuffer{
-    char        byte[DATA_BUFFER_SIZE];     ///< byte access within dataBuffer
+    uint8_t     byte[DATA_BUFFER_SIZE];     ///< byte access within dataBuffer
     uint16_t    word[DATA_BUFFER_SIZE/2];   ///< word access within dataBuffer
 } dataBuffer;                               ///< union of byte/words to permit the Rx of bytes and Tx of words without hassle
 
@@ -67,7 +67,8 @@ void sfReadFile();
 void sfWriteFile();
 void sfVerify();
 
-void sfEraseCartBurnAuto(uint16_t blockSize);
+void sfBurnCartAuto(uint16_t blockSize);
+uint8_t sfBurnCartFromSerialFlashFile(char* fileName, uint16_t blockSize, boolean verbose);
 void flash_led(uint8_t times, uint32_t wait);
 
 /*******************************************************************//**
@@ -144,7 +145,7 @@ void loop()
     if( digitalRead(umdv1::nPB) == LOW ){
         // purpose built for genesis ROM
         cart = cf.getCart(umdv1::GENESIS);
-        sfEraseCartBurnAuto(512);
+        sfBurnCartAuto(512);
     }
 }
 
@@ -896,14 +897,12 @@ void sfBurnCart()
 {
     char *arg;
     uint16_t blockSize, i;
-    uint32_t timer, fileSize, address=0, pos=0;
     char fileName[13];      //Max filename length (8.3 plus a null char terminator)
     
     //get the file name
     arg = SCmd.next();
     i = 0;
-    while( (*arg != 0) && ( i < 12) )
-    {
+    while( (*arg != 0) && ( i < 12) ){
         fileName[i++] = *(arg++);
     }
     fileName[i] = 0; //null char terminator
@@ -912,51 +911,7 @@ void sfBurnCart()
     arg = SCmd.next();
     blockSize = strtoul(arg, (char**)0, 0);
     
-    //start a timer
-    timer = millis();
-
-    flashFile = SerialFlash.open(fileName);
-    if (flashFile)
-    {
-        Serial.println(F("found"));
-        fileSize = flashFile.size();
-        Serial.println(fileSize,DEC);
-        
-        while( pos < fileSize )
-        {
-            if(millis() - timer > 250){
-                digitalWrite(cart->nLED, !digitalRead(cart->nLED));
-                timer = millis();
-            }
-
-            flashFile.read(dataBuffer.byte, blockSize);
-            
-            if( cart->info.bus_size == 16 )
-            {
-                for( i=0 ; i < ( blockSize >> 1) ; i++ )
-                {
-                    cart->programWord(address, dataBuffer.word[i], true);
-                    address += 2;
-                }
-            }else
-            {
-                for( i=0 ; i < blockSize ; i++ )
-                {
-                    cart->programByte(address, dataBuffer.byte[i], true);
-                    address++;
-                }
-            }
-            pos += blockSize;
-            Serial.println(pos, DEC);
-        }
-        Serial.println(F("done"));
-    }else
-    {
-        Serial.println(F("error"));
-    }
-    
-    flashFile.close();
-    digitalWrite(cart->nLED, HIGH);
+    sfBurnCartFromSerialFlashFile(fileName, blockSize, true);
 }
 
 /*******************************************************************//**
@@ -967,52 +922,22 @@ void sfBurnCart()
  *  
  *  \return Void
  **********************************************************************/
-void sfEraseCartBurnAuto(uint16_t blockSize)
+void sfBurnCartAuto(uint16_t blockSize)
 {
-    uint16_t i;
-    uint32_t timer, fileSize, address=0, pos=0;
-    
+    char fileName[13] = "auto";
+
     digitalWrite(cart->nLED, LOW);
     cart->eraseChip(true);
     
     // flash to signal erase is complete
     flash_led(4, 100);
     
-    //start a timer
-    timer = millis();
-
-    flashFile = SerialFlash.open("auto");
-    if (flashFile){
-        fileSize = flashFile.size();
-        
-        while( pos < fileSize ){
-
-            if(millis() - timer > 250){
-                digitalWrite(cart->nLED, !digitalRead(cart->nLED));
-                timer = millis();
-            }
-
-            flashFile.read(dataBuffer.byte, blockSize);
-            if( cart->info.bus_size == 16 ){
-                for( i=0 ; i < ( blockSize >> 1) ; i++ )
-                {
-                    cart->programWord(address, dataBuffer.word[i], true);
-                    address += 2;
-                }
-            }else{
-                for( i=0 ; i < blockSize ; i++ ){
-                    cart->programByte(address, dataBuffer.byte[i], true);
-                    address++;
-                }
-            }
-            pos += blockSize;
-        }
-        flash_led(4, 100);
+    if(sfBurnCartFromSerialFlashFile(fileName, blockSize, false)){
+        // failure, flash slowly
+        flash_led(4, 250);
     }else{
-        flash_led(4, 500);
+        flash_led(4, 100);
     }
-    
-    flashFile.close();
 }
 
 
@@ -1182,16 +1107,15 @@ void sfListFiles()
 void sfVerify()
 {
     char *arg;
-    uint8_t readByte;
-    uint16_t i=0, readWord;
+    uint8_t data_byte;
+    uint16_t i=0, data_word;
     uint32_t fileSize, pos=0;
     char fileName[13];      //Max filename length (8.3 plus a null char terminator)
     
     //get the file name
     arg = SCmd.next();
     i = 0;
-    while( (*arg != 0) && ( i < 12) )
-    {
+    while( (*arg != 0) && ( i < 12) ){
         fileName[i++] = *(arg++);
     }
     fileName[i] = 0; //null char terminator
@@ -1199,47 +1123,52 @@ void sfVerify()
     digitalWrite(cart->nLED, LOW);
     
     flashFile = SerialFlash.open(fileName);
-    if (flashFile)
-    {
+    if (flashFile){
         Serial.println(F("found"));
         fileSize = flashFile.size();
         Serial.println(fileSize,DEC);
         
-        while( pos < fileSize )
-        {
+        while( pos < fileSize ){
             flashFile.read(dataBuffer.byte, DATA_BUFFER_SIZE);
             
-            if( cart->info.bus_size == 16 )
-            {
-                for( i = 0; i < DATA_BUFFER_SIZE/2 ; i++ )
-                {
-                    readWord = cart->readWord(pos);
-                    if( dataBuffer.word[i] != readWord )
-                    {
+            if( cart->info.bus_size == 16 ){
+                for( i = 0; i < DATA_BUFFER_SIZE/2 ; i++ ){
+                    data_word = cart->readWord(pos);
+                    if( dataBuffer.word[i] != data_word ){
                         //throw some error
                         Serial.print("$");
                         Serial.println(pos, DEC);
                         Serial.println(dataBuffer.word[i], DEC);
-                        Serial.println(readWord, DEC);
+                        Serial.println(data_word, DEC);
                     }
                     pos += 2;
                 }
-            }else
-            {
-                for( i = 0; i < DATA_BUFFER_SIZE; i++ )
-                {
-                    readByte = cart->readByte(pos);
-                    if( dataBuffer.byte[i] != readByte )
-                    {
-                        //throw some error
-                        Serial.print("$");
-                        Serial.println(pos, DEC);
-                        Serial.println(dataBuffer.byte[i], DEC);
-                        Serial.println(readByte, DEC);
+            }else{
+                if( cart->info.mirrored_bus ){
+                    for( i = 0; i < DATA_BUFFER_SIZE; i++ ){
+                        data_byte = cart->mirror_byte(cart->readByte(pos));
+                        if( dataBuffer.byte[i] != data_byte ){
+                            //throw some error
+                            Serial.print("$");
+                            Serial.println(pos, DEC);
+                            Serial.println(dataBuffer.byte[i], DEC);
+                            Serial.println(data_byte, DEC);
+                        }
+                        pos++;
                     }
-                    pos++;
-                }
-                
+                }else{
+                    for( i = 0; i < DATA_BUFFER_SIZE; i++ ){
+                        data_byte = cart->readByte(pos);
+                        if( dataBuffer.byte[i] != data_byte ){
+                            //throw some error
+                            Serial.print("$");
+                            Serial.println(pos, DEC);
+                            Serial.println(dataBuffer.byte[i], DEC);
+                            Serial.println(data_byte, DEC);
+                        }
+                        pos++;
+                    }
+                } 
             }
             
             //PC side app expects a "." before timeout
@@ -1257,4 +1186,74 @@ void sfVerify()
     Serial.print("!");
     
     digitalWrite(cart->nLED, HIGH);
+}
+
+
+/*******************************************************************//**
+ *  \brief Burn a file from the serial flash to the cartridge
+ *  
+ *  Usage:
+ *  sflburn rom.bin
+ *  
+ *  \return Void
+ **********************************************************************/
+uint8_t sfBurnCartFromSerialFlashFile(char* fileName, uint16_t blockSize, boolean verbose)
+{
+    uint16_t i;
+    uint32_t timer, fileSize, address=0, pos=0;
+        
+    //start a timer
+    timer = millis();
+
+    flashFile = SerialFlash.open(fileName);
+    if (flashFile){
+        fileSize = flashFile.size();
+        if(verbose){
+            Serial.println(F("found"));
+            Serial.println(fileSize,DEC);
+        }
+        
+        while( pos < fileSize ){
+            if(millis() - timer > 250){
+                digitalWrite(cart->nLED, !digitalRead(cart->nLED));
+                timer = millis();
+            }
+
+            flashFile.read(dataBuffer.byte, blockSize);
+            
+            if( cart->info.bus_size == 16 ){
+                for( i=0 ; i < ( blockSize >> 1) ; i++ ){
+                    cart->programWord(address, dataBuffer.word[i], true);
+                    address += 2;
+                }
+            }else{
+                if( cart->info.mirrored_bus ){
+                    for( i=0 ; i < blockSize ; i++ ){
+                        cart->programByte(address, cart->mirror_byte(dataBuffer.byte[i]), true);
+                        address++;
+                    }
+                }else{
+                    for( i=0 ; i < blockSize ; i++ ){
+                        cart->programByte(address, dataBuffer.byte[i], true);
+                        address++;
+                    }
+                }
+            }
+            pos += blockSize;
+            Serial.println(pos, DEC);
+        }
+        if(verbose){
+            Serial.println(F("done"));
+        }
+    }else{
+        if(verbose){
+            Serial.println(F("error"));
+        }
+        digitalWrite(cart->nLED, HIGH);
+        return 1;
+    }
+    
+    flashFile.close();
+    digitalWrite(cart->nLED, HIGH);
+    return 0;
 }

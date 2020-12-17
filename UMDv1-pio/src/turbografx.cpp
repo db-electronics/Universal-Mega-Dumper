@@ -50,7 +50,7 @@ void turbografx::setup(uint8_t param)
     digitalWrite(TG16_nRST, HIGH);
 
     info.console = TG16;
-    info.mirrored_bus = true;
+    info.mirrored_bus = false;
     info.bus_size = 8;
 }
 

@@ -720,7 +720,10 @@ class umddb:
                     expected = int(response)
                     response = self.serialPort.readline().decode("utf-8")
                     error = int(response)
-                    print("error at 0x{0:X} expected 0x{1:04X} read 0x{2:04X}".format(address, expected, error))
+                    if self.busWidth.get(self.cartType) == 8:
+                        print("error at 0x{0:X} expected 0x{1:02X} read 0x{2:02X}".format(address, expected, error))
+                    else:
+                        print("error at 0x{0:X} expected 0x{1:04X} read 0x{2:04X}".format(address, expected, error))
                 elif( response == "." ):
                     done = 0
                     #print(response, end="", flush=True)
