@@ -220,21 +220,15 @@ void genesis::writeByte(uint32_t address, uint8_t data)
 
     latchAddress32(address);
     SET_DATABUS_TO_OUTPUT();
-    DATAOUTH = data;
+    DATAOUTL = data;
     
     // write to the bus
-    //digitalWrite(nCE, LOW);
-    //digitalWrite(nWR, LOW);
-    PORTCE &= nCE_clrmask;
-    PORTWR &= nWR_clrmask;
+    digitalWrite(nCE, LOW);
+    digitalWrite(GEN_nLWR, LOW);
     
-    PORTWR &= nWR_clrmask; // waste 62.5ns - nWR should be low for 125ns
-    
-    //digitalWrite(nWR, HIGH);
-    //digitalWrite(nCE, HIGH);
-    PORTWR |= nWR_setmask;
-    PORTCE |= nCE_setmask;
-    
+    digitalWrite(GEN_nLWR, HIGH);
+    digitalWrite(nCE, HIGH);
+
     SET_DATABUS_TO_INPUT();
     
 }
