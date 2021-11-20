@@ -1,14 +1,14 @@
-# ROM folders in Python subdir
-Python/roms/*
+# ROMs
 *.bin
 *.sms
+*.gen
+*.srm
 
 # Doxygen output
 html/
 Python/html
 
-# Geany project files
-*.geany
+# project files
 *.code-workspace
 
 # Byte-compiled / optimized / DLL files
